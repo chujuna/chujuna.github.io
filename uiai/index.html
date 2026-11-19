@@ -1,0 +1,2305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>网站效果Ai描述词</title>
+<style>
+:root{
+  --bg:#F6F4EF; --surface:#FFFFFF; --surface2:#EFECE4; --ink:#1C2321; --muted:#6B7280; --line:#E3DFD3;
+  --accent:#0F766E; --accent-ink:#0B4F4A; --accent-soft:#E6F2F0; --amber:#B45309; --amber-soft:#FEF3C7;
+  --red:#DC2626; --red-soft:#FEE2E2; --blue:#1D4ED8; --blue-soft:#DBEAFE;
+  --radius:14px; --shadow:0 1px 2px rgba(20,25,23,.05),0 8px 24px rgba(20,25,23,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#121614; --surface:#1B201E; --surface2:#242A27; --ink:#ECEDEA; --muted:#9AA3A0; --line:#2E3532;
+  --accent:#2DD4BF; --accent-ink:#99F6E4; --accent-soft:#123B36; --amber:#FBBF24; --amber-soft:#3A2E0E;
+  --red:#F87171; --red-soft:#3B1D1D; --blue:#93C5FD; --blue-soft:#1E2F4D; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:clip}
+button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]){min-height:2.25rem}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px 90px}
+
+/* header — 精简版：只留标题 + 一句说明 */
+header.hero{padding:20px 0 2px}
+.hero h1{font-size:clamp(26px,5vw,36px);line-height:1.15;margin:0 0 6px;letter-spacing:-.02em;font-weight:800}
+.hero h1 span{color:var(--accent)}
+.hero p{color:var(--muted);font-size:14.5px;max-width:640px;margin:0}
+
+/* toolbar */
+.toolbar{position:sticky;top:0;z-index:40;background:color-mix(in srgb, var(--bg) 88%, transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:14px 0 10px;margin-top:14px;border-bottom:1px solid var(--line)}
+.searchbox{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:999px;padding:4px 6px 4px 16px}
+.searchbox:focus-within{border-color:var(--accent)}
+.searchbox input{flex:1;border:0;outline:0;background:transparent;font-size:16px;color:var(--ink);min-width:0}
+.searchbox input::placeholder{color:var(--muted)}
+.search-count{font-size:13px;color:var(--muted);white-space:nowrap;padding-right:8px}
+.cats{display:flex;gap:8px;flex-wrap:wrap;padding:12px 2px 4px}
+.cats::-webkit-scrollbar{display:none}
+.cat-btn{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:14px;font-weight:600;min-height:38px}
+.cat-btn.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* sections & cards */
+section{margin-top:36px}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+.sec-head h2{font-size:22px;margin:0;font-weight:800;letter-spacing:-.01em}
+.sec-head p{margin:0;color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media(max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:visible;display:flex;flex-direction:column;position:relative;min-width:0}
+.card-top,.demo,.say{min-width:0}
+.card-top h3,.card-top .desc,.say p{overflow-wrap:break-word}
+.card:has(.dd-menu.open),.card:has(.auto-list.open),.card:has(.pop-box.open),.card:focus-within{z-index:20}
+.card-top{padding:18px 18px 0}
+.card-top h3{margin:0;font-size:19px;font-weight:800;line-height:1.3}
+.card-top h3 .en{font-size:13px;color:var(--accent);font-weight:700;margin-left:8px;letter-spacing:.02em}
+.card-top .alias{font-size:12px;color:var(--muted);margin-top:2px}
+.card-top .desc{color:var(--muted);font-size:14px;margin:8px 0 0}
+/* 演示框不裁剪：气泡 / 确认框 / 下拉菜单 / 联想列表等浮层可以完整伸出框外显示 */
+.demo{margin:14px 18px 0;border:1.5px dashed color-mix(in srgb, var(--accent) 35%, var(--line));border-radius:10px;background:var(--surface2);padding:18px 14px;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;position:relative;overflow:visible}
+.demo>*{max-width:100%;min-width:0}
+.demo.left{align-items:stretch;text-align:left}
+.say{margin:14px 18px 18px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+.say p{margin:0;font-size:13.5px;flex:1;min-width:0}
+.say p::before{content:"跟 AI 这样说：";font-weight:700;color:var(--accent-ink);display:block;font-size:12px}
+@media (prefers-color-scheme: dark){.say p::before{color:var(--accent)}}
+.copy-btn{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;min-height:36px}
+.copy-btn:active{transform:scale(.96)}
+.hidden-card{display:none!important}
+.empty-search{text-align:center;padding:50px 20px;color:var(--muted);display:none}
+.empty-search.show{display:block}
+
+/* generic demo controls */
+.btn{border:0;border-radius:9px;padding:9px 18px;font-size:14px;font-weight:700;background:var(--accent);color:#fff;min-height:40px}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line)}
+.btn.danger{background:var(--red)}
+.btn.sm{padding:6px 12px;min-height:36px;font-size:13px}
+.btn:active{transform:scale(.97)}
+.icon-btn{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);font-size:18px;display:inline-flex;align-items:center;justify-content:center;position:relative}
+
+/* tooltip */
+.has-tip{position:relative}
+.tip{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) translateY(4px);background:#111827;color:#fff;font-size:12.5px;padding:7px 11px;border-radius:8px;white-space:normal;width:max-content;max-width:min(240px,72vw);text-align:center;line-height:1.45;opacity:0;pointer-events:none;transition:.18s;z-index:60}
+.tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#111827}
+.has-tip:hover .tip,.has-tip:focus .tip{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* toast */
+.toast-stack{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:92vw}
+.toast-item{background:#111827;color:#fff;padding:11px 18px;border-radius:999px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:toastIn .25s ease}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* modal & drawer */
+.overlay{position:fixed;inset:0;background:rgba(10,14,12,.5);backdrop-filter:blur(3px);z-index:150;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal-box{background:var(--surface);color:var(--ink);border-radius:16px;max-width:400px;width:100%;padding:24px;animation:pop .22s ease;text-align:left}
+@keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.modal-box h4{margin:0 0 8px;font-size:18px}
+.modal-box p{margin:0 0 18px;color:var(--muted);font-size:14px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.drawer-panel{position:fixed;top:0;right:0;bottom:0;width:min(320px,86vw);background:var(--surface);color:var(--ink);z-index:160;transform:translateX(105%);visibility:hidden;transition:transform .3s ease,visibility 0s .3s;padding:22px;box-shadow:-12px 0 40px rgba(0,0,0,.2);text-align:left}
+.drawer-panel.open{transform:none;visibility:visible;transition:transform .3s ease}
+.drawer-panel h4{margin:0 0 6px;font-size:18px}
+.drawer-panel p,.drawer-panel li{font-size:14px;color:var(--muted)}
+.scrim{position:fixed;inset:0;background:rgba(10,14,12,.4);z-index:155;display:none}
+.scrim.open{display:block}
+
+/* popconfirm */
+.pop-wrap{position:relative}
+.pop-box{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:12px;width:min(210px,78vw);font-size:13.5px;display:none;z-index:60;text-align:left}
+.pop-box.open{display:block}
+.pop-box .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
+/* alert banner */
+.alert-bar{width:100%;border-radius:10px;padding:11px 14px;font-size:13.5px;display:flex;gap:9px;align-items:flex-start;text-align:left}
+.alert-bar.warn{background:var(--amber-soft);color:#7C4A03}
+.alert-bar.err{background:var(--red-soft);color:#7F1D1D}
+@media (prefers-color-scheme: dark){.alert-bar.warn{color:var(--amber)}.alert-bar.err{color:var(--red)}}
+
+/* badge */
+.badge-dot{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--surface)}
+.pill-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink)}
+@media (prefers-color-scheme: dark){.pill-badge{color:var(--accent)}}
+
+/* spinner */
+.spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dots span{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin:0 2px;animation:bnc 1s infinite}
+.dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+@keyframes bnc{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
+
+/* navbar demo */
+.mini-nav{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:14px;font-size:14px}
+.mini-nav b{font-size:15px}
+.mini-nav a{color:var(--muted);text-decoration:none;padding:6px 4px}
+.mini-nav a.on{color:var(--accent);font-weight:700}
+.mini-nav .sp{flex:1}
+
+/* breadcrumb */
+.crumb{font-size:14px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.crumb a{color:var(--muted);text-decoration:none;padding:4px 2px}
+.crumb a:hover{color:var(--accent)}
+.crumb .cur{color:var(--ink);font-weight:700}
+.crumb .sep{opacity:.5}
+
+/* tabs */
+.tabs-head{display:flex;gap:4px;border-bottom:2px solid var(--line);width:100%}
+.tab-btn{border:0;background:none;padding:10px 16px;font-size:14.5px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-2px;min-height:42px}
+.tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-pane{padding:14px 4px 2px;font-size:14px;color:var(--muted);width:100%;text-align:left}
+
+/* dropdown */
+.dd{position:relative}
+.dd-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-width:170px;max-width:82vw;padding:6px;display:none;z-index:60;text-align:left}
+.dd-menu.open{display:block}
+.dd-menu button{display:flex;width:100%;border:0;background:none;padding:10px 12px;border-radius:7px;font-size:14px;color:var(--ink);align-items:center;min-height:40px}
+.dd-menu button:hover{background:var(--surface2)}
+
+/* pagination */
+.pager{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.pager button{min-width:38px;height:38px;border-radius:9px;border:1.5px solid var(--line);background:var(--surface);font-size:14px;font-weight:600;padding:0 10px}
+.pager button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* steps */
+.steps{display:flex;width:100%;align-items:flex-start}
+.step{flex:1;text-align:center;font-size:12.5px;color:var(--muted);position:relative}
+.step .dot{width:30px;height:30px;border-radius:50%;background:var(--surface);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-weight:700;font-size:13px;position:relative;z-index:1}
+.step::before{content:"";position:absolute;top:15px;left:-50%;width:100%;height:2px;background:var(--line)}
+.step:first-child::before{display:none}
+.step.done,.step.now{color:var(--ink);font-weight:600}
+.step.done .dot,.step.now .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+.step.done::before{background:var(--accent)}
+
+/* sticky demo */
+.sticky-box{width:100%;height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left}
+.sticky-head{position:sticky;top:0;background:var(--accent);color:#fff;padding:10px 14px;font-weight:700;font-size:14px;z-index:2}
+.sticky-box p{padding:4px 14px;font-size:13.5px;color:var(--muted);margin:6px 0}
+
+/* accordion */
+.acc{width:100%;text-align:left}
+.acc-item{border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:8px;overflow:hidden}
+.acc-head{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;border:0;padding:13px 15px;font-size:14.5px;font-weight:700;color:var(--ink);min-height:48px;text-align:left}
+.acc-head .chev{transition:.25s;color:var(--muted)}
+.acc-item.open .acc-head .chev{transform:rotate(180deg)}
+.acc-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.acc-body div{padding:0 15px 14px;font-size:13.5px;color:var(--muted)}
+
+/* carousel */
+.carousel{width:100%;max-width:340px;min-width:0}
+.car-track{display:flex;transition:transform .45s ease;min-width:0}
+.car-slide{flex:0 0 100%;min-width:0;height:120px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:19px;padding:0 10px;text-align:center}
+.car-viewport{overflow:hidden;border-radius:10px;min-width:0}
+.car-dots{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.car-dots button{width:9px;height:9px;min-height:9px;border-radius:50%;border:0;background:var(--line);padding:0}
+.car-dots button.on{background:var(--accent);width:24px;border-radius:99px}
+
+/* card demo */
+.mini-card{width:100%;max-width:300px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-align:left;box-shadow:var(--shadow)}
+.mini-card .thumb{height:74px;background:linear-gradient(120deg,#0F766E,#134E4A);display:flex;align-items:center;justify-content:center;font-size:30px}
+.mini-card .body{padding:12px 14px}
+.mini-card h5{margin:0 0 4px;font-size:15px}
+.mini-card p{margin:0;font-size:13px;color:var(--muted)}
+.mini-card .foot{display:flex;justify-content:space-between;align-items:center;padding:0 14px 12px;font-size:13px}
+.price{color:var(--red);font-weight:800;font-size:16px}
+
+/* timeline */
+.tl{width:100%;text-align:left;max-width:320px}
+.tl-item{display:flex;gap:12px;position:relative;padding-bottom:18px}
+.tl-item::before{content:"";position:absolute;left:7px;top:20px;bottom:0;width:2px;background:var(--line)}
+.tl-item:last-child::before{display:none}
+.tl-dot{width:16px;height:16px;border-radius:50%;background:var(--accent);flex:0 0 auto;margin-top:3px;position:relative;z-index:1;border:3px solid var(--surface2)}
+.tl-item h5{margin:0;font-size:14px}
+.tl-item p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+
+/* skeleton */
+.skel{width:100%;max-width:320px;text-align:left}
+.sk{border-radius:8px;background:linear-gradient(90deg,var(--line) 25%,var(--surface) 50%,var(--line) 75%);background-size:200% 100%;animation:shimmer 1.3s infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+
+/* marquee */
+.marquee{width:100%;min-width:0;overflow:hidden;background:var(--ink);color:var(--bg);border-radius:9px;padding:9px 0;white-space:nowrap}
+.marquee-inner{display:inline-block;animation:mq 12s linear infinite;font-size:14px}
+@keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* lightbox */
+.lb-thumbs{display:flex;gap:10px}
+.lb-thumbs button{border:0;padding:0;border-radius:10px;overflow:hidden;width:86px;height:64px;font-size:26px;cursor:pointer}
+.lb-view{position:fixed;inset:0;background:rgba(5,8,7,.88);z-index:180;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;padding:20px}
+.lb-view.open{display:flex}
+.lb-view .big{font-size:90px;background:#1F2937;border-radius:18px;width:min(420px,88vw);height:280px;display:flex;align-items:center;justify-content:center}
+
+/* tree */
+.tree{width:100%;text-align:left;font-size:14px;max-width:320px}
+.tree ul{list-style:none;margin:0;padding-left:22px}
+.tree>ul{padding-left:0}
+.tree button{border:0;background:none;font-size:14px;color:var(--ink);padding:7px 6px;display:flex;gap:7px;align-items:center;min-height:38px;width:100%;text-align:left;border-radius:7px}
+.tree button:hover{background:var(--surface)}
+.tree .kids{display:none}
+.tree .open>.kids{display:block}
+.tree .chev{font-size:11px;color:var(--muted);transition:.2s;display:inline-block}
+.tree .open>button .chev{transform:rotate(90deg)}
+.tree .leaf{padding:7px 6px 7px 26px;color:var(--muted)}
+
+/* switch */
+.switch{position:relative;width:52px;height:30px;flex:0 0 auto}
+.switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;z-index:1}
+.switch .track{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:.2s}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:.2s}
+.switch input:checked + .track{background:var(--accent)}
+.switch input:checked + .track::after{transform:translateX(22px)}
+
+/* slider / range */
+input[type=range]{width:100%;max-width:300px;accent-color:var(--accent);height:36px}
+.range-val{font-weight:800;font-size:20px;color:var(--accent)}
+
+/* rate */
+.rate{display:flex;gap:4px}
+.rate button{border:0;background:none;font-size:30px;line-height:1;color:var(--line);padding:4px;min-height:44px;min-width:44px}
+.rate button.lit{color:#F59E0B}
+
+/* autocomplete */
+.auto-wrap{width:100%;max-width:320px;position:relative;text-align:left}
+.auto-wrap input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;background:var(--surface);color:var(--ink);outline:none}
+.auto-wrap input:focus{border-color:var(--accent)}
+.auto-list{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;display:none;z-index:60}
+.auto-list.open{display:block}
+.auto-list button{display:block;width:100%;border:0;background:none;text-align:left;padding:11px 14px;font-size:14px;color:var(--ink);min-height:42px}
+.auto-list button:hover{background:var(--surface2)}
+.auto-list button b{color:var(--accent)}
+
+/* tag input */
+.tagbox{width:100%;max-width:340px;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-wrap:wrap;gap:7px;align-items:center;text-align:left}
+.tag{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent-ink);font-size:13px;font-weight:600;padding:5px 6px 5px 11px;border-radius:999px}
+@media (prefers-color-scheme: dark){.tag{color:var(--accent)}}
+.tag button{border:0;background:rgba(0,0,0,.08);width:20px;height:20px;min-height:20px;border-radius:50%;font-size:12px;line-height:1;padding:0;color:inherit}
+.tagbox input{flex:1;min-width:110px;border:0;outline:0;font-size:14px;background:transparent;color:var(--ink)}
+
+/* upload */
+.upload-zone{width:100%;max-width:340px;border:2px dashed var(--line);border-radius:12px;padding:22px 14px;background:var(--surface);transition:.2s}
+.upload-zone.over{border-color:var(--accent);background:var(--accent-soft)}
+.upload-zone .big{font-size:30px}
+
+/* progress */
+.progress{width:100%;max-width:320px;height:12px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s;width:0%}
+
+/* fab */
+.fab-demo{position:relative;width:100%;height:150px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;text-align:left}
+.fab-demo p{padding:12px 14px;font-size:13px;color:var(--muted);margin:0}
+.fab{position:absolute;right:14px;bottom:14px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:0;font-size:22px;box-shadow:0 8px 20px rgba(15,118,110,.4);display:flex;align-items:center;justify-content:center}
+
+/* scroll box */
+.load-box{width:100%;max-width:340px;height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left}
+.load-box .row-item{padding:11px 14px;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between}
+.load-box .foot{text-align:center;padding:10px;font-size:12.5px;color:var(--muted)}
+
+/* hover demo */
+/* 修复宽度冲突：容器必须先撑满演示框（width:100%），子卡再用 flex 等分；
+   旧写法容器无宽度（被 .demo 的 align-items:center 收成内容宽）+ 子卡固定 118px，
+   手机端又叠加 width:50% 相对这个收缩的容器计算，三条规则互相打架导致卡片过窄 */
+.hover-grid{display:flex;gap:12px;width:100%;max-width:340px;align-items:stretch;justify-content:center}
+.hover-card{flex:1 1 0;min-width:0;padding:18px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:13.5px;font-weight:600;transition:.25s;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.hover-card:hover{transform:translateY(-6px);box-shadow:0 14px 28px rgba(15,118,110,.22);border-color:var(--accent)}
+.hover-zoom{flex:1 1 0;min-width:0;min-height:96px;border-radius:12px;overflow:hidden;position:relative;cursor:pointer;border:1px solid var(--line)}
+.hover-zoom .inner{position:absolute;inset:0;background:linear-gradient(130deg,#B45309,#92400E);display:flex;align-items:center;justify-content:center;font-size:28px;transition:.35s}
+.hover-zoom:hover .inner{transform:scale(1.18)}
+
+/* countup */
+.count-num{font-size:40px;font-weight:800;letter-spacing:-.02em;color:var(--accent)}
+
+/* glass */
+.glass-stage{width:100%;max-width:340px;height:140px;border-radius:12px;background:linear-gradient(120deg,#0F766E 0%,#B45309 55%,#1D4ED8 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.glass-card{background:rgba(255,255,255,.18);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.45);border-radius:14px;padding:16px 22px;color:#fff;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.18);text-align:center}
+.glass-card small{display:block;font-weight:400;opacity:.85;font-size:12.5px;margin-top:3px}
+
+/* reveal */
+.reveal-box{width:100%;max-width:340px;height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px;text-align:left}
+.reveal-item{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;font-size:14px;opacity:0;transform:translateY(18px);transition:.55s}
+.reveal-item.in{opacity:1;transform:none}
+
+/* segmented / radio pills */
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:4px;gap:2px}
+.seg button{border:0;background:none;padding:8px 18px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted);min-height:38px}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+
+/* ===== 新增词条样式（第二批） ===== */
+.popcard-wrap{position:relative}
+.popcard{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);width:min(230px,80vw);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:14px;display:none;z-index:60;text-align:left;font-size:13.5px}
+.popcard.open{display:block}
+.popcard b{font-size:14.5px}
+.notif-wrap{position:relative;width:100%;max-width:340px}
+.notif-panel{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-align:left;display:none}
+.notif-panel.open{display:block}
+.notif-panel div{padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--line)}
+.notif-panel div:last-child{border-bottom:0}
+.notif-panel small{display:block;color:var(--muted);font-size:12px}
+.result-demo{text-align:center}
+.result-ico{font-size:46px;line-height:1.1}
+.undo-toast{display:flex;gap:14px;align-items:center;background:#111827;color:#fff;padding:11px 16px;border-radius:12px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.undo-toast button{border:0;background:none;color:#5EEAD4;font-weight:800;font-size:14px;min-height:36px;padding:4px 6px}
+.mini-layout{display:flex;width:100%;max-width:340px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);text-align:left;min-height:132px}
+.mini-side{background:var(--surface2);border-right:1px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:4px;width:118px;flex:0 0 auto;transition:.25s}
+.mini-side.closed{width:46px}
+.mini-side button{border:0;background:none;text-align:left;padding:8px;border-radius:7px;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;min-height:36px}
+.mini-side button.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
+.mini-main{flex:1;padding:12px;font-size:13px;color:var(--muted);min-width:0}
+.bottom-nav{width:100%;max-width:340px;background:var(--surface);border:1px solid var(--line);border-radius:12px;display:flex;padding:6px}
+.bottom-nav button{flex:1;border:0;background:none;font-size:12px;color:var(--muted);padding:6px 2px;border-radius:9px;min-height:48px}
+.bottom-nav button span{display:block;font-size:19px;line-height:1.2}
+.bottom-nav button.on{color:var(--accent);font-weight:700;background:var(--accent-soft)}
+.burger-panel{width:100%;max-width:300px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:none;text-align:left}
+.burger-panel.open{display:block}
+.burger-panel a{display:block;padding:12px 16px;color:var(--ink);text-decoration:none;font-size:14px;border-bottom:1px solid var(--line)}
+.burger-panel a:last-child{border-bottom:0}
+.spy-box{width:100%;max-width:340px;height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;position:relative}
+.spy-nav{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);display:flex;gap:2px;padding:6px;z-index:2}
+.spy-nav button{flex:1;border:0;background:none;font-size:12.5px;padding:7px 2px;border-radius:7px;color:var(--muted);min-height:36px}
+.spy-nav button.on{background:var(--accent);color:#fff;font-weight:700}
+.spy-sec{padding:12px 14px 26px;font-size:13.5px;color:var(--muted)}
+.spy-sec b{color:var(--ink);display:block;margin-bottom:4px}
+.totop-box{width:100%;max-width:340px;height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;position:relative;padding:12px 14px;font-size:13.5px;color:var(--muted)}
+.totop-btn{position:sticky;bottom:10px;float:right;width:42px;height:42px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:18px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s}
+.totop-btn.show{opacity:1;pointer-events:auto}
+.grid-menu{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:340px}
+.grid-menu button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 2px 9px;font-size:12.5px;color:var(--ink);min-height:64px}
+.grid-menu button span{display:block;font-size:22px;margin-bottom:3px}
+table.data-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:10px;overflow:hidden;font-size:13.5px}
+table.data-table th,table.data-table td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}
+table.data-table th{background:var(--surface2);font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+table.data-table tr:last-child td{border-bottom:0}
+.plain-list{width:100%;max-width:340px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;text-align:left}
+.plain-list div{display:flex;justify-content:space-between;gap:10px;padding:11px 14px;font-size:14px;border-bottom:1px solid var(--line)}
+.plain-list div:last-child{border-bottom:0}
+.plain-list small{color:var(--muted)}
+.masonry{columns:2;column-gap:10px;width:100%;max-width:340px;text-align:left}
+.masonry div{break-inside:avoid;border-radius:10px;padding:12px;margin-bottom:10px;color:#fff;font-weight:700;font-size:13.5px}
+.avatar-group{display:flex;align-items:center}
+.avatar-group span{width:42px;height:42px;border-radius:50%;border:2.5px solid var(--surface2);display:flex;align-items:center;justify-content:center;font-size:19px;margin-left:-10px}
+.avatar-group span:first-child{margin-left:0}
+.countdown{display:flex;gap:8px;justify-content:center}
+.countdown div{background:var(--ink);color:var(--bg);border-radius:10px;min-width:56px;padding:9px 4px 7px}
+.countdown b{display:block;font-size:22px;line-height:1.1}
+.countdown small{font-size:11px;opacity:.75}
+.pricing{width:100%;max-width:300px;background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:18px 16px;text-align:center;box-shadow:var(--shadow)}
+.pricing .p{font-size:30px;font-weight:800;color:var(--accent)}
+.pricing ul{list-style:none;margin:12px 0;padding:0;font-size:13.5px;color:var(--muted);text-align:left}
+.pricing li{padding:4px 0 4px 22px;position:relative}
+.pricing li::before{content:"✓";position:absolute;left:2px;color:var(--accent);font-weight:800}
+.ba-wrap{position:relative;width:100%;max-width:340px;height:150px;border-radius:12px;overflow:hidden}
+.ba-a,.ba-b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px}
+.ba-a{background:linear-gradient(120deg,#9CA3AF,#6B7280)}
+.ba-b{background:linear-gradient(120deg,#F59E0B,#0F766E)}
+.ba-b{clip-path:inset(0 0 0 50%)}
+.ba-wrap input[type=range]{position:absolute;left:0;right:0;bottom:2px;width:100%;max-width:none}
+.cal{width:100%;max-width:320px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.cal h5{margin:0 0 8px;font-size:14.5px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:12.5px;text-align:center}
+.cal-grid span{padding:6px 0;border-radius:7px;color:var(--muted)}
+.cal-grid b{padding:6px 0;border-radius:7px;font-weight:500}
+.cal-grid b.today{background:var(--accent);color:#fff;font-weight:800}
+.cal-grid b.mark{box-shadow:inset 0 0 0 1.5px var(--amber);color:var(--ink)}
+.comment{width:100%;max-width:340px;text-align:left}
+.comment-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.comment-item:last-child{border-bottom:0}
+.comment-item .av{font-size:26px;flex:0 0 auto}
+.comment-item p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.comment-item .like{border:0;background:none;color:var(--muted);font-size:13px;min-height:32px;padding:2px 6px}
+.comment-item .like.liked{color:var(--red)}
+.video-mock{width:100%;max-width:340px;background:#111827;border-radius:12px;overflow:hidden;color:#fff}
+.video-stage{height:130px;display:flex;align-items:center;justify-content:center;font-size:52px;position:relative}
+.video-bar{display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.06)}
+.video-bar button{border:0;background:none;color:#fff;font-size:17px;min-height:36px;min-width:36px}
+.video-prog{flex:1;height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
+.video-prog i{display:block;height:100%;width:0%;background:var(--accent)}
+.video-bar small{font-size:11.5px;opacity:.8;white-space:nowrap}
+.choice-list{display:flex;flex-direction:column;gap:9px;width:100%;max-width:320px;text-align:left;font-size:14.5px}
+.choice-list label{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 14px;cursor:pointer}
+.choice-list input{width:19px;height:19px;accent-color:var(--accent);flex:0 0 auto}
+select.demo-select{width:100%;max-width:320px;padding:11px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:15px}
+input[type=date].demo-date,input[type=color].demo-color{width:100%;max-width:320px;padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:15px}
+input[type=color].demo-color{height:48px;padding:4px 8px}
+.qty{display:inline-flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);overflow:hidden}
+.qty button{width:44px;height:44px;border:0;background:none;font-size:19px;color:var(--accent);font-weight:800}
+.qty b{min-width:44px;text-align:center;font-size:16px}
+.otp{display:flex;gap:9px;justify-content:center}
+.otp input{width:48px;height:56px;text-align:center;font-size:22px;font-weight:800;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);outline:none}
+.otp input:focus{border-color:var(--accent)}
+.pwd-wrap{width:100%;max-width:320px;text-align:left}
+.pwd-wrap input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;background:var(--surface);color:var(--ink);outline:none}
+.pwd-meter{height:8px;border-radius:99px;background:var(--line);margin-top:10px;overflow:hidden}
+.pwd-meter i{display:block;height:100%;width:0%;background:var(--red);transition:.25s}
+.ta-wrap{width:100%;max-width:320px;text-align:left}
+.ta-wrap textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:14.5px;background:var(--surface);color:var(--ink);outline:none;resize:vertical;min-height:74px;font-family:inherit}
+.ta-count{text-align:right;font-size:12.5px;color:var(--muted);margin-top:4px}
+.cascade{display:flex;gap:9px;width:100%;max-width:340px}
+.cascade select{flex:1;min-width:0;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:340px}
+.chips button{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 15px;font-size:13.5px;min-height:38px}
+.chips button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.sort-list{width:100%;max-width:320px;text-align:left}
+.sort-item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:8px;font-size:14px;cursor:grab}
+.sort-item .grip{color:var(--muted);cursor:grab}
+.sort-item .mv{margin-left:auto;display:flex;gap:4px}
+.sort-item .mv button{border:1px solid var(--line);background:var(--surface2);border-radius:7px;width:32px;height:32px;min-height:32px;font-size:13px}
+.pull-box{width:100%;max-width:340px;height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;position:relative}
+.pull-hint{text-align:center;font-size:12.5px;color:var(--muted);padding:9px}
+.pull-box .row-item{padding:11px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.swipe-row{position:relative;width:100%;max-width:340px;border-radius:10px;overflow:hidden;background:var(--red)}
+.swipe-front{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;font-size:14px;text-align:left;transition:transform .25s;display:flex;justify-content:space-between;gap:8px}
+.swipe-del{position:absolute;right:0;top:0;bottom:0;width:78px;border:0;background:var(--red);color:#fff;font-weight:700;font-size:14px}
+.flip-scene{perspective:800px;width:100%;max-width:300px;height:150px}
+.flip-inner{position:relative;width:100%;height:100%;transition:transform .6s;transform-style:preserve-3d;cursor:pointer}
+.flip-inner.flipped{transform:rotateY(180deg)}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-weight:800;font-size:17px;padding:14px;text-align:center}
+.flip-front{background:linear-gradient(130deg,#0F766E,#134E4A);color:#fff}
+.flip-back{background:var(--amber-soft);color:#7C4A03;transform:rotateY(180deg);border:1px solid var(--amber)}
+.type-box{width:100%;max-width:340px;background:#111827;color:#5EEAD4;border-radius:12px;padding:18px 16px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;text-align:left;min-height:86px}
+.type-caret{display:inline-block;width:8px;height:17px;background:#5EEAD4;vertical-align:-3px;animation:bnc 1s infinite}
+.confetti-box{position:relative;width:100%;max-width:340px;height:150px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.confetti-box i{position:absolute;width:9px;height:14px;border-radius:2px;top:45%;left:50%;pointer-events:none}
+.ripple-btn{position:relative;overflow:hidden;border:0;border-radius:999px;padding:13px 30px;font-size:15px;font-weight:700;background:var(--accent);color:#fff;min-height:46px}
+.ripple-btn .rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.55);transform:scale(0);animation:rip .6s ease-out forwards;pointer-events:none}
+@keyframes rip{to{transform:scale(3);opacity:0}}
+.parallax-box{width:100%;max-width:340px;height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;position:relative}
+.para-bg{position:sticky;top:0;height:0;z-index:0}
+.para-sun{position:absolute;top:16px;right:22px;font-size:40px}
+.para-mtn{position:absolute;top:64px;left:0;right:0;font-size:64px;letter-spacing:6px;opacity:.85;white-space:nowrap}
+.para-content{position:relative;z-index:1;margin-top:120px;background:var(--surface);border-top:1px solid var(--line);padding:14px;font-size:13.5px;color:var(--muted)}
+.dbl-stage{width:100%;max-width:300px;height:150px;border-radius:14px;background:linear-gradient(130deg,#B45309,#92400E);display:flex;align-items:center;justify-content:center;font-size:56px;position:relative;cursor:pointer;user-select:none;-webkit-user-select:none}
+.dbl-heart{position:absolute;font-size:44px;pointer-events:none;animation:heartPop .8s ease forwards}
+@keyframes heartPop{0%{transform:scale(.3);opacity:0}25%{opacity:1}60%{transform:scale(1.25)}100%{transform:scale(1.05) translateY(-16px);opacity:0}}
+.hero-demo{width:100%;max-width:340px;border-radius:12px;background:linear-gradient(125deg,#134E4A,#0F766E 60%,#B45309);color:#fff;padding:26px 18px;text-align:center}
+.hero-demo h4{margin:0 0 6px;font-size:21px}
+.hero-demo p{margin:0 0 14px;font-size:13px;opacity:.88}
+.footer-demo{width:100%;max-width:340px;background:var(--ink);color:var(--bg);border-radius:12px;padding:16px;font-size:12.5px;text-align:left}
+.footer-demo .cols{display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between}
+.footer-demo a{color:inherit;opacity:.75;text-decoration:none;display:block;padding:3px 0}
+.grid-demo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:340px}
+.grid-demo div{border-radius:9px;padding:16px 4px;font-size:12.5px;font-weight:700;color:#fff;text-align:center}
+.split-demo{display:flex;gap:10px;width:100%;max-width:340px}
+.split-demo div{flex:1;border-radius:10px;padding:16px 10px;font-size:13px;text-align:left}
+.action-bar-demo{position:relative;width:100%;max-width:340px;height:150px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-align:left}
+.action-bar-demo p{padding:12px 14px;font-size:13px;color:var(--muted);margin:0}
+.action-bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;align-items:center;padding:10px 12px;background:var(--surface);border-top:1px solid var(--line)}
+.action-bar .pr{font-weight:800;color:var(--red);font-size:17px}
+.action-bar .btn{flex:1}
+.hscroll{display:flex;gap:10px;overflow-x:auto;width:100%;max-width:340px;padding:4px 2px 10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.hscroll div{flex:0 0 128px;scroll-snap-align:start;border-radius:12px;padding:18px 10px;color:#fff;font-weight:700;font-size:13.5px;text-align:center}
+.fs-loading{position:fixed;inset:0;background:rgba(10,14,12,.55);z-index:190;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;font-size:14px}
+.fs-loading.open{display:flex}
+@media(max-width:560px){
+  .grid-menu{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .grid-menu button{font-size:11.5px;padding:10px 1px 8px}
+  .otp input{width:44px;height:52px}
+  .countdown div{min-width:50px}
+  .mini-side{width:104px}
+  .mini-side.closed{width:42px}
+  .cascade{flex-direction:column}
+  .split-demo{flex-direction:column}
+  .grid-demo{grid-template-columns:repeat(2,1fr)}
+  table.data-table th,table.data-table td{padding:8px 7px;font-size:12.5px}
+}
+
+/* 为向上弹出的浮层预留空间，避免遮住上方描述文字（浮层本身仍完整可见） */
+.demo:has(.has-tip){padding-top:46px}
+.demo:has(.pop-wrap){padding-top:54px}
+.demo:has(.popcard-wrap){padding-top:120px}
+
+/* ============ 全页面手机自适应 ============ */
+img,svg,video,canvas{max-width:100%}
+@media(max-width:760px){
+  /* 分类按钮改为自动换行两排，全部可见，不再横滑被切掉一半 */
+  .cats{flex-wrap:wrap;overflow:visible;padding:10px 2px 6px}
+  .cat-btn{white-space:nowrap;flex:0 1 auto}
+  .tabs-head{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs-head::-webkit-scrollbar{display:none}
+  .tab-btn{white-space:nowrap;flex:1 1 0;min-width:0}
+}
+@media(max-width:560px){
+  .wrap{padding:0 12px 64px}
+  header.hero{padding:16px 0 0}
+  .hero h1{font-size:27px}
+  .hero p{font-size:14px;line-height:1.55}
+  .toolbar{padding:10px 0 8px;margin-top:10px}
+  .searchbox{padding:3px 5px 3px 12px;gap:7px}
+  .search-count{font-size:12px;padding-right:4px}
+  .cat-btn{padding:7px 13px;font-size:13.5px;min-height:36px}
+  section{margin-top:28px}
+  .sec-head{flex-wrap:wrap;gap:2px 10px;margin-bottom:12px}
+  .sec-head h2{font-size:20px}
+  .sec-head p{font-size:13px;flex-basis:100%}
+  .grid{gap:14px}
+  .card-top{padding:15px 14px 0}
+  .card-top h3{font-size:17.5px}
+  .card-top h3 .en{margin-left:6px;font-size:12px}
+  .card-top .desc{font-size:13.5px}
+  .demo{margin:12px 12px 0;padding:16px 10px;min-height:96px}
+  .demo:has(.has-tip){padding-top:44px}
+  .demo:has(.pop-wrap){padding-top:50px}
+  .say{margin:12px 12px 14px;padding:9px 10px}
+  .say p{font-size:13px}
+  .mini-nav{flex-wrap:wrap;gap:6px 10px;padding:9px 11px}
+  .mini-nav .sp{display:none}
+  .mini-nav b{flex-basis:100%}
+  .steps{gap:0}
+  .step{font-size:11px;line-height:1.35;padding:0 1px}
+  .step .dot{width:27px;height:27px;font-size:12px}
+  .step::before{top:13px}
+  .seg{flex-wrap:wrap;justify-content:center;max-width:100%}
+  .seg button{padding:8px 14px}
+  .pager button{min-width:34px;height:36px;padding:0 8px}
+  .lb-thumbs{flex-wrap:wrap;justify-content:center}
+  .hover-grid{gap:10px}
+  .rate button{min-width:40px;min-height:40px;font-size:27px}
+  .marquee-inner{font-size:13px}
+  .count-num{font-size:34px}
+  .tab-btn{padding:10px 8px;font-size:13.5px}
+  .glass-card{max-width:calc(100% - 16px);padding:14px 14px}
+  .glass-card small{overflow-wrap:anywhere}
+  /* 不再用 width:calc(50% - 5px)：百分比会相对收缩的父容器计算、把卡片压窄；改由 flex 等分父容器宽度 */
+  .hover-card,.hover-zoom{width:auto;max-width:none}
+  .lb-thumbs button{width:80px;height:60px}
+  .car-slide{font-size:17px}
+  .glass-stage,.carousel,.auto-wrap,.tagbox,.upload-zone,.progress,.load-box,.sticky-box,.reveal-box,.skel,.tl,.tree,.fab-demo,.mini-card,.hover-grid{max-width:100%}
+  .modal-box{padding:20px 18px}
+  .toast-stack{max-width:94vw}
+  .toast-item{max-width:94vw;text-align:center}
+  footer{margin-top:36px;font-size:13px}
+}
+@media(max-width:360px){
+  .wrap{padding:0 10px 56px}
+  .search-count{display:none}
+  .step{font-size:10.5px}
+}
+
+footer{margin-top:50px;border-top:1px solid var(--line);padding-top:20px;color:var(--muted);font-size:13.5px}
+footer b{color:var(--ink)}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>网站效果<span>Ai描述词</span></h1>
+  <p>85 个常用效果，都能现场试；喜欢哪个，复制卡片下方的例句发给 AI 即可。</p>
+</header>
+
+<div class="toolbar">
+  <div class="searchbox">
+    <span aria-hidden="true">🔍</span>
+    <input id="searchInput" type="search" placeholder="搜：气泡、折叠、弹窗…" aria-label="搜索词条">
+    <span class="search-count" id="searchCount"></span>
+  </div>
+  <nav class="cats" id="catNav" aria-label="分类">
+    <button class="cat-btn active" data-cat="all">全部</button>
+    <button class="cat-btn" data-cat="feedback">反馈提示</button>
+    <button class="cat-btn" data-cat="nav">导航</button>
+    <button class="cat-btn" data-cat="content">内容展示</button>
+    <button class="cat-btn" data-cat="form">表单交互</button>
+    <button class="cat-btn" data-cat="motion">动效与滚动</button>
+    <button class="cat-btn" data-cat="layout">布局与媒体</button>
+  </nav>
+</div>
+
+<div class="empty-search" id="emptySearch">
+  <div style="font-size:40px">🗂️</div>
+  <p>没找到这个词。换个说法试试，比如搜「弹」「滑」「转」。<br>也可以直接跟 AI 描述样子：「鼠标放上去会冒出一小段说明文字」——AI 一般也能懂。</p>
+</div>
+
+<!-- ============ 反馈提示 ============ -->
+<section data-section="feedback">
+  <div class="sec-head"><h2>一、反馈提示</h2><p>点完之后，页面怎么告诉你「成功了 / 出错了 / 请确认」</p></div>
+  <div class="grid">
+
+    <article class="card" data-cat="feedback" data-keys="提醒气泡 tooltip 悬停提示 气泡提示 hover 提示框">
+      <div class="card-top"><h3>提醒气泡<span class="en">Tooltip</span></h3><div class="alias">也叫：悬停提示、气泡提示</div>
+      <p class="desc">鼠标悬停（手机上长按/点击）时，旁边冒出一小段说明文字，移开就消失。不打扰阅读，专门解释图标和缩写。</p></div>
+      <div class="demo">
+        <button class="icon-btn has-tip" aria-label="帮助">?<span class="tip">点这里查看使用帮助</span></button>
+        <button class="btn ghost has-tip">把鼠标放我上面<span class="tip">这就是提醒气泡 👋</span></button>
+        <span style="font-size:12.5px;color:var(--muted)">↑ 悬停或点住按钮试试</span>
+      </div>
+      <div class="say"><p>「给这个按钮加一个提醒气泡（Tooltip），鼠标悬停时显示‘点击查看帮助’。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="轻提示 toast 消息提示 吐司 成功提示">
+      <div class="card-top"><h3>轻提示<span class="en">Toast</span></h3><div class="alias">也叫：吐司提示、消息通知条</div>
+      <p class="desc">操作完成后，屏幕底部或顶部飘出一句短消息（如「保存成功」），几秒后自动消失，不需要点任何按钮。</p></div>
+      <div class="demo">
+        <button class="btn" id="toastBtn">点我：模拟保存</button>
+        <span style="font-size:12.5px;color:var(--muted)">点完看屏幕最底部</span>
+      </div>
+      <div class="say"><p>「保存成功后，用轻提示（Toast）在底部弹出‘已保存’，2 秒后自动消失。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="模态弹窗 modal dialog 弹窗 对话框 弹出层">
+      <div class="card-top"><h3>模态弹窗<span class="en">Modal</span></h3><div class="alias">也叫：对话框、弹出层</div>
+      <p class="desc">页面中央弹出一个框，背景变暗，必须先处理它（确认或取消）才能继续操作。适合删除确认、重要通知。</p></div>
+      <div class="demo">
+        <button class="btn danger" id="modalBtn">删除这条记录</button>
+      </div>
+      <div class="say"><p>「点击删除时弹出模态弹窗（Modal）二次确认，有‘取消’和‘确认删除’两个按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="抽屉 drawer 侧边弹出 滑出面板">
+      <div class="card-top"><h3>抽屉<span class="en">Drawer</span></h3><div class="alias">也叫：侧边滑出面板</div>
+      <p class="desc">从屏幕边缘（通常是右侧）滑出一个面板，放详情、筛选条件或菜单，点空白处或关闭按钮收回去。</p></div>
+      <div class="demo">
+        <button class="btn" id="drawerBtn">查看订单详情</button>
+      </div>
+      <div class="say"><p>「点击订单后，从右侧滑出抽屉（Drawer）显示订单详情，不要跳转新页面。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="气泡确认 popconfirm 小确认框 删除确认">
+      <div class="card-top"><h3>气泡确认框<span class="en">Popconfirm</span></h3><div class="alias">也叫：小气泡确认</div>
+      <p class="desc">比弹窗更轻：点删除后，就在按钮旁边冒出一个小气泡问「确定吗？」，不用遮住整个页面。适合不那么严重的确认。</p></div>
+      <div class="demo">
+        <div class="pop-wrap">
+          <div class="pop-box" id="popBox">确定要删除吗？删了不能恢复。<div class="row"><button class="btn ghost sm" id="popCancel">取消</button><button class="btn danger sm" id="popOk">删除</button></div></div>
+          <button class="btn ghost" id="popBtn">🗑 删除</button>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)" id="popResult">点上方按钮试试</span>
+      </div>
+      <div class="say"><p>「删除按钮用气泡确认框（Popconfirm），在按钮上方弹出小确认，不要用大弹窗。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="警告提示条 alert banner 横幅提示 通知条">
+      <div class="card-top"><h3>警告提示条<span class="en">Alert / Banner</span></h3><div class="alias">也叫：横幅通知、提示横条</div>
+      <p class="desc">页面顶部或内容区上方的一条彩色横条，长期显示重要信息：黄色是提醒，红色是错误，绿色是成功。</p></div>
+      <div class="demo left">
+        <div class="alert-bar warn">⚠️ <span><b>注意：</b>你的套餐将于 3 天后到期，请及时续费。</span></div>
+        <div class="alert-bar err">✕ <span><b>提交失败：</b>手机号格式不正确，请检查后重试。</span></div>
+      </div>
+      <div class="say"><p>「在页面顶部加一条黄色警告提示条（Alert），写‘套餐即将到期’，带关闭按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="角标 徽标 badge 未读数 红点 数字标记">
+      <div class="card-top"><h3>角标 / 徽标<span class="en">Badge</span></h3><div class="alias">也叫：未读红点、数字角标</div>
+      <p class="desc">图标右上角的小红点或数字，表示「有 3 条未读消息」；也可以是文字小标签，如「新品」「热卖」。</p></div>
+      <div class="demo">
+        <div style="display:flex;gap:22px;align-items:center">
+          <button class="icon-btn" aria-label="消息">🔔<span class="badge-dot">3</span></button>
+          <button class="icon-btn" aria-label="购物车">🛒<span class="badge-dot">12</span></button>
+          <span class="pill-badge">新品上架</span>
+        </div>
+      </div>
+      <div class="say"><p>「给消息图标加数字角标（Badge），显示未读数量，超过 99 显示 99+。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="加载中 loading spinner 转圈 等待动画">
+      <div class="card-top"><h3>加载动画<span class="en">Loading / Spinner</span></h3><div class="alias">也叫：转圈、等待指示器</div>
+      <p class="desc">数据还没加载完时显示的转圈或跳动动画，告诉用户「正在处理，别急」，避免以为页面卡死了。</p></div>
+      <div class="demo">
+        <div style="display:flex;gap:34px;align-items:center">
+          <div class="spinner" role="status" aria-label="加载中"></div>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <button class="btn ghost sm" id="loadBtn">模拟加载一次</button>
+        <span style="font-size:12.5px;color:var(--muted)" id="loadText">点按钮后，这里会先转圈再出结果</span>
+      </div>
+      <div class="say"><p>「数据加载时显示加载动画（Spinner），加载完成后再显示内容，不要白屏。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="气泡卡片 popover 浮层卡片 信息浮层">
+      <div class="card-top"><h3>气泡卡片<span class="en">Popover</span></h3><div class="alias">也叫：浮层卡片、信息浮窗</div>
+      <p class="desc">比提醒气泡大、比弹窗小：点一下元素，旁边浮出一张小卡片，能放头像、简介和按钮。看用户资料、商品速览常用。</p></div>
+      <div class="demo">
+        <div class="popcard-wrap">
+          <div class="popcard" id="popcardBox"><b>🍊 橙子君</b><br><span style="color:var(--muted)">资深买手 · 已发布 128 篇测评</span><div style="margin-top:10px;display:flex;gap:8px"><button class="btn sm" onclick="showToast('已关注（演示）')">＋ 关注</button><button class="btn ghost sm" onclick="showToast('打开私信（演示）')">私信</button></div></div>
+          <button class="btn ghost" id="popcardBtn">👤 把鼠标放/点我看资料卡</button>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">点按钮，资料卡浮出来</span>
+      </div>
+      <div class="say"><p>「鼠标悬停头像时弹出气泡卡片（Popover），显示头像、简介和关注按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="通知面板 notification 消息面板 通知列表 铃铛面板">
+      <div class="card-top"><h3>通知面板<span class="en">Notification Panel</span></h3><div class="alias">也叫：消息面板、通知中心下拉</div>
+      <p class="desc">点铃铛后展开的一列消息清单，不用跳页面就能看完最近通知。配合角标数字一起用。</p></div>
+      <div class="demo">
+        <div class="notif-wrap">
+          <button class="btn" id="notifBtn">🔔 点我展开通知</button>
+          <div class="notif-panel" id="notifPanel">
+            <div>📦 你的包裹已送达<small>10 分钟前</small></div>
+            <div>💬 小林回复了你的评论<small>1 小时前</small></div>
+            <div>🎁 会员日优惠券已到账<small>昨天</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="say"><p>「点右上角铃铛展开通知面板，列出最近消息和时间，不跳转页面。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="结果页 result 成功页 状态页 提交成功 失败页">
+      <div class="card-top"><h3>结果状态页<span class="en">Result</span></h3><div class="alias">也叫：成功/失败提示页</div>
+      <p class="desc">提交完表单、付完款后，整页换成一个大图标 + 结果说明 + 下一步按钮。比轻提示更正式，适合支付、下单这种大事。</p></div>
+      <div class="demo">
+        <div class="result-demo">
+          <div class="result-ico" id="resultIco">✅</div>
+          <div style="font-weight:800;font-size:16px" id="resultTitle">支付成功</div>
+          <div style="font-size:13px;color:var(--muted)" id="resultDesc">订单号 202611190031，可在「我的订单」查看</div>
+          <div style="margin-top:10px;display:flex;gap:8px;justify-content:center"><button class="btn ghost sm" id="resultToggle">换成失败看看</button><button class="btn sm" onclick="showToast('返回首页（演示）')">返回首页</button></div>
+        </div>
+      </div>
+      <div class="say"><p>「支付完成后显示结果页（Result）：大号成功图标、订单号和‘查看订单/返回首页’两个按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="撤销提示 snackbar 撤销条 操作撤销 底部操作条">
+      <div class="card-top"><h3>带撤销的操作条<span class="en">Snackbar</span></h3><div class="alias">也叫：撤销提示条</div>
+      <p class="desc">轻提示的加强版：提示里带一个「撤销」按钮，删错了、移错了能立刻反悔。邮箱删信、文件移入回收站常用。</p></div>
+      <div class="demo">
+        <button class="btn danger" id="undoBtn">删除这封邮件</button>
+        <div id="undoSlot"></div>
+        <span style="font-size:12.5px;color:var(--muted)" id="undoText">删完会出现带「撤销」的提示条</span>
+      </div>
+      <div class="say"><p>「删除后底部出现带‘撤销’按钮的操作条（Snackbar），5 秒内可点撤销恢复。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="feedback" data-keys="全屏加载 fullscreen loading 整页加载 遮罩加载 全局等待">
+      <div class="card-top"><h3>全屏加载遮罩<span class="en">Fullscreen Loading</span></h3><div class="alias">也叫：整页等待、全局 Loading</div>
+      <p class="desc">整个页面被半透明层盖住，中间转圈，期间什么都点不了。适合提交订单、切换页面这种必须等完的场景。</p></div>
+      <div class="demo">
+        <button class="btn" id="fsLoadBtn">提交订单（模拟）</button>
+        <span style="font-size:12.5px;color:var(--muted)">点完整个页面会被盖住 1.5 秒</span>
+      </div>
+      <div class="say"><p>「提交时显示全屏加载遮罩，半透明黑底加转圈和‘提交中…’，期间禁止重复点击。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ 导航 ============ -->
+<section data-section="nav">
+  <div class="sec-head"><h2>二、导航</h2><p>帮用户知道「我在哪、能去哪」的所有入口</p></div>
+  <div class="grid">
+
+    <article class="card" data-cat="nav" data-keys="导航栏 navbar 顶栏 菜单栏 header">
+      <div class="card-top"><h3>顶部导航栏<span class="en">Navbar</span></h3><div class="alias">也叫：顶栏、Header</div>
+      <p class="desc">页面最上方固定的一条，通常放 Logo、主要栏目链接和登录/头像。用户在任何页面都能快速跳到其他栏目。</p></div>
+      <div class="demo left">
+        <div class="mini-nav"><b>🍊 橙子商城</b><span class="sp"></span><a href="#" class="on" onclick="return false">首页</a><a href="#" onclick="return false">商品</a><a href="#" onclick="return false">我的</a></div>
+      </div>
+      <div class="say"><p>「页面顶部做一个导航栏（Navbar），左边放 Logo，右边放首页、商品、我的三个链接。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="面包屑 breadcrumb 路径导航 层级">
+      <div class="card-top"><h3>面包屑<span class="en">Breadcrumb</span></h3><div class="alias">也叫：路径导航</div>
+      <p class="desc">一行「首页 › 商品 › 手机 › iPhone」的小字，显示你现在在网站的哪一层，点任意一层能跳回去。</p></div>
+      <div class="demo left">
+        <nav class="crumb"><a href="#" onclick="return false">首页</a><span class="sep">›</span><a href="#" onclick="return false">数码产品</a><span class="sep">›</span><a href="#" onclick="return false">手机</a><span class="sep">›</span><span class="cur">iPhone 17</span></nav>
+      </div>
+      <div class="say"><p>「在标题上方加面包屑导航（Breadcrumb）：首页 › 分类 › 当前页，每一级可点击。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="标签页 tabs 选项卡 切换页签">
+      <div class="card-top"><h3>标签页 / 选项卡<span class="en">Tabs</span></h3><div class="alias">也叫：页签切换</div>
+      <p class="desc">同一块区域里放几组内容，点顶部标签来回切换，不用跳页面。常用于「商品详情 / 参数 / 评论」。</p></div>
+      <div class="demo left">
+        <div class="tabs-head" role="tablist">
+          <button class="tab-btn on" data-tab="0">商品详情</button>
+          <button class="tab-btn" data-tab="1">规格参数</button>
+          <button class="tab-btn" data-tab="2">用户评论</button>
+        </div>
+        <div class="tab-pane" id="tabPane">这里是商品详情：面料、产地、使用说明都写在这里。</div>
+      </div>
+      <div class="say"><p>「详情区用标签页（Tabs）切换：详情、参数、评论三个页签，点击切换内容不刷新页面。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="下拉菜单 dropdown 下拉列表 展开菜单">
+      <div class="card-top"><h3>下拉菜单<span class="en">Dropdown</span></h3><div class="alias">也叫：下拉列表</div>
+      <p class="desc">点一下按钮，下方展开一列选项；点完选项或点别处就收起。适合放「更多操作」、头像菜单、筛选选项。</p></div>
+      <div class="demo">
+        <div class="dd">
+          <button class="btn" id="ddBtn">更多操作 ▾</button>
+          <div class="dd-menu" id="ddMenu">
+            <button data-act="编辑">✏️ 编辑</button>
+            <button data-act="复制链接">🔗 复制链接</button>
+            <button data-act="导出">⬇️ 导出</button>
+            <button data-act="删除">🗑 删除</button>
+          </div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)" id="ddResult">点按钮展开菜单，再点一个选项</span>
+      </div>
+      <div class="say"><p>「头像旁边加下拉菜单（Dropdown），点开有：个人设置、我的订单、退出登录。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="分页 pagination 页码 翻页">
+      <div class="card-top"><h3>分页器<span class="en">Pagination</span></h3><div class="alias">也叫：页码、翻页</div>
+      <p class="desc">内容太多时分成一页一页，底部有 1 2 3 … 页码按钮。和「无限滚动」是两种相反的加载方式，二选一。</p></div>
+      <div class="demo">
+        <div style="font-size:14px" id="pageText">正在看：第 1 页的内容</div>
+        <div class="pager" id="pager">
+          <button data-p="prev">‹</button><button data-p="1" class="on">1</button><button data-p="2">2</button><button data-p="3">3</button><button data-p="4">4</button><button data-p="5">5</button><button data-p="next">›</button>
+        </div>
+      </div>
+      <div class="say"><p>「列表每页显示 10 条，底部加分页器（Pagination），显示页码和上一页/下一页。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="步骤条 stepper 流程 进度步骤 向导">
+      <div class="card-top"><h3>步骤条<span class="en">Stepper</span></h3><div class="alias">也叫：流程进度、向导</div>
+      <p class="desc">把一件事拆成几步横着排开，显示「走到第几步了」。常用于下单、注册、填写多页表单。</p></div>
+      <div class="demo left">
+        <div class="steps" id="stepsDemo">
+          <div class="step done"><div class="dot">✓</div>填写信息</div>
+          <div class="step now"><div class="dot">2</div>确认订单</div>
+          <div class="step"><div class="dot">3</div>支付</div>
+          <div class="step"><div class="dot">4</div>完成</div>
+        </div>
+        <div style="text-align:center"><button class="btn ghost sm" id="stepNext">下一步 →</button></div>
+      </div>
+      <div class="say"><p>「下单流程顶部加步骤条（Stepper）：填写信息 → 确认订单 → 支付 → 完成，高亮当前步。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="吸顶 sticky 粘性定位 固定顶部 悬停固定">
+      <div class="card-top"><h3>吸顶 / 粘性定位<span class="en">Sticky</span></h3><div class="alias">也叫：滚动固定</div>
+      <p class="desc">元素滚到顶部时「粘」住不动，继续往下滚它也一直可见。导航栏、分类标题、购买按钮常用。</p></div>
+      <div class="demo left">
+        <div class="sticky-box">
+          <div class="sticky-head">📌 我是吸顶标题，往下滚我试试</div>
+          <p>第 1 行内容</p><p>第 2 行内容</p><p>第 3 行内容</p><p>第 4 行内容</p><p>第 5 行内容</p><p>第 6 行内容</p><p>第 7 行内容</p><p>第 8 行内容</p>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">↑ 在这个小框里往下滚动</span>
+      </div>
+      <div class="say"><p>「让分类标题吸顶（position: sticky），滚动时固定在顶部，下一个分类滚到时再顶替它。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="分段控制器 segmented 切换按钮组 二选一">
+      <div class="card-top"><h3>分段控制器<span class="en">Segmented Control</span></h3><div class="alias">也叫：切换按钮组</div>
+      <p class="desc">几个选项并排在一个圆角框里，选中一个高亮。比标签页更轻，常用于「日 / 周 / 月」「列表 / 网格」切换。</p></div>
+      <div class="demo">
+        <div class="seg" id="segDemo">
+          <button class="on">日</button><button>周</button><button>月</button><button>年</button>
+        </div>
+        <span style="font-size:13px;color:var(--muted)" id="segText">当前查看：日数据</span>
+      </div>
+      <div class="say"><p>「数据切换用分段控制器（Segmented Control）：日、周、月、年四个选项并排，选中高亮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="侧边栏 sidebar 侧边导航 左侧菜单 可折叠菜单">
+      <div class="card-top"><h3>侧边栏<span class="en">Sidebar</span></h3><div class="alias">也叫：左侧导航、侧边菜单</div>
+      <p class="desc">固定在页面左侧的一列菜单，后台、管理页、文档站最常见。空间不够时能折叠成只剩图标的一条。</p></div>
+      <div class="demo left">
+        <div class="mini-layout">
+          <div class="mini-side" id="miniSide">
+            <button class="on">🏠 首页</button><button>📦 订单</button><button>👥 客户</button><button>⚙️ 设置</button>
+          </div>
+          <div class="mini-main"><b style="color:var(--ink)">主内容区</b><br>点左侧菜单切换栏目；点下方按钮，侧边栏会折叠成图标条。<div style="margin-top:10px"><button class="btn ghost sm" id="sideToggle">⇤ 折叠/展开</button></div></div>
+        </div>
+      </div>
+      <div class="say"><p>「左侧做固定侧边栏（Sidebar）放主菜单，可折叠成只显示图标，右侧是内容区。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="底部导航 bottom navigation 底部标签栏 tab bar 手机底栏">
+      <div class="card-top"><h3>底部导航栏<span class="en">Bottom Navigation</span></h3><div class="alias">也叫：底部标签栏、Tab Bar</div>
+      <p class="desc">手机 App 和移动网页最底下的一排图标：首页、发现、消息、我的，拇指最容易够到，一般 3–5 个。</p></div>
+      <div class="demo">
+        <div class="bottom-nav" data-group>
+          <button class="on"><span>🏠</span>首页</button>
+          <button><span>🧭</span>发现</button>
+          <button><span>💬</span>消息</button>
+          <button><span>👤</span>我的</button>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">点一点，选中的会高亮</span>
+      </div>
+      <div class="say"><p>「移动端底部加固定导航栏：首页、发现、消息、我的，图标加文字，选中高亮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="汉堡菜单 hamburger menu 三横线菜单 移动端菜单 折叠菜单按钮">
+      <div class="card-top"><h3>汉堡菜单<span class="en">Hamburger Menu</span></h3><div class="alias">也叫：三横线菜单、移动端菜单按钮</div>
+      <p class="desc">那个「☰」三横线按钮，手机上导航装不下时，把菜单藏进它里面，点开才展开。</p></div>
+      <div class="demo">
+        <button class="icon-btn" id="burgerBtn" aria-label="打开菜单">☰</button>
+        <div class="burger-panel" id="burgerPanel">
+          <a href="#" onclick="return false">🏠 首页</a>
+          <a href="#" onclick="return false">🛍 全部商品</a>
+          <a href="#" onclick="return false">📦 我的订单</a>
+          <a href="#" onclick="return false">⚙️ 设置</a>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">点 ☰ 展开 / 收起菜单</span>
+      </div>
+      <div class="say"><p>「手机端顶栏只留 Logo 和汉堡菜单按钮（☰），点开向下展开全部导航链接。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="锚点导航 anchor scrollspy 页内导航 目录高亮 滚动监听">
+      <div class="card-top"><h3>锚点导航 / 滚动高亮<span class="en">Scrollspy</span></h3><div class="alias">也叫：页内目录、滚动监听</div>
+      <p class="desc">长页面旁边一列小目录：点一下平滑滚到对应段落；自己滚动时，当前段落的目录项自动高亮。</p></div>
+      <div class="demo left">
+        <div class="spy-box" id="spyBox">
+          <div class="spy-nav"><button class="on" data-spy="0">介绍</button><button data-spy="1">价格</button><button data-spy="2">评价</button></div>
+          <div class="spy-sec"><b>产品介绍</b>往下滚动这个小框，顶部目录会跟着变色。点目录也能直接跳过去。</div>
+          <div class="spy-sec"><b>价格说明</b>基础版免费，进阶版每月 19 元，包含全部功能和优先客服。</div>
+          <div class="spy-sec"><b>用户评价</b>「用了三个月，最满意的就是操作简单。」—— 已购买用户</div>
+        </div>
+      </div>
+      <div class="say"><p>「长页面右侧加锚点目录，点击平滑滚动到对应章节，滚动时自动高亮当前章节（Scrollspy）。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="返回顶部 back to top 回到顶部 一键置顶">
+      <div class="card-top"><h3>返回顶部<span class="en">Back to Top</span></h3><div class="alias">也叫：一键置顶、回顶部按钮</div>
+      <p class="desc">页面滚下去一段后，右下角才冒出一个 ↑ 按钮，点一下平滑滚回最上面。长文章、长列表必备。</p></div>
+      <div class="demo left">
+        <div class="totop-box" id="totopBox">
+          <p>在这个小框里往下滚一段，右下角会出现 ↑ 按钮。</p><p>第 1 段内容……</p><p>第 2 段内容……</p><p>第 3 段内容……</p><p>第 4 段内容……</p><p>第 5 段内容……</p><p>第 6 段内容……</p><p>已经到底啦，点 ↑ 回去。</p>
+          <button class="totop-btn" id="totopBtn" aria-label="返回顶部">↑</button>
+        </div>
+      </div>
+      <div class="say"><p>「滚动超过一屏后，右下角显示‘返回顶部’圆形按钮，点击平滑滚回顶部。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="nav" data-keys="宫格导航 grid menu 金刚区 图标入口 九宫格 快捷入口">
+      <div class="card-top"><h3>宫格导航<span class="en">Grid Menu</span></h3><div class="alias">也叫：金刚区、图标快捷入口</div>
+      <p class="desc">一排排「图标 + 两个字」的方格入口，手机首页最常见：充值、缴费、外卖、打车……功能多的时候用它一屏摆完。</p></div>
+      <div class="demo">
+        <div class="grid-menu">
+          <button onclick="showToast('打开：充值（演示）')"><span>📱</span>充值</button>
+          <button onclick="showToast('打开：缴费（演示）')"><span>💡</span>缴费</button>
+          <button onclick="showToast('打开：外卖（演示）')"><span>🍔</span>外卖</button>
+          <button onclick="showToast('打开：打车（演示）')"><span>🚕</span>打车</button>
+          <button onclick="showToast('打开：电影（演示）')"><span>🎬</span>电影</button>
+          <button onclick="showToast('打开：酒店（演示）')"><span>🏨</span>酒店</button>
+          <button onclick="showToast('打开：火车票（演示）')"><span>🚆</span>火车票</button>
+          <button onclick="showToast('打开：更多（演示）')"><span>⋯</span>更多</button>
+        </div>
+      </div>
+      <div class="say"><p>「首页功能入口用宫格导航（金刚区）：每行 4 个，图标在上、名称在下。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ 内容展示 ============ -->
+<section data-section="content">
+  <div class="sec-head"><h2>三、内容展示</h2><p>内容怎么排、怎么收起、怎么翻看</p></div>
+  <div class="grid">
+
+    <article class="card" data-cat="content" data-keys="折叠列表 折叠面板 accordion 手风琴 展开收起">
+      <div class="card-top"><h3>折叠面板<span class="en">Accordion</span></h3><div class="alias">也叫：手风琴、折叠列表</div>
+      <p class="desc">一列标题，点标题展开下面的内容，再点收起。常见问题（FAQ）页几乎都用它，省地方又整齐。</p></div>
+      <div class="demo left">
+        <div class="acc" id="accDemo">
+          <div class="acc-item"><button class="acc-head">怎么退款？<span class="chev">▾</span></button><div class="acc-body"><div>在「我的订单」里点申请退款，1–3 个工作日原路退回。</div></div></div>
+          <div class="acc-item"><button class="acc-head">多久发货？<span class="chev">▾</span></button><div class="acc-body"><div>付款后 48 小时内发货，偏远地区顺延 1 天。</div></div></div>
+          <div class="acc-item"><button class="acc-head">可以改地址吗？<span class="chev">▾</span></button><div class="acc-body"><div>发货前可以，在订单详情页点「修改地址」即可。</div></div></div>
+        </div>
+      </div>
+      <div class="say"><p>「常见问题用折叠面板（Accordion）：点问题展开答案，一次只展开一个。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="轮播图 carousel 幻灯片 banner 滑动图">
+      <div class="card-top"><h3>轮播图<span class="en">Carousel</span></h3><div class="alias">也叫：幻灯片、Banner 轮播</div>
+      <p class="desc">几张图自动一张张滑过去，下方有小圆点表示第几张，也能手动左右滑。首页顶部的大图区就是它。</p></div>
+      <div class="demo">
+        <div class="carousel">
+          <div class="car-viewport"><div class="car-track" id="carTrack">
+            <div class="car-slide" style="background:linear-gradient(120deg,#0F766E,#115E59)">活动一 · 满减</div>
+            <div class="car-slide" style="background:linear-gradient(120deg,#B45309,#92400E)">活动二 · 新品</div>
+            <div class="car-slide" style="background:linear-gradient(120deg,#1D4ED8,#1E3A8A)">活动三 · 会员日</div>
+          </div></div>
+          <div class="car-dots" id="carDots"><button class="on" aria-label="第1张"></button><button aria-label="第2张"></button><button aria-label="第3张"></button></div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">自动轮播中，点圆点可切换</span>
+      </div>
+      <div class="say"><p>「首页顶部加轮播图（Carousel），3 张图每 3 秒自动切换，带圆点指示，可手动滑动。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="卡片 card 信息卡 商品卡 块">
+      <div class="card-top"><h3>卡片<span class="en">Card</span></h3><div class="alias">也叫：信息卡、商品卡</div>
+      <p class="desc">把一条信息装在一个带边框/阴影的方块里：图在上、标题、简介、价格、按钮。列表页的基本单位就是一张张卡片。</p></div>
+      <div class="demo">
+        <div class="mini-card">
+          <div class="thumb">🎧</div>
+          <div class="body"><h5>降噪无线耳机</h5><p>主动降噪 · 续航 30 小时 · 蓝牙 5.3</p></div>
+          <div class="foot"><span class="price">¥399</span><button class="btn sm">加入购物车</button></div>
+        </div>
+      </div>
+      <div class="say"><p>「商品用卡片（Card）展示：上方图片、下方名称和简介，底部左边价格、右边购买按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="时间线 timeline 时间轴 物流轨迹 历史记录">
+      <div class="card-top"><h3>时间线<span class="en">Timeline</span></h3><div class="alias">也叫：时间轴</div>
+      <p class="desc">一条竖线串起按时间发生的事件，新在上、旧在下。物流轨迹、更新日志、个人动态都用它。</p></div>
+      <div class="demo">
+        <div class="tl">
+          <div class="tl-item"><div class="tl-dot"></div><div><h5>包裹已签收</h5><p>今天 10:24 · 本人签收</p></div></div>
+          <div class="tl-item"><div class="tl-dot"></div><div><h5>正在派送</h5><p>今天 08:10 · 快递员已出发</p></div></div>
+          <div class="tl-item"><div class="tl-dot"></div><div><h5>到达本地仓库</h5><p>昨天 21:37</p></div></div>
+        </div>
+      </div>
+      <div class="say"><p>「物流信息用时间线（Timeline）展示，竖线串联每个节点，最新在最上面。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="骨架屏 skeleton 占位 加载占位 灰块">
+      <div class="card-top"><h3>骨架屏<span class="en">Skeleton</span></h3><div class="alias">也叫：加载占位图</div>
+      <p class="desc">内容加载前，先显示和最终页面长得差不多的灰色块轮廓（带闪光），加载完再换成真内容。比转圈更不晃眼。</p></div>
+      <div class="demo left">
+        <div class="skel" id="skelDemo">
+          <div class="sk" style="height:16px;width:55%;margin-bottom:10px"></div>
+          <div class="sk" style="height:12px;width:92%;margin-bottom:8px"></div>
+          <div class="sk" style="height:12px;width:80%;margin-bottom:8px"></div>
+          <div class="sk" style="height:12px;width:64%"></div>
+        </div>
+        <div style="text-align:center"><button class="btn ghost sm" id="skelBtn">重新演示一次</button></div>
+        <div id="skelReal" style="display:none;font-size:14px;text-align:left;width:100%"><b>这就是加载完成的样子</b><br><span style="color:var(--muted)">骨架屏先占位，真内容到了再替换，用户不会看到白屏闪烁。</span></div>
+      </div>
+      <div class="say"><p>「列表加载时用骨架屏（Skeleton）占位，灰块闪烁，数据到了再替换成真实内容。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="空状态 empty state 无数据 暂无内容">
+      <div class="card-top"><h3>空状态<span class="en">Empty State</span></h3><div class="alias">也叫：无数据提示</div>
+      <p class="desc">列表里什么都没有时，不是留一片空白，而是显示一个图标 + 一句「暂无订单」+ 一个引导按钮。</p></div>
+      <div class="demo">
+        <div style="font-size:42px">📭</div>
+        <div style="font-weight:700">还没有订单</div>
+        <div style="font-size:13.5px;color:var(--muted)">去逛逛商城，看看有什么喜欢的</div>
+        <button class="btn sm" onclick="showToast('这就去逛商城（演示）')">去逛逛</button>
+      </div>
+      <div class="say"><p>「列表为空时显示空状态（Empty State）：一个插图、一句‘暂无数据’和一个引导按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="跑马灯 marquee 滚动字幕 走马灯 公告滚动">
+      <div class="card-top"><h3>跑马灯 / 滚动公告<span class="en">Marquee</span></h3><div class="alias">也叫：走马灯、滚动字幕</div>
+      <p class="desc">一行文字从右往左不停滚动，常见于商城公告、直播间提示。适合放一条不需要点开看的通知。</p></div>
+      <div class="demo left">
+        <div class="marquee"><div class="marquee-inner">📢 双十一大促：全场满 300 减 50 · 会员额外 9 折 · 下单即赠小样 —— &nbsp;📢 双十一大促：全场满 300 减 50 · 会员额外 9 折 · 下单即赠小样 —— &nbsp;</div></div>
+      </div>
+      <div class="say"><p>「顶部加一条跑马灯公告（Marquee），文字从右向左循环滚动，鼠标悬停时暂停。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="灯箱 lightbox 图片放大 查看大图 图片预览">
+      <div class="card-top"><h3>图片灯箱<span class="en">Lightbox</span></h3><div class="alias">也叫：查看大图、图片预览</div>
+      <p class="desc">点一张小图，全屏变暗、图片放大居中显示，再点任意处关闭。相册和商品图必备。</p></div>
+      <div class="demo">
+        <div class="lb-thumbs">
+          <button style="background:linear-gradient(130deg,#0F766E,#134E4A)" data-lb="🏔️" aria-label="查看大图 1">🏔️</button>
+          <button style="background:linear-gradient(130deg,#B45309,#78350F)" data-lb="🌅" aria-label="查看大图 2">🌅</button>
+          <button style="background:linear-gradient(130deg,#1D4ED8,#172554)" data-lb="🌊" aria-label="查看大图 3">🌊</button>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">点任意一张图放大看</span>
+      </div>
+      <div class="say"><p>「点击图片打开灯箱（Lightbox）全屏看大图，带左右切换和关闭按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="树形 tree 目录 层级结构 文件树">
+      <div class="card-top"><h3>树形结构<span class="en">Tree</span></h3><div class="alias">也叫：目录树、层级列表</div>
+      <p class="desc">像文件夹一样层层展开的列表：点父级展开子级。适合文件目录、组织架构、多级分类。</p></div>
+      <div class="demo left">
+        <div class="tree"><ul>
+          <li class="open"><button><span class="chev">▶</span>📁 我的文件</button><ul class="kids">
+            <li class="open"><button><span class="chev">▶</span>📁 工作文档</button><ul class="kids">
+              <li class="leaf">📄 年度报告.docx</li><li class="leaf">📄 预算表.xlsx</li>
+            </ul></li>
+            <li><button><span class="chev">▶</span>📁 照片</button><ul class="kids"><li class="leaf">🖼 旅行.jpg</li></ul></li>
+          </ul></li>
+        </ul></div>
+      </div>
+      <div class="say"><p>「文件列表做成树形结构（Tree），点击文件夹展开/收起子级，层级用缩进区分。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="数据表格 table 表格 排序表格 数据表">
+      <div class="card-top"><h3>数据表格<span class="en">Table</span></h3><div class="alias">也叫：数据表、列表表格</div>
+      <p class="desc">行列整齐地摆数据：订单、成绩、库存都靠它。表头常可点击排序，行多时配分页器一起用。</p></div>
+      <div class="demo left">
+        <table class="data-table" id="dataTable">
+          <thead><tr><th>商品</th><th data-sort="price">价格 ↕</th><th data-sort="stock">库存 ↕</th></tr></thead>
+          <tbody>
+            <tr><td>无线耳机</td><td>399</td><td>58</td></tr>
+            <tr><td>机械键盘</td><td>259</td><td>120</td></tr>
+            <tr><td>保温杯</td><td>89</td><td>340</td></tr>
+          </tbody>
+        </table>
+        <span style="font-size:12.5px;color:var(--muted);text-align:center">点「价格 / 库存」表头可以排序</span>
+      </div>
+      <div class="say"><p>「数据用表格展示，表头点击可按价格排序，数字右对齐，行与行之间有分隔线。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="基础列表 list 列表项 信息列表 条目">
+      <div class="card-top"><h3>基础列表<span class="en">List</span></h3><div class="alias">也叫：信息列表、条目列表</div>
+      <p class="desc">最朴素的排版：一行一条，左边名称、右边数值或箭头。设置页、账单页、消息页的基本形态。</p></div>
+      <div class="demo">
+        <div class="plain-list">
+          <div><span>📦 我的订单</span><small>3 待收货 ›</small></div>
+          <div><span>⭐ 我的收藏</span><small>12 件 ›</small></div>
+          <div><span>🎟 优惠券</span><small>2 张可用 ›</small></div>
+          <div><span>📍 收货地址</span><small>›</small></div>
+        </div>
+      </div>
+      <div class="say"><p>「个人中心用基础列表排版：一行一项，左边图标加名称，右边显示状态和箭头。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="瀑布流 masonry waterfall 双列流 错落布局">
+      <div class="card-top"><h3>瀑布流<span class="en">Masonry</span></h3><div class="alias">也叫：双列错落流</div>
+      <p class="desc">两列（或多列）卡片高度参差错落，像瀑布一样往下排。小红书、图片社区的首页就是它，适合图片长短不一的内容。</p></div>
+      <div class="demo">
+        <div class="masonry">
+          <div style="background:#0F766E;height:86px">🏔 旅行笔记</div>
+          <div style="background:#B45309;height:56px">🍜 美食探店</div>
+          <div style="background:#1D4ED8;height:70px">📷 摄影日常</div>
+          <div style="background:#92400E;height:96px">🏡 家居改造</div>
+          <div style="background:#134E4A;height:60px">🐱 猫咪日记</div>
+          <div style="background:#7C2D12;height:78px">🎨 手绘分享</div>
+        </div>
+      </div>
+      <div class="say"><p>「首页内容用瀑布流（Masonry）双列排版，卡片高度按图片比例错落，不要等高。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="头像组 avatar group 头像叠放 成员头像 参与者">
+      <div class="card-top"><h3>头像组<span class="en">Avatar Group</span></h3><div class="alias">也叫：头像叠放、成员堆叠</div>
+      <p class="desc">几个头像互相叠在一起，后面跟「+9」表示还有更多人。群成员、参与者、点赞的人常用这种紧凑展示。</p></div>
+      <div class="demo">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center">
+          <div class="avatar-group"><span style="background:#FDE68A">🦊</span><span style="background:#A7F3D0">🐼</span><span style="background:#BFDBFE">🐰</span><span style="background:#FBCFE8">🐱</span><span style="background:var(--surface2);font-size:13px;font-weight:800;color:var(--muted)">+9</span></div>
+          <span style="font-size:13.5px;color:var(--muted)">13 人参与</span>
+        </div>
+      </div>
+      <div class="say"><p>「参与者用头像组展示：头像叠放显示前 4 个，后面用‘+9’表示剩余人数。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="倒计时 countdown 限时 抢购倒计时 秒杀计时">
+      <div class="card-top"><h3>倒计时<span class="en">Countdown</span></h3><div class="alias">也叫：限时计时、秒杀倒计时</div>
+      <p class="desc">离活动结束还剩几天几时几分几秒，一秒一秒往下跳，营造紧迫感。秒杀、抢购、开售提醒必备。</p></div>
+      <div class="demo">
+        <div style="font-size:13.5px;color:var(--muted)">🔥 限时秒杀 · 距结束还有</div>
+        <div class="countdown"><div><b id="cdD">00</b><small>天</small></div><div><b id="cdH">00</b><small>时</small></div><div><b id="cdM">00</b><small>分</small></div><div><b id="cdS">00</b><small>秒</small></div></div>
+      </div>
+      <div class="say"><p>「秒杀区加倒计时（Countdown），显示天/时/分/秒，每秒刷新，结束时显示‘活动已结束’。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="价格表 pricing 套餐对比 定价卡 会员套餐">
+      <div class="card-top"><h3>套餐价格卡<span class="en">Pricing</span></h3><div class="alias">也叫：定价表、套餐对比</div>
+      <p class="desc">把几个套餐并排摆：价格最大最醒目，下面列包含的功能，推荐的那个加边框或「推荐」标记高亮。</p></div>
+      <div class="demo">
+        <div class="pricing">
+          <div style="font-weight:700">进阶版 <span class="pill-badge">推荐</span></div>
+          <div class="p">¥19<small style="font-size:13px;color:var(--muted);font-weight:400"> / 月</small></div>
+          <ul><li>全部基础功能</li><li>云端同步 100GB</li><li>优先客服支持</li></ul>
+          <button class="btn" style="width:100%" onclick="showToast('已选择进阶版（演示）')">立即开通</button>
+        </div>
+      </div>
+      <div class="say"><p>「定价页用套餐价格卡并排对比，推荐套餐加粗边框和‘推荐’徽标，价格字号最大。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="图片对比 before after 对比滑块 前后对比 效果对比">
+      <div class="card-top"><h3>前后对比滑块<span class="en">Before / After</span></h3><div class="alias">也叫：图片对比、对比滑动条</div>
+      <p class="desc">两张图叠在一起，拖中间的滑块左右对比。修图效果、装修前后、美颜对比特别直观。</p></div>
+      <div class="demo">
+        <div class="ba-wrap">
+          <div class="ba-a">🌫️</div>
+          <div class="ba-b" id="baTop">🌈</div>
+          <input type="range" id="baRange" min="0" max="100" value="50" aria-label="对比滑块">
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">拖动滑块：左是处理前，右是处理后</span>
+      </div>
+      <div class="say"><p>「加一个前后对比滑块：两张图叠放，拖动中间滑杆左右对比处理前后效果。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="日历 calendar 月历 日期展示 签到日历">
+      <div class="card-top"><h3>日历<span class="en">Calendar</span></h3><div class="alias">也叫：月历、日期面板</div>
+      <p class="desc">一整月的日期格子，今天高亮，有安排的日子打个点或圈。和「日期选择器」不同，这个主要用来展示和签到。</p></div>
+      <div class="demo">
+        <div class="cal"><h5 id="calTitle">2026 年 11 月</h5><div class="cal-grid" id="calGrid"></div></div>
+        <span style="font-size:12.5px;color:var(--muted)">金色圈 = 已签到 · 绿色 = 今天</span>
+      </div>
+      <div class="say"><p>「做一个签到日历（Calendar）：月视图，今天高亮，签到过的日期打圈标记。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="评论列表 comment 评论区 留言 点赞回复">
+      <div class="card-top"><h3>评论列表<span class="en">Comment List</span></h3><div class="alias">也叫：评论区、留言区</div>
+      <p class="desc">头像 + 名字 + 内容 + 时间 + 点赞/回复，一条条往下排。文章、视频、商品评价区都是这个结构。</p></div>
+      <div class="demo left">
+        <div class="comment">
+          <div class="comment-item"><span class="av">🦊</span><div style="flex:1;min-width:0"><b style="font-size:14px">小狐狸</b> <small style="color:var(--muted)">2 小时前</small><p>写得太清楚了，照着做一次就成功。</p><button class="like">♡ 点赞 <span>24</span></button></div></div>
+          <div class="comment-item"><span class="av">🐼</span><div style="flex:1;min-width:0"><b style="font-size:14px">滚滚</b> <small style="color:var(--muted)">5 小时前</small><p>第三步的图片能不能再大一点？</p><button class="like">♡ 点赞 <span>6</span></button></div></div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">点 ♡ 可以点赞</span>
+      </div>
+      <div class="say"><p>「底部做评论列表：头像、昵称、时间、正文，右下角有点赞和回复按钮，点赞数可累加。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="content" data-keys="视频播放器 video player 播放器 播放控件 视频组件">
+      <div class="card-top"><h3>视频播放器<span class="en">Video Player</span></h3><div class="alias">也叫：播放控件条</div>
+      <p class="desc">画面 + 底部控制条：播放/暂停按钮、进度条、时间、全屏按钮。点中间大三角开始播是它的标志动作。</p></div>
+      <div class="demo">
+        <div class="video-mock">
+          <div class="video-stage" id="videoStage">▶️</div>
+          <div class="video-bar"><button id="videoBtn" aria-label="播放/暂停">▶</button><div class="video-prog"><i id="videoProg"></i></div><small><span id="videoTime">0:00</span> / 0:30</small></div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">点 ▶ 播放，进度条会走（演示动画）</span>
+      </div>
+      <div class="say"><p>「嵌入视频播放器：居中播放按钮、底部进度条可拖动、显示当前/总时长，带全屏按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ 表单交互 ============ -->
+<section data-section="form">
+  <div class="sec-head"><h2>四、表单交互</h2><p>让用户输入、选择、调节的小控件</p></div>
+  <div class="grid">
+
+    <article class="card" data-cat="form" data-keys="开关 switch toggle 开关按钮 状态切换">
+      <div class="card-top"><h3>开关<span class="en">Switch / Toggle</span></h3><div class="alias">也叫：切换开关</div>
+      <p class="desc">一个滑动的小开关，只有开/关两种状态，拨一下立即生效。设置页里到处都是它。</p></div>
+      <div class="demo left">
+        <label style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:320px;margin:0 auto;font-size:14.5px">消息通知
+          <span class="switch"><input type="checkbox" id="sw1" checked><span class="track"></span></span></label>
+        <label style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:320px;margin:0 auto;font-size:14.5px">深色模式
+          <span class="switch"><input type="checkbox" id="sw2"><span class="track"></span></span></label>
+        <span style="font-size:12.5px;color:var(--muted);text-align:center" id="swText">消息通知：开 · 深色模式：关</span>
+      </div>
+      <div class="say"><p>「设置项用开关（Switch）控制开/关，切换后立即生效，不需要再点保存。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="滑块 slider 滑动条 范围选择 音量">
+      <div class="card-top"><h3>滑块<span class="en">Slider</span></h3><div class="alias">也叫：滑动条、范围选择器</div>
+      <p class="desc">拖动一个小圆点，在一条线上选数值。适合音量、亮度、价格区间这种「大概多少」的选择。</p></div>
+      <div class="demo">
+        <div class="range-val"><span id="rangeVal">60</span><span style="font-size:15px;color:var(--muted)"> / 100</span></div>
+        <input type="range" id="rangeDemo" min="0" max="100" value="60" aria-label="滑块演示">
+        <span style="font-size:12.5px;color:var(--muted)">拖动圆点，数字会跟着变</span>
+      </div>
+      <div class="say"><p>「音量用滑块（Slider）调节，范围 0–100，拖动时实时显示当前数值。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="评分 rate 星级 打分 评价星星">
+      <div class="card-top"><h3>星级评分<span class="en">Rate</span></h3><div class="alias">也叫：打星、评分组件</div>
+      <p class="desc">一排星星，点几颗亮几颗。评价商品、给服务打分都用它，也可以只展示不可点。</p></div>
+      <div class="demo">
+        <div class="rate" id="rateDemo">
+          <button aria-label="1星">★</button><button aria-label="2星">★</button><button aria-label="3星">★</button><button aria-label="4星">★</button><button aria-label="5星">★</button>
+        </div>
+        <span style="font-size:13px;color:var(--muted)" id="rateText">点星星打个分</span>
+      </div>
+      <div class="say"><p>「评价区加星级评分（Rate），5 颗星可点击，点第几颗就亮几颗，并显示分值。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="搜索联想 autocomplete 自动补全 搜索建议 输入提示">
+      <div class="card-top"><h3>搜索联想<span class="en">Autocomplete</span></h3><div class="alias">也叫：自动补全、搜索建议</div>
+      <p class="desc">在搜索框打字时，下方实时列出可能的词，点一下直接填入。试着在下面输入「苹」或「耳」。</p></div>
+      <div class="demo">
+        <div class="auto-wrap">
+          <input id="autoInput" type="text" placeholder="试试输入：苹 / 耳 / 手" autocomplete="off">
+          <div class="auto-list" id="autoList"></div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">输入一个字，下方会出现联想词</span>
+      </div>
+      <div class="say"><p>「搜索框加搜索联想（Autocomplete），输入时下拉显示匹配建议，关键词高亮，可点选。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="标签输入 tag input 标签编辑 多标签">
+      <div class="card-top"><h3>标签输入<span class="en">Tag Input</span></h3><div class="alias">也叫：多标签编辑</div>
+      <p class="desc">输入一个词按回车，它变成一个带 × 的小标签，可以加很多个、逐个删除。发文章打标签时用。</p></div>
+      <div class="demo">
+        <div class="tagbox" id="tagBox">
+          <span class="tag">旅行<button aria-label="删除标签">×</button></span>
+          <span class="tag">美食<button aria-label="删除标签">×</button></span>
+          <input id="tagInput" type="text" placeholder="输入后按回车添加">
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">输入文字按回车试试，点 × 可删除</span>
+      </div>
+      <div class="say"><p>「标签用标签输入框（Tag Input）：输入后按回车生成标签，每个标签可单独删除。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="拖拽上传 upload 上传 文件上传 拖放">
+      <div class="card-top"><h3>拖拽上传<span class="en">Drag Upload</span></h3><div class="alias">也叫：拖放上传区</div>
+      <p class="desc">一个虚线框区域，把文件直接拖进去就能上传（也能点击选择）。把任意东西拖到下面框上试试高亮效果。</p></div>
+      <div class="demo">
+        <div class="upload-zone" id="uploadZone">
+          <div class="big">☁️⬆️</div>
+          <div style="font-weight:700;font-size:14.5px">把文件拖到这里，或点击选择</div>
+          <div style="font-size:12.5px;color:var(--muted)" id="uploadText">支持 JPG / PNG，单个不超过 10MB</div>
+          <input type="file" id="uploadFile" hidden>
+        </div>
+      </div>
+      <div class="say"><p>「上传区支持拖拽上传：虚线框，拖入时边框高亮，也可点击选择文件，显示格式限制。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="进度条 progress 上传进度 完成度">
+      <div class="card-top"><h3>进度条<span class="en">Progress Bar</span></h3><div class="alias">也叫：完成度条</div>
+      <p class="desc">一条会变长的色带，表示事情完成了百分之多少。上传文件、填写完整度、任务进度都用它。</p></div>
+      <div class="demo">
+        <div style="font-size:14px">文件上传中… <b id="progText">0%</b></div>
+        <div class="progress"><i id="progBar"></i></div>
+        <button class="btn ghost sm" id="progBtn">开始上传（模拟）</button>
+      </div>
+      <div class="say"><p>「上传时显示进度条（Progress Bar）和百分比数字，完成后变绿色并提示成功。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="单选框 radio 单选 选项 二选一 单项选择">
+      <div class="card-top"><h3>单选框<span class="en">Radio</span></h3><div class="alias">也叫：单选按钮</div>
+      <p class="desc">一排圆圈，只能选一个，选了新的旧的自动取消。性别、支付方式、配送方式这种「必须选一」的场合用。</p></div>
+      <div class="demo left">
+        <div class="choice-list" id="radioDemo">
+          <label><input type="radio" name="payDemo" checked>💳 银行卡支付</label>
+          <label><input type="radio" name="payDemo">📱 扫码支付</label>
+          <label><input type="radio" name="payDemo">🧧 余额支付</label>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted);text-align:center" id="radioText">当前选择：银行卡支付</span>
+      </div>
+      <div class="say"><p>「支付方式用单选框（Radio），三个选项只能选一个，默认选中第一个。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="多选框 checkbox 复选框 多选 勾选">
+      <div class="card-top"><h3>多选框<span class="en">Checkbox</span></h3><div class="alias">也叫：复选框、勾选框</div>
+      <p class="desc">一排方框，想勾几个勾几个。和单选框的区别就一条：多选框能同时选多个，比如兴趣爱好、筛选条件。</p></div>
+      <div class="demo left">
+        <div class="choice-list" id="checkDemo">
+          <label><input type="checkbox" value="旅行" checked>🧳 旅行</label>
+          <label><input type="checkbox" value="美食">🍜 美食</label>
+          <label><input type="checkbox" value="运动">🏃 运动</label>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted);text-align:center" id="checkText">已选：旅行</span>
+      </div>
+      <div class="say"><p>「兴趣爱好用多选框（Checkbox），可多选，底部实时显示已选了哪几项。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="下拉选择 select 选择器 下拉框 选项选择">
+      <div class="card-top"><h3>下拉选择框<span class="en">Select</span></h3><div class="alias">也叫：下拉框、选择器</div>
+      <p class="desc">一个框，点开列出全部选项，选完收起只显示选中的那个。选项很多又只选一个时用它，比单选框省地方。</p></div>
+      <div class="demo">
+        <select class="demo-select" id="selectDemo" aria-label="选择城市">
+          <option>北京</option><option>上海</option><option selected>广州</option><option>深圳</option><option>成都</option>
+        </select>
+        <span style="font-size:12.5px;color:var(--muted)" id="selectText">已选城市：广州</span>
+      </div>
+      <div class="say"><p>「城市用下拉选择框（Select），点开选一个，选项超过 10 个时带搜索。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="日期选择 date picker 日历选择 选日期 时间选择">
+      <div class="card-top"><h3>日期选择器<span class="en">Date Picker</span></h3><div class="alias">也叫：日历选择、选日期</div>
+      <p class="desc">点输入框弹出小日历选一天，不用手打格式。生日、预约、订票都靠它，还能限制只能选今天之后。</p></div>
+      <div class="demo">
+        <input type="date" class="demo-date" id="dateDemo" value="2026-11-20" aria-label="选择日期">
+        <span style="font-size:12.5px;color:var(--muted)" id="dateText">已选：2026-11-20</span>
+      </div>
+      <div class="say"><p>「预约时间用日期选择器（Date Picker），点开小日历选日期，只能选今天及以后。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="颜色选择 color picker 取色器 选颜色 调色">
+      <div class="card-top"><h3>颜色选择器<span class="en">Color Picker</span></h3><div class="alias">也叫：取色器、调色板</div>
+      <p class="desc">点开一个色板，选任意颜色，还能拿到它的色号（如 #0F766E）。主题设置、画图工具、装修配色常用。</p></div>
+      <div class="demo">
+        <input type="color" class="demo-color" id="colorDemo" value="#0f766e" aria-label="选择颜色">
+        <span style="font-size:13.5px">当前色号：<b id="colorText">#0F766E</b> <span id="colorChip" style="display:inline-block;width:16px;height:16px;border-radius:5px;background:#0f766e;vertical-align:-3px"></span></span>
+      </div>
+      <div class="say"><p>「主题色用颜色选择器（Color Picker），点开色板选色，旁边显示色号并可复制。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="数量步进器 stepper input number 加减 数量选择 计数器">
+      <div class="card-top"><h3>数量步进器<span class="en">Number Stepper</span></h3><div class="alias">也叫：加减按钮、数量选择器</div>
+      <p class="desc">一个减号、一个数字、一个加号，点一下加一减一。购物车改数量、订票选张数，永远是这个组合。</p></div>
+      <div class="demo">
+        <div class="qty"><button id="qtyMinus" aria-label="减少">−</button><b id="qtyVal">2</b><button id="qtyPlus" aria-label="增加">＋</button></div>
+        <span style="font-size:12.5px;color:var(--muted)" id="qtyText">小计：¥798（单价 ¥399）</span>
+      </div>
+      <div class="say"><p>「购物车数量用步进器：左右加减按钮，中间数字，最少 1 件、最多 10 件，到限变灰。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="验证码输入 otp pin 验证码 短信码 分格输入">
+      <div class="card-top"><h3>验证码分格输入<span class="en">OTP Input</span></h3><div class="alias">也叫：PIN 码输入、分格验证码</div>
+      <p class="desc">验证码拆成 4–6 个小格子，输一位自动跳下一格，输满自动提交。登录、支付确认时最眼熟。</p></div>
+      <div class="demo">
+        <div class="otp" id="otpDemo"><input inputmode="numeric" maxlength="1" aria-label="第1位"><input inputmode="numeric" maxlength="1" aria-label="第2位"><input inputmode="numeric" maxlength="1" aria-label="第3位"><input inputmode="numeric" maxlength="1" aria-label="第4位"></div>
+        <span style="font-size:12.5px;color:var(--muted)" id="otpText">随便输 4 位数字试试自动跳格</span>
+      </div>
+      <div class="say"><p>「短信验证码用分格输入（OTP）：4 个格子，输一位自动跳下一格，输满自动校验。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="密码强度 password strength 密码 meter 安全等级">
+      <div class="card-top"><h3>密码强度条<span class="en">Password Strength</span></h3><div class="alias">也叫：密码安全等级</div>
+      <p class="desc">输密码时下面一条小进度条实时变：太短是红、带数字变黄、长短搭配齐全变绿。注册页用来催你设个好密码。</p></div>
+      <div class="demo">
+        <div class="pwd-wrap">
+          <input type="password" id="pwdDemo" placeholder="试着输入一个密码…" autocomplete="off">
+          <div class="pwd-meter"><i id="pwdBar"></i></div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:6px" id="pwdText">强度：未输入</div>
+        </div>
+      </div>
+      <div class="say"><p>「注册密码框下方加密码强度条：按长度和字符种类实时显示弱/中/强，颜色红黄绿。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="字数统计 textarea 多行输入 字数限制 输入框计数">
+      <div class="card-top"><h3>多行输入 + 字数统计<span class="en">Textarea Counter</span></h3><div class="alias">也叫：文本域、字数限制提示</div>
+      <p class="desc">写长内容的大框，右下角实时显示「已写 23 / 200 字」，快到上限会提醒。评价、简介、留言都用它。</p></div>
+      <div class="demo">
+        <div class="ta-wrap">
+          <textarea id="taDemo" maxlength="200" placeholder="写点什么试试…"></textarea>
+          <div class="ta-count"><span id="taCount">0</span> / 200 字</div>
+        </div>
+      </div>
+      <div class="say"><p>「评价框用多行输入（Textarea），右下角实时字数统计，最多 200 字，超了不能再输。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="级联选择 cascader 联动选择 省市区 二级联动">
+      <div class="card-top"><h3>级联选择<span class="en">Cascader</span></h3><div class="alias">也叫：联动选择、省市区选择</div>
+      <p class="desc">先选上一级，下一级的选项才跟着变：选了广东，第二框才出现广州、深圳。地址、分类目录都这样选。</p></div>
+      <div class="demo">
+        <div class="cascade">
+          <select id="casProv" aria-label="省份"><option value="gd">广东省</option><option value="zj">浙江省</option><option value="sc">四川省</option></select>
+          <select id="casCity" aria-label="城市"></select>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)" id="casText">切换省份，城市列表会跟着变</span>
+      </div>
+      <div class="say"><p>「收货地址用级联选择（Cascader）：先选省，再联动出该省的城市，最后选区。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="form" data-keys="筛选标签 filter chips 筛选条件 快速筛选 条件标签">
+      <div class="card-top"><h3>筛选标签组<span class="en">Filter Chips</span></h3><div class="alias">也叫：快速筛选、条件胶囊</div>
+      <p class="desc">一排小胶囊：全部、包邮、现货、降价……点亮几个，列表立刻只剩符合的。电商列表页顶部几乎都有。</p></div>
+      <div class="demo">
+        <div class="chips" id="chipDemo">
+          <button class="on">全部</button><button>包邮</button><button>现货</button><button>降价</button><button>品牌</button>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)" id="chipText">已开启筛选：无（显示全部）</span>
+      </div>
+      <div class="say"><p>「列表上方加筛选标签组（Filter Chips），可多选，点亮即生效，列表实时过滤。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ 动效与滚动 ============ -->
+<section data-section="motion">
+  <div class="sec-head"><h2>五、动效与滚动</h2><p>页面动起来、长列表怎么加载的效果</p></div>
+  <div class="grid">
+
+    <article class="card" data-cat="motion" data-keys="悬浮按钮 fab 回到顶部 back to top 浮动按钮">
+      <div class="card-top"><h3>悬浮按钮<span class="en">FAB</span></h3><div class="alias">也叫：浮动操作按钮</div>
+      <p class="desc">一个圆形按钮浮在页面角落，不随滚动消失。最常见的用法是右下角的「＋新建」和「回到顶部 ↑」。</p></div>
+      <div class="demo left">
+        <div class="fab-demo">
+          <p>这是页面内容区域…<br>不管内容滚到哪里，右下角的按钮一直浮着。</p>
+          <button class="fab" id="fabBtn" aria-label="新建">＋</button>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted);text-align:center" id="fabText">点右下角的 ＋ 试试</span>
+      </div>
+      <div class="say"><p>「右下角加一个悬浮按钮（FAB），圆形带阴影，点击新建内容；滚动超过一屏后旁边再出现‘回到顶部’。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="无限滚动 infinite scroll 加载更多 上拉加载 瀑布流加载">
+      <div class="card-top"><h3>无限滚动 / 上拉加载<span class="en">Infinite Scroll</span></h3><div class="alias">也叫：滚动加载更多</div>
+      <p class="desc">不用点页码，列表滑到底部就自动加载下一批。刷短视频、逛商品流就是这种感觉。和「分页器」二选一。</p></div>
+      <div class="demo">
+        <div class="load-box" id="loadBox"></div>
+        <span style="font-size:12.5px;color:var(--muted)">↑ 在框里一直往下滑，到底自动加载</span>
+      </div>
+      <div class="say"><p>「商品列表用无限滚动（Infinite Scroll），滑到底部自动加载下一页，底部显示‘加载中…’。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="悬停效果 hover 鼠标经过 hover效果 放大 阴影">
+      <div class="card-top"><h3>悬停效果<span class="en">Hover</span></h3><div class="alias">也叫：鼠标经过效果</div>
+      <p class="desc">鼠标放上去时元素发生变化：上浮、加阴影、图片放大、变色——暗示「这个可以点」。手机上没有悬停，一般用点击代替。</p></div>
+      <div class="demo">
+        <div class="hover-grid">
+          <div class="hover-card">🃏 卡片上浮<br><span style="color:var(--muted);font-weight:400;font-size:12px">放上来试试</span></div>
+          <div class="hover-zoom"><div class="inner">🌄</div></div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">左：上浮+阴影 · 右：图片放大</span>
+      </div>
+      <div class="say"><p>「给卡片加悬停效果（Hover）：鼠标放上去微微上浮并加深阴影，图片缓慢放大。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="数字滚动 count up 数字动画 计数动画 数据展示">
+      <div class="card-top"><h3>数字滚动<span class="en">Count Up</span></h3><div class="alias">也叫：数字递增动画</div>
+      <p class="desc">数字从 0 快速滚到目标值，显得很有「数据感」。官网首页展示用户量、销售额时常用。</p></div>
+      <div class="demo">
+        <div class="count-num" id="countNum">0</div>
+        <div style="font-size:13px;color:var(--muted)">累计注册用户（人）</div>
+        <button class="btn ghost sm" id="countBtn">再播一次</button>
+      </div>
+      <div class="say"><p>「首页数据用数字滚动动画（Count Up），从 0 递增到 128,540，时长约 1.5 秒。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="毛玻璃 glassmorphism 磨砂玻璃 半透明模糊">
+      <div class="card-top"><h3>毛玻璃<span class="en">Glassmorphism</span></h3><div class="alias">也叫：磨砂玻璃效果</div>
+      <p class="desc">半透明 + 背景模糊，像隔着磨砂玻璃看后面的彩色背景。苹果风界面、悬浮顶栏特别爱用。</p></div>
+      <div class="demo">
+        <div class="glass-stage"><div class="glass-card">毛玻璃卡片<small>backdrop-filter: blur(14px)</small></div></div>
+      </div>
+      <div class="say"><p>「顶部栏用毛玻璃效果：半透明白色背景 + 背景模糊（backdrop-filter: blur），滚动时能透出下面的内容。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="滚动渐入 reveal 淡入动画 入场动画 scroll animation">
+      <div class="card-top"><h3>滚动渐入<span class="en">Scroll Reveal</span></h3><div class="alias">也叫：入场动画、淡入上浮</div>
+      <p class="desc">往下滚动时，内容进入视线才轻轻淡入并上浮出现，而不是一开始全摆在那。落地页、介绍页常用。</p></div>
+      <div class="demo">
+        <div class="reveal-box" id="revealBox">
+          <div class="reveal-item">✨ 第一段：滚到我时我才出现</div>
+          <div class="reveal-item">✨ 第二段：依次淡入上浮</div>
+          <div class="reveal-item">✨ 第三段：继续往下滚</div>
+          <div class="reveal-item">✨ 第四段：最后一段也出现了</div>
+          <div class="reveal-item">🎉 全部出现完毕</div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">↑ 在这个小框里往下滚动</span>
+      </div>
+      <div class="say"><p>「页面各区块加滚动渐入动画：元素进入屏幕时淡入并上浮 20px，只播放一次。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="拖拽排序 drag sort 拖动排序 列表排序 拖拽">
+      <div class="card-top"><h3>拖拽排序<span class="en">Drag Sort</span></h3><div class="alias">也叫：拖动排序</div>
+      <p class="desc">按住一条上下拖，松手就换位置。歌单排序、待办优先级、照片排序都用它；手机上常配 ↑↓ 按钮代替拖动。</p></div>
+      <div class="demo">
+        <div class="sort-list" id="sortList">
+          <div class="sort-item" draggable="true"><span class="grip">⠿</span>🎵 第一首歌<span class="mv"><button data-mv="-1" aria-label="上移">↑</button><button data-mv="1" aria-label="下移">↓</button></span></div>
+          <div class="sort-item" draggable="true"><span class="grip">⠿</span>🎵 第二首歌<span class="mv"><button data-mv="-1" aria-label="上移">↑</button><button data-mv="1" aria-label="下移">↓</button></span></div>
+          <div class="sort-item" draggable="true"><span class="grip">⠿</span>🎵 第三首歌<span class="mv"><button data-mv="-1" aria-label="上移">↑</button><button data-mv="1" aria-label="下移">↓</button></span></div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)">电脑上可直接拖；手机点右侧 ↑↓</span>
+      </div>
+      <div class="say"><p>「歌单支持拖拽排序：按住左侧拖动手柄上下移动换位，手机端提供上移/下移按钮。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="下拉刷新 pull refresh 下拉 加载最新 刷新列表">
+      <div class="card-top"><h3>下拉刷新<span class="en">Pull to Refresh</span></h3><div class="alias">也叫：下拉加载最新</div>
+      <p class="desc">在列表最顶部继续往下拉，出现「松开刷新」，松手转个圈加载最新内容。手机信息流的标志动作。</p></div>
+      <div class="demo">
+        <div class="pull-box" id="pullBox">
+          <div class="pull-hint" id="pullHint">↓ 点下方按钮模拟一次下拉刷新</div>
+          <div class="row-item">📰 新闻一：今日天气晴好</div>
+          <div class="row-item">📰 新闻二：新店开业五折</div>
+          <div class="row-item">📰 新闻三：周末市集汇总</div>
+          <div class="row-item">📰 新闻四：地铁新线开通</div>
+        </div>
+        <button class="btn ghost sm" id="pullBtn">模拟下拉刷新</button>
+      </div>
+      <div class="say"><p>「信息流支持下拉刷新：拉到顶继续下拉显示‘松开刷新’，松手后转圈并加载最新内容。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="左滑删除 swipe delete 滑动删除 侧滑操作 滑动操作">
+      <div class="card-top"><h3>左滑删除<span class="en">Swipe to Delete</span></h3><div class="alias">也叫：侧滑操作</div>
+      <p class="desc">一条记录往左滑，右边露出红色「删除」（有时还有置顶、已读）。聊天列表、邮件列表最常见，藏操作又省按钮。</p></div>
+      <div class="demo">
+        <div class="swipe-row">
+          <button class="swipe-del" id="swipeDel">删除</button>
+          <div class="swipe-front" id="swipeFront"><span>💬 小林：晚上一起吃饭吗？</span><button class="btn ghost sm" id="swipeToggle">← 左滑</button></div>
+        </div>
+        <span style="font-size:12.5px;color:var(--muted)" id="swipeText">点「左滑」模拟滑动，露出删除按钮</span>
+      </div>
+      <div class="say"><p>「聊天列表支持左滑删除：左滑露出红色删除按钮，点击删除，滑过头自动回弹。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="翻转卡片 flip card 3d翻转 卡片翻面 正反面">
+      <div class="card-top"><h3>翻转卡片<span class="en">Flip Card</span></h3><div class="alias">也叫：3D 翻面卡</div>
+      <p class="desc">点一下，卡片像扑克牌一样翻个面，背面藏着详情。会员卡、单词卡、优惠券爱用这种小惊喜。</p></div>
+      <div class="demo">
+        <div class="flip-scene"><div class="flip-inner" id="flipInner">
+          <div class="flip-face flip-front">💳 会员金卡<small style="font-weight:400;opacity:.85">点我翻面看看</small></div>
+          <div class="flip-face flip-back">卡号 8888 · 积分 2,560<small>再点一次翻回去</small></div>
+        </div></div>
+      </div>
+      <div class="say"><p>「会员卡做成翻转卡片：点击后 3D 翻面，背面显示卡号和积分，动画时长 0.6 秒。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="打字机 typewriter 打字效果 逐字显示 文字动画">
+      <div class="card-top"><h3>打字机效果<span class="en">Typewriter</span></h3><div class="alias">也叫：逐字打印效果</div>
+      <p class="desc">文字一个字一个字蹦出来，后面跟个闪烁光标，像有人在现场打字。AI 对话回复、首页标语常用。</p></div>
+      <div class="demo">
+        <div class="type-box"><span id="typeText"></span><span class="type-caret"></span></div>
+        <button class="btn ghost sm" id="typeBtn">再打一次</button>
+      </div>
+      <div class="say"><p>「首页标语用打字机效果：逐字打出三句轮换文案，打完停顿再删掉换下一句，光标闪烁。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="五彩纸屑 confetti 礼花 庆祝动画 撒花">
+      <div class="card-top"><h3>五彩纸屑<span class="en">Confetti</span></h3><div class="alias">也叫：撒花、庆祝礼花</div>
+      <p class="desc">成功那一刻，彩色纸片从中间炸开飘落。下单成功、抽中奖、完成目标时撒一把，情绪价值拉满。</p></div>
+      <div class="demo">
+        <div class="confetti-box" id="confettiBox"><button class="btn" id="confettiBtn">🎉 点我庆祝一下</button></div>
+      </div>
+      <div class="say"><p>「下单成功时撒五彩纸屑（Confetti）：从按钮位置向四周喷出彩色纸片，飘落 2 秒后消失。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="波纹点击 ripple 水波纹 点击反馈 涟漪">
+      <div class="card-top"><h3>波纹点击<span class="en">Ripple</span></h3><div class="alias">也叫：水波纹反馈、涟漪效果</div>
+      <p class="desc">点按钮时，从指尖位置扩散出一圈水波纹。安卓 Material 风格的标志反馈，让人确认「点到了」。</p></div>
+      <div class="demo">
+        <button class="ripple-btn" id="rippleBtn">点我看水波纹</button>
+        <span style="font-size:12.5px;color:var(--muted)">波纹从你点的位置扩散开</span>
+      </div>
+      <div class="say"><p>「主要按钮加波纹点击效果（Ripple）：点击时从触点扩散一圈半透明水波，0.6 秒消退。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="视差滚动 parallax 景深滚动 背景滚动差 层次滚动">
+      <div class="card-top"><h3>视差滚动<span class="en">Parallax</span></h3><div class="alias">也叫：景深滚动</div>
+      <p class="desc">滚动时背景和前景速度不一样：远山慢、近景快，画面有了纵深感。旅游页、故事页特别出效果。</p></div>
+      <div class="demo left">
+        <div class="parallax-box" id="paraBox">
+          <div class="para-bg"><span class="para-sun" id="paraSun">🌞</span><div class="para-mtn" id="paraMtn">🏔️🏔️🏔️</div></div>
+          <div class="para-content">往下滚这个框：太阳和山移动得比文字慢，这就是视差。<br><br>第一段介绍……<br><br>第二段介绍……<br><br>第三段介绍……<br><br>滚到底啦。</div>
+        </div>
+      </div>
+      <div class="say"><p>「首屏加视差滚动：背景图滚动速度是前景文字的一半，营造景深层次感。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="motion" data-keys="双击点赞 double tap like 爱心 双击 爱心动画">
+      <div class="card-top"><h3>双击点赞<span class="en">Double-Tap Like</span></h3><div class="alias">也叫：双击爱心</div>
+      <p class="desc">连点两下图片，中间砰地弹出一颗大爱心，同时完成点赞。短视频和照片流的招牌互动，不用找小按钮。</p></div>
+      <div class="demo">
+        <div class="dbl-stage" id="dblStage">🌅</div>
+        <span style="font-size:12.5px;color:var(--muted)" id="dblText">双击上面的图试试（连点两下）</span>
+      </div>
+      <div class="say"><p>「图片支持双击点赞：双击时中央弹出爱心动画并点亮点赞按钮，单击不触发。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ 布局与媒体 ============ -->
+<section data-section="layout">
+  <div class="sec-head"><h2>六、布局与媒体</h2><p>整个页面怎么搭、首屏和页脚长什么样</p></div>
+  <div class="grid">
+
+    <article class="card" data-cat="layout" data-keys="英雄区 hero 首屏 头图 主视觉 banner区">
+      <div class="card-top"><h3>首屏英雄区<span class="en">Hero</span></h3><div class="alias">也叫：首屏、主视觉区</div>
+      <p class="desc">打开页面第一眼看到的大区块：一句大标题、一句说明、一个主按钮，通常配大图或渐变背景。决定用户留不留下。</p></div>
+      <div class="demo">
+        <div class="hero-demo"><h4>把日子过成想要的样子</h4><p>精选家居好物，每周上新，会员首单立减 30 元</p><button class="btn" style="background:#fff;color:#134E4A" onclick="showToast('开始逛逛（演示）')">开始逛逛</button></div>
+      </div>
+      <div class="say"><p>「页面做一个首屏英雄区（Hero）：大标题 + 一句卖点 + 一个主按钮，背景用品牌色渐变。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="layout" data-keys="页脚 footer 底部信息 网站底部 版权区">
+      <div class="card-top"><h3>页脚<span class="en">Footer</span></h3><div class="alias">也叫：网站底部、版权区</div>
+      <p class="desc">页面最底部的深色区域：分栏放帮助链接、联系方式、公众号，最下面一行版权和备案号。</p></div>
+      <div class="demo">
+        <div class="footer-demo"><div class="cols"><div><b>帮助</b><a href="#" onclick="return false">购物指南</a><a href="#" onclick="return false">退换货</a></div><div><b>关于</b><a href="#" onclick="return false">公司介绍</a><a href="#" onclick="return false">加入我们</a></div><div><b>联系</b><a href="#" onclick="return false">客服热线</a><a href="#" onclick="return false">公众号</a></div></div><div style="border-top:1px solid rgba(255,255,255,.18);margin-top:12px;padding-top:10px;opacity:.65">© 2026 橙子商城 · 备案号示例</div></div>
+      </div>
+      <div class="say"><p>「页面底部做页脚（Footer）：深色背景，三栏链接加一行版权信息，手机上自动堆叠。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="layout" data-keys="栅格布局 grid 网格布局 多列布局 响应式网格">
+      <div class="card-top"><h3>栅格布局<span class="en">Grid Layout</span></h3><div class="alias">也叫：网格布局</div>
+      <p class="desc">把内容排成整齐的行列：电脑上 3–4 列，手机上自动变 1–2 列。商品列表、图库、卡片墙都靠它撑着。</p></div>
+      <div class="demo">
+        <div class="grid-demo"><div style="background:#0F766E">1</div><div style="background:#B45309">2</div><div style="background:#1D4ED8">3</div><div style="background:#92400E">4</div><div style="background:#134E4A">5</div><div style="background:#7C2D12">6</div></div>
+        <span style="font-size:12.5px;color:var(--muted)">缩小窗口试试：手机上自动变 2 列</span>
+      </div>
+      <div class="say"><p>「商品列表用栅格布局：桌面 3 列、平板 2 列、手机 1 列，间距统一 16px，自动响应式。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="layout" data-keys="分栏布局 split 两栏 左右分栏 图文分栏">
+      <div class="card-top"><h3>分栏布局<span class="en">Split Layout</span></h3><div class="alias">也叫：左右两栏、图文分栏</div>
+      <p class="desc">页面横着切成两半：一边图、一边文，或一边表单、一边说明。落地页、登录页常用；手机上自动上下堆叠。</p></div>
+      <div class="demo">
+        <div class="split-demo"><div style="background:linear-gradient(130deg,#0F766E,#134E4A);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px">🖼️</div><div style="background:var(--surface);border:1px solid var(--line)"><b>左边图，右边文</b><br><span style="color:var(--muted);font-size:12.5px">手机上我会自动跑到图片下面去。</span></div></div>
+      </div>
+      <div class="say"><p>「介绍区用左右分栏布局：一半图片一半文字，手机上自动改成上下堆叠。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="layout" data-keys="吸底操作栏 bottom bar 底部固定栏 结算栏 底部按钮栏">
+      <div class="card-top"><h3>吸底操作栏<span class="en">Bottom Action Bar</span></h3><div class="alias">也叫：底部结算栏</div>
+      <p class="desc">粘在屏幕最底部的一条：左边总价、右边「去结算/立即购买」大按钮，滚到哪都看得见。电商详情页和购物车标配。</p></div>
+      <div class="demo">
+        <div class="action-bar-demo"><p>商品详情往下很长很长……<br>不管滚到哪里，最下面那条一直吸在底部。</p><div class="action-bar"><span class="pr">¥399</span><button class="btn" onclick="showToast('去结算（演示）')">立即购买</button></div></div>
+      </div>
+      <div class="say"><p>「详情页底部加吸底操作栏：固定在屏幕底部，左边价格、右边‘立即购买’按钮，始终可见。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+    <article class="card" data-cat="layout" data-keys="横向滚动 horizontal scroll 横滑 滚动吸附 snap 横向卡片">
+      <div class="card-top"><h3>横滑卡片<span class="en">Horizontal Scroll + Snap</span></h3><div class="alias">也叫：横向滚动、滚动吸附</div>
+      <p class="desc">一排卡片左右滑动浏览，松手时自动「吸附」对齐到最近一张，不会停在半张的位置。推荐位、故事流常用。</p></div>
+      <div class="demo">
+        <div class="hscroll"><div style="background:#0F766E">推荐一</div><div style="background:#B45309">推荐二</div><div style="background:#1D4ED8">推荐三</div><div style="background:#92400E">推荐四</div><div style="background:#134E4A">推荐五</div></div>
+        <span style="font-size:12.5px;color:var(--muted)">左右滑动试试，松手会自动对齐一张</span>
+      </div>
+      <div class="say"><p>「推荐位用横滑卡片：可左右滑动，带滚动吸附（scroll-snap），松手自动对齐到整张卡。」</p><button class="copy-btn">复制</button></div>
+    </article>
+
+  </div>
+</section>
+
+<footer>
+  <p><b>速记口诀：</b>小提示用「气泡」，办完事用「轻提示」，大事确认用「弹窗」，小事确认用「气泡确认」；长内容收起用「折叠」，多图轮换用「轮播」，翻页二选一：「分页器」或「无限滚动」。</p>
+  <p>找不到想要的词时，别硬猜名字——直接向 AI 描述样子和位置，例如「鼠标放上去、按钮上方、冒出一小段黑底白字说明」，AI 照样能做对。词条会随你的实际需求继续补充。</p>
+</footer>
+</div>
+
+<!-- overlays -->
+<div class="overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-label="删除确认">
+  <div class="modal-box">
+    <h4>确定要删除这条记录吗？</h4>
+    <p>删除后无法恢复。如果只是暂时不用，可以先归档。这就是模态弹窗：背景变暗，不处理它就不能点其他地方。</p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="modalCancel">取消</button>
+      <button class="btn danger" id="modalOk">确认删除</button>
+    </div>
+  </div>
+</div>
+<div class="scrim" id="drawerScrim"></div>
+<aside class="drawer-panel" id="drawerPanel" aria-label="订单详情抽屉" aria-hidden="true">
+  <h4>订单详情</h4>
+  <p>这就是抽屉：从右边滑出来，不离开当前页面就能看详情。</p>
+  <ul>
+    <li>订单号：202611190031</li>
+    <li>商品：降噪无线耳机 × 1</li>
+    <li>金额：¥399</li>
+    <li>状态：已发货</li>
+  </ul>
+  <button class="btn" id="drawerClose" style="margin-top:10px">关闭抽屉</button>
+</aside>
+<div class="lb-view" id="lbView">
+  <div class="big" id="lbBig">🏔️</div>
+  <div style="font-size:14px;opacity:.85">这就是灯箱效果 · 点任意处关闭</div>
+  <button class="btn ghost" id="lbClose">关闭 ✕</button>
+</div>
+<div class="fs-loading" id="fsLoading"><div class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:#fff"></div><div>提交中，请稍候…</div></div>
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,c){return (c||document).querySelector(s)};
+var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
+
+/* ---------- toast ---------- */
+window.showToast=function(msg){
+  var stack=$('#toastStack');
+  var el=document.createElement('div'); el.className='toast-item'; el.textContent=msg;
+  stack.appendChild(el);
+  setTimeout(function(){ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(function(){el.remove()},320); },2200);
+};
+$('#toastBtn').addEventListener('click',function(){ showToast('✓ 已保存到草稿箱'); });
+
+/* ---------- copy ---------- */
+$$('.copy-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var text=btn.parentElement.querySelector('p').textContent.replace(/^跟 AI 这样说：/,'');
+    function done(){ var old=btn.textContent; btn.textContent='已复制 ✓'; setTimeout(function(){btn.textContent=old},1500); showToast('已复制，去粘贴给 AI 吧'); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done).catch(function(){fallback()}); } else fallback();
+    function fallback(){ var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); done();}catch(e){} ta.remove(); }
+  });
+});
+
+/* ---------- modal ---------- */
+var mo=$('#modalOverlay');
+$('#modalBtn').addEventListener('click',function(){ mo.classList.add('open'); });
+$('#modalCancel').addEventListener('click',function(){ mo.classList.remove('open'); showToast('已取消，什么都没删'); });
+$('#modalOk').addEventListener('click',function(){ mo.classList.remove('open'); showToast('🗑 已删除（演示，未真的删除）'); });
+mo.addEventListener('click',function(e){ if(e.target===mo) mo.classList.remove('open'); });
+
+/* ---------- drawer ---------- */
+var dp=$('#drawerPanel'), sc=$('#drawerScrim');
+function openDrawer(o){ dp.classList.toggle('open',o); sc.classList.toggle('open',o); dp.setAttribute('aria-hidden', o?'false':'true'); }
+$('#drawerBtn').addEventListener('click',function(){ openDrawer(true); });
+$('#drawerClose').addEventListener('click',function(){ openDrawer(false); });
+sc.addEventListener('click',function(){ openDrawer(false); });
+
+/* ---------- popconfirm ---------- */
+var popBox=$('#popBox');
+$('#popBtn').addEventListener('click',function(e){ e.stopPropagation(); popBox.classList.toggle('open'); });
+$('#popCancel').addEventListener('click',function(){ popBox.classList.remove('open'); $('#popResult').textContent='已取消，记录还在'; });
+$('#popOk').addEventListener('click',function(){ popBox.classList.remove('open'); $('#popResult').textContent='✓ 已删除（演示）'; showToast('已删除'); });
+document.addEventListener('click',function(e){ if(!e.target.closest('.pop-wrap')) popBox.classList.remove('open'); });
+
+/* ---------- loading demo ---------- */
+$('#loadBtn').addEventListener('click',function(){
+  var t=$('#loadText'); t.innerHTML='';
+  var s=document.createElement('div'); s.className='spinner'; s.style.margin='0 auto'; t.appendChild(s);
+  setTimeout(function(){ t.textContent='✓ 加载完成！刚才转圈的 1.2 秒就是 Loading 的作用时间'; },1200);
+});
+
+/* ---------- tabs ---------- */
+var tabTexts=['这里是商品详情：面料、产地、使用说明都写在这里。','规格参数：尺寸 180×200cm · 重量 1.2kg · 材质纯棉。','用户评论：已有 326 条评价，好评率 96%。'];
+$$('#tabPane').length; // noop
+$$('.tab-btn').forEach(function(b){
+  b.addEventListener('click',function(){
+    $$('.tab-btn').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');
+    $('#tabPane').textContent=tabTexts[parseInt(b.getAttribute('data-tab'),10)];
+  });
+});
+
+/* ---------- dropdown ---------- */
+var ddMenu=$('#ddMenu');
+$('#ddBtn').addEventListener('click',function(e){ e.stopPropagation(); ddMenu.classList.toggle('open'); });
+$$('#ddMenu button').forEach(function(b){
+  b.addEventListener('click',function(){ ddMenu.classList.remove('open'); $('#ddResult').textContent='你点了：'+b.getAttribute('data-act'); });
+});
+document.addEventListener('click',function(e){ if(!e.target.closest('.dd')) ddMenu.classList.remove('open'); });
+
+/* ---------- pagination ---------- */
+var curPage=1;
+function setPage(p){ curPage=Math.max(1,Math.min(5,p));
+  $$('#pager button[data-p]').forEach(function(b){ var v=b.getAttribute('data-p'); if(v!=='prev'&&v!=='next') b.classList.toggle('on', parseInt(v,10)===curPage); });
+  $('#pageText').textContent='正在看：第 '+curPage+' 页的内容';
+}
+$$('#pager button').forEach(function(b){ b.addEventListener('click',function(){ var v=b.getAttribute('data-p'); setPage(v==='prev'?curPage-1:v==='next'?curPage+1:parseInt(v,10)); }); });
+
+/* ---------- steps ---------- */
+var stepIdx=1, stepNames=['填写信息','确认订单','支付','完成'];
+$('#stepNext').addEventListener('click',function(){
+  stepIdx=(stepIdx+1)%4;
+  $$('#stepsDemo .step').forEach(function(st,i){
+    st.className='step'+(i<stepIdx?' done':i===stepIdx?' now':'');
+    st.querySelector('.dot').textContent=i<stepIdx?'✓':(i+1);
+  });
+  this.textContent = stepIdx===3 ? '↺ 重新开始' : '下一步 →';
+});
+
+/* ---------- segmented ---------- */
+$$('#segDemo button').forEach(function(b){
+  b.addEventListener('click',function(){
+    $$('#segDemo button').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on'); $('#segText').textContent='当前查看：'+b.textContent+'数据';
+  });
+});
+
+/* ---------- accordion ---------- */
+$$('#accDemo .acc-item').forEach(function(item){
+  var head=item.querySelector('.acc-head'), body=item.querySelector('.acc-body');
+  head.addEventListener('click',function(){
+    var open=item.classList.contains('open');
+    $$('#accDemo .acc-item').forEach(function(it){ it.classList.remove('open'); it.querySelector('.acc-body').style.maxHeight='0px'; });
+    if(!open){ item.classList.add('open'); body.style.maxHeight=body.scrollHeight+'px'; }
+  });
+});
+
+/* ---------- carousel ---------- */
+var carIdx=0, carTimer=null;
+function goCar(i){ carIdx=(i+3)%3; $('#carTrack').style.transform='translateX(-'+(carIdx*100)+'%)';
+  $$('#carDots button').forEach(function(d,j){ d.classList.toggle('on', j===carIdx); }); }
+function carAuto(){ carTimer=setInterval(function(){ goCar(carIdx+1); },2600); }
+$$('#carDots button').forEach(function(d,j){ d.addEventListener('click',function(){ clearInterval(carTimer); goCar(j); carAuto(); }); });
+carAuto();
+
+/* ---------- skeleton ---------- */
+function skelRun(){
+  $('#skelReal').style.display='none'; $('#skelDemo').style.display='block';
+  setTimeout(function(){ $('#skelDemo').style.display='none'; $('#skelReal').style.display='block'; },1600);
+}
+$('#skelBtn').addEventListener('click',skelRun);
+setTimeout(skelRun,600);
+
+/* ---------- lightbox ---------- */
+var lb=$('#lbView');
+$$('[data-lb]').forEach(function(b){ b.addEventListener('click',function(){ $('#lbBig').textContent=b.getAttribute('data-lb'); lb.classList.add('open'); }); });
+lb.addEventListener('click',function(){ lb.classList.remove('open'); });
+
+/* ---------- tree ---------- */
+$$('.tree li > button').forEach(function(b){
+  b.addEventListener('click',function(){ b.parentElement.classList.toggle('open'); });
+});
+
+/* ---------- switch ---------- */
+function swUpdate(){ $('#swText').textContent='消息通知：'+($('#sw1').checked?'开':'关')+' · 深色模式：'+($('#sw2').checked?'开':'关'); }
+$('#sw1').addEventListener('change',swUpdate); $('#sw2').addEventListener('change',swUpdate);
+
+/* ---------- range ---------- */
+$('#rangeDemo').addEventListener('input',function(){ $('#rangeVal').textContent=this.value; });
+
+/* ---------- rate ---------- */
+var rateVal=0;
+$$('#rateDemo button').forEach(function(b,i){
+  b.addEventListener('click',function(){
+    rateVal=i+1;
+    $$('#rateDemo button').forEach(function(x,j){ x.classList.toggle('lit', j<rateVal); });
+    $('#rateText').textContent='你打了 '+rateVal+' 星'+(rateVal>=4?'，好评！':rateVal>=2?'，继续加油':'，我们会改进');
+  });
+});
+
+/* ---------- autocomplete ---------- */
+var words=['苹果手机壳','苹果数据线','苹果手表表带','耳机收纳包','耳机清洁笔','手机支架','手机膜','手写笔','手工皂','手账本'];
+var ai=$('#autoInput'), al=$('#autoList');
+ai.addEventListener('input',function(){
+  var q=ai.value.trim(); al.innerHTML='';
+  if(!q){ al.classList.remove('open'); return; }
+  var hits=words.filter(function(w){ return w.indexOf(q)>-1; });
+  if(!hits.length){ al.classList.remove('open'); return; }
+  hits.forEach(function(w){
+    var b=document.createElement('button');
+    b.innerHTML=w.replace(q,'<b>'+q+'</b>');
+    b.addEventListener('click',function(){ ai.value=w; al.classList.remove('open'); showToast('已选择：'+w); });
+    al.appendChild(b);
+  });
+  al.classList.add('open');
+});
+document.addEventListener('click',function(e){ if(!e.target.closest('.auto-wrap')) al.classList.remove('open'); });
+
+/* ---------- tag input ---------- */
+var tagBox=$('#tagBox'), tagInput=$('#tagInput');
+function bindTagDel(scope){ $$('.tag button',scope||tagBox).forEach(function(b){ b.onclick=function(){ b.parentElement.remove(); }; }); }
+bindTagDel();
+tagInput.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&tagInput.value.trim()){
+    e.preventDefault();
+    var s=document.createElement('span'); s.className='tag';
+    s.textContent=tagInput.value.trim();
+    var x=document.createElement('button'); x.textContent='×'; x.setAttribute('aria-label','删除标签');
+    x.onclick=function(){ s.remove(); };
+    s.appendChild(x); tagBox.insertBefore(s,tagInput); tagInput.value='';
+  }
+});
+tagBox.addEventListener('click',function(){ tagInput.focus(); });
+
+/* ---------- upload ---------- */
+var uz=$('#uploadZone'), uf=$('#uploadFile');
+uz.addEventListener('click',function(){ uf.click(); });
+uf.addEventListener('change',function(){ if(uf.files.length) $('#uploadText').textContent='已选择：'+uf.files[0].name+'（演示，未真上传）'; });
+['dragenter','dragover'].forEach(function(ev){ uz.addEventListener(ev,function(e){ e.preventDefault(); uz.classList.add('over'); $('#uploadText').textContent='松开鼠标即可上传 ⬇'; }); });
+['dragleave','drop'].forEach(function(ev){ uz.addEventListener(ev,function(e){ e.preventDefault(); uz.classList.remove('over'); $('#uploadText').textContent= ev==='drop' ? '文件已放进来啦（演示，未真上传）' : '支持 JPG / PNG，单个不超过 10MB'; }); });
+
+/* ---------- progress ---------- */
+$('#progBtn').addEventListener('click',function(){
+  var p=0, bar=$('#progBar'), txt=$('#progText'); this.disabled=true;
+  var iv=setInterval(function(){ p+=Math.random()*14+4; if(p>=100){ p=100; clearInterval(iv); txt.textContent='100% ✓ 完成'; showToast('上传完成'); $('#progBtn').disabled=false; $('#progBtn').textContent='再传一次'; }
+    bar.style.width=p+'%'; if(p<100) txt.textContent=Math.floor(p)+'%'; },160);
+});
+
+/* ---------- fab ---------- */
+$('#fabBtn').addEventListener('click',function(){ $('#fabText').textContent='✓ 你点了悬浮按钮（演示：这里通常会打开新建页面）'; showToast('打开新建（演示）'); });
+
+/* ---------- infinite scroll ---------- */
+var loadBox=$('#loadBox'), itemN=0, loading=false, ended=false;
+function addItems(n){
+  for(var i=0;i<n;i++){ itemN++;
+    var r=document.createElement('div'); r.className='row-item';
+    r.innerHTML='<span>📦 商品 '+itemN+' 号</span><span style="color:var(--red);font-weight:700">¥'+(19+itemN*7)+'</span>';
+    loadBox.appendChild(r);
+  }
+  var f=document.createElement('div'); f.className='foot'; f.id='loadFoot'; f.textContent='继续往下滑，加载更多…';
+  loadBox.appendChild(f);
+}
+addItems(6);
+loadBox.addEventListener('scroll',function(){
+  if(loading||ended) return;
+  if(loadBox.scrollTop+loadBox.clientHeight>=loadBox.scrollHeight-30){
+    loading=true; var f=$('#loadFoot'); if(f) f.textContent='加载中…';
+    setTimeout(function(){
+      if(f) f.remove();
+      if(itemN>=24){ ended=true; var e=document.createElement('div'); e.className='foot'; e.textContent='— 已经到底啦，共 '+itemN+' 件 —'; loadBox.appendChild(e); }
+      else addItems(6);
+      loading=false;
+    },650);
+  }
+});
+
+/* ---------- count up ---------- */
+function countUp(){
+  var el=$('#countNum'), target=128540, t0=null;
+  function tick(ts){ if(!t0) t0=ts; var p=Math.min(1,(ts-t0)/1500); var v=Math.floor(target*(1-Math.pow(1-p,3)));
+    el.textContent=v.toLocaleString('en-US'); if(p<1) requestAnimationFrame(tick); }
+  requestAnimationFrame(tick);
+}
+$('#countBtn').addEventListener('click',countUp);
+countUp();
+
+/* ---------- reveal ---------- */
+var revealBox=$('#revealBox');
+function checkReveal(){
+  var boxTop=revealBox.getBoundingClientRect().top;
+  $$('.reveal-item',revealBox).forEach(function(it){
+    if(it.getBoundingClientRect().top-boxTop < revealBox.clientHeight-24) it.classList.add('in');
+  });
+}
+revealBox.addEventListener('scroll',checkReveal);
+setTimeout(checkReveal,300);
+
+/* ---------- search & filter ---------- */
+var cards=$$('.card'), sections=$$('section[data-section]');
+var activeCat='all', query='';
+function applyFilter(){
+  var visible=0;
+  cards.forEach(function(c){
+    var okCat = activeCat==='all' || c.getAttribute('data-cat')===activeCat;
+    var text=(c.querySelector('h3').textContent+' '+(c.getAttribute('data-keys')||'')+' '+c.querySelector('.desc').textContent).toLowerCase();
+    var okQ = !query || text.indexOf(query)>-1;
+    var show=okCat&&okQ;
+    c.classList.toggle('hidden-card',!show);
+    if(show) visible++;
+  });
+  sections.forEach(function(s){
+    var any=$$('.card:not(.hidden-card)',s).length>0;
+    s.style.display=any?'':'none';
+  });
+  $('#searchCount').textContent=visible+' 个词条';
+  $('#emptySearch').classList.toggle('show',visible===0);
+}
+$('#searchInput').addEventListener('input',function(){ query=this.value.trim().toLowerCase(); applyFilter(); });
+$$('#catNav .cat-btn').forEach(function(b){
+  b.addEventListener('click',function(){
+    $$('#catNav .cat-btn').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active'); activeCat=b.getAttribute('data-cat'); applyFilter();
+  });
+});
+applyFilter();
+})();
+</script>
+<script>
+(function(){
+"use strict";
+var $=function(s,c){return (c||document).querySelector(s)};
+var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
+function on(el,ev,fn){ if(el) el.addEventListener(ev,fn); }
+
+/* popover */
+var pc=$('#popcardBox');
+on($('#popcardBtn'),'click',function(e){ e.stopPropagation(); pc.classList.toggle('open'); });
+document.addEventListener('click',function(e){ if(pc && !e.target.closest('.popcard-wrap')) pc.classList.remove('open'); });
+
+/* notification */
+on($('#notifBtn'),'click',function(){ $('#notifPanel').classList.toggle('open'); });
+
+/* result toggle */
+var resOk=true;
+on($('#resultToggle'),'click',function(){
+  resOk=!resOk;
+  $('#resultIco').textContent=resOk?'✅':'❌';
+  $('#resultTitle').textContent=resOk?'支付成功':'支付失败';
+  $('#resultDesc').textContent=resOk?'订单号 202611190031，可在「我的订单」查看':'银行卡余额不足，请更换支付方式后重试';
+  this.textContent=resOk?'换成失败看看':'换成成功看看';
+});
+
+/* undo snackbar */
+var undoTimer=null;
+on($('#undoBtn'),'click',function(){
+  var slot=$('#undoSlot'); slot.innerHTML='';
+  var bar=document.createElement('div'); bar.className='undo-toast';
+  var span=document.createElement('span'); span.textContent='🗑 邮件已删除';
+  var btn=document.createElement('button'); btn.textContent='撤销';
+  btn.addEventListener('click',function(){ clearTimeout(undoTimer); slot.innerHTML=''; $('#undoText').textContent='✓ 已撤销，邮件恢复了'; showToast('已撤销删除'); });
+  bar.appendChild(span); bar.appendChild(btn); slot.appendChild(bar);
+  $('#undoText').textContent='5 秒内点「撤销」可以反悔';
+  undoTimer=setTimeout(function(){ slot.innerHTML=''; $('#undoText').textContent='提示条消失了，这次是真删了（演示）'; },5000);
+});
+
+/* fullscreen loading */
+on($('#fsLoadBtn'),'click',function(){
+  var fs=$('#fsLoading'); fs.classList.add('open');
+  setTimeout(function(){ fs.classList.remove('open'); showToast('✓ 提交成功（演示）'); },1500);
+});
+
+/* sidebar */
+on($('#sideToggle'),'click',function(){ $('#miniSide').classList.toggle('closed'); });
+$$('#miniSide button').forEach(function(b){ b.addEventListener('click',function(){ $$('#miniSide button').forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); }); });
+
+/* generic toggle groups (bottom nav) */
+$$('[data-group]').forEach(function(g){
+  $$('button',g).forEach(function(b){ b.addEventListener('click',function(){ $$('button',g).forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); }); });
+});
+
+/* hamburger */
+on($('#burgerBtn'),'click',function(){ $('#burgerPanel').classList.toggle('open'); });
+
+/* scrollspy */
+var spyBox=$('#spyBox');
+if(spyBox){
+  var secs=$$('.spy-sec',spyBox), navBtns=$$('.spy-nav button',spyBox);
+  function spyUpdate(){
+    var cur=0;
+    secs.forEach(function(s,i){ if(s.offsetTop-spyBox.scrollTop < 90) cur=i; });
+    navBtns.forEach(function(b,i){ b.classList.toggle('on', i===cur); });
+  }
+  spyBox.addEventListener('scroll',spyUpdate);
+  navBtns.forEach(function(b,i){ b.addEventListener('click',function(){ spyBox.scrollTo({top:secs[i].offsetTop-52,behavior:'smooth'}); }); });
+}
+
+/* back to top */
+var ttBox=$('#totopBox'), ttBtn=$('#totopBtn');
+if(ttBox){ ttBox.addEventListener('scroll',function(){ ttBtn.classList.toggle('show', ttBox.scrollTop>60); });
+  ttBtn.addEventListener('click',function(){ ttBox.scrollTo({top:0,behavior:'smooth'}); }); }
+
+/* table sort */
+var tbl=$('#dataTable');
+if(tbl){ $$('th[data-sort]',tbl).forEach(function(th,ci){
+  th.addEventListener('click',function(){
+    var col=ci+1, body=tbl.tBodies[0], rows=Array.prototype.slice.call(body.rows), asc=th.getAttribute('data-asc')!=='1';
+    rows.sort(function(a,b){ return (parseFloat(a.cells[col].textContent)-parseFloat(b.cells[col].textContent))*(asc?1:-1); });
+    rows.forEach(function(r){ body.appendChild(r); });
+    th.setAttribute('data-asc', asc?'1':'0');
+    showToast('已按'+(col===1?'价格':'库存')+(asc?'从低到高':'从高到低')+'排序');
+  });
+});}
+
+/* countdown: ends 2 days from first open, ticks down */
+var cdEnd=Date.now()+ (2*24*3600+7*3600+23*60+10)*1000;
+function pad(n){ return (n<10?'0':'')+n; }
+function cdTick(){
+  var left=Math.max(0,Math.floor((cdEnd-Date.now())/1000));
+  var d=Math.floor(left/86400), h=Math.floor(left%86400/3600), m=Math.floor(left%3600/60), s=left%60;
+  if($('#cdD')){ $('#cdD').textContent=pad(d); $('#cdH').textContent=pad(h); $('#cdM').textContent=pad(m); $('#cdS').textContent=pad(s); }
+}
+cdTick(); setInterval(cdTick,1000);
+
+/* before / after */
+on($('#baRange'),'input',function(){ $('#baTop').style.clipPath='inset(0 0 0 '+this.value+'%)'; });
+
+/* calendar: Nov 2026, 1st is a Sunday; signed days 3,7,12,15 */
+(function(){
+  var g=$('#calGrid'); if(!g) return;
+  ['日','一','二','三','四','五','六'].forEach(function(w){ var s=document.createElement('span'); s.textContent=w; s.style.fontWeight='700'; g.appendChild(s); });
+  var signed={3:1,7:1,12:1,15:1};
+  for(var d=1; d<=30; d++){ var b=document.createElement('b'); b.textContent=d; if(d===19) b.className='today'; else if(signed[d]) b.className='mark'; g.appendChild(b); }
+})();
+
+/* comment like */
+$$('.comment-item .like').forEach(function(b){
+  b.addEventListener('click',function(){
+    var n=b.querySelector('span'), v=parseInt(n.textContent,10), liked=b.classList.toggle('liked');
+    n.textContent=v+(liked?1:-1); b.firstChild.textContent=liked?'♥ 点赞 ':'♡ 点赞 ';
+  });
+});
+
+/* video mock */
+var vPlaying=false, vPos=0, vTimer=null;
+function vRender(){ $('#videoProg').style.width=(vPos/30*100)+'%'; $('#videoTime').textContent='0:'+pad(vPos); $('#videoStage').textContent=vPlaying?'⏸️':'▶️'; $('#videoBtn').textContent=vPlaying?'⏸':'▶'; }
+on($('#videoBtn'),'click',function(){
+  vPlaying=!vPlaying;
+  if(vPlaying){ vTimer=setInterval(function(){ vPos++; if(vPos>=30){ vPos=0; vPlaying=false; clearInterval(vTimer); showToast('播放结束（演示）'); } vRender(); },200); }
+  else clearInterval(vTimer);
+  vRender();
+});
+on($('#videoStage'),'click',function(){ $('#videoBtn').click(); });
+
+/* radio / checkbox readouts */
+$$('#radioDemo input').forEach(function(r){ r.addEventListener('change',function(){ $('#radioText').textContent='当前选择：'+r.parentElement.textContent.trim(); }); });
+function checkRead(){ var vals=$$('#checkDemo input:checked').map(function(c){return c.value}); $('#checkText').textContent='已选：'+(vals.length?vals.join('、'):'（还没选）'); }
+$$('#checkDemo input').forEach(function(c){ c.addEventListener('change',checkRead); });
+
+/* select / date / color */
+on($('#selectDemo'),'change',function(){ $('#selectText').textContent='已选城市：'+this.value; });
+on($('#dateDemo'),'change',function(){ $('#dateText').textContent='已选：'+this.value; });
+on($('#colorDemo'),'input',function(){ var v=this.value.toUpperCase(); $('#colorText').textContent=v; $('#colorChip').style.background=this.value; });
+
+/* qty stepper */
+var qty=2;
+function qtyRender(){ $('#qtyVal').textContent=qty; $('#qtyText').textContent='小计：¥'+(qty*399)+'（单价 ¥399）'; }
+on($('#qtyMinus'),'click',function(){ if(qty>1){ qty--; qtyRender(); } else showToast('最少买 1 件'); });
+on($('#qtyPlus'),'click',function(){ if(qty<10){ qty++; qtyRender(); } else showToast('最多买 10 件'); });
+
+/* OTP */
+var otpInputs=$$('#otpDemo input');
+otpInputs.forEach(function(inp,i){
+  inp.addEventListener('input',function(){
+    inp.value=inp.value.replace(/\D/g,'').slice(-1);
+    if(inp.value && i<otpInputs.length-1) otpInputs[i+1].focus();
+    var code=otpInputs.map(function(x){return x.value}).join('');
+    $('#otpText').textContent = code.length===4 ? '✓ 验证码 '+code+' 已输满（演示校验通过）' : '已输入 '+code.length+' / 4 位';
+  });
+  inp.addEventListener('keydown',function(e){ if(e.key==='Backspace' && !inp.value && i>0) otpInputs[i-1].focus(); });
+});
+
+/* password strength */
+on($('#pwdDemo'),'input',function(){
+  var v=this.value, score=0;
+  if(v.length>=6) score++; if(v.length>=10) score++; if(/\d/.test(v)) score++; if(/[a-zA-Z]/.test(v)) score++; if(/[^a-zA-Z0-9]/.test(v)) score++;
+  var pct=v?Math.min(100,score*22):0, bar=$('#pwdBar');
+  bar.style.width=pct+'%';
+  bar.style.background = pct<40?'var(--red)':pct<75?'var(--amber)':'var(--accent)';
+  $('#pwdText').textContent='强度：'+(!v?'未输入':pct<40?'弱（太短或太单一）':pct<75?'中（再长一点更好）':'强（这个密码不错）');
+});
+
+/* textarea counter */
+on($('#taDemo'),'input',function(){ $('#taCount').textContent=this.value.length; });
+
+/* cascader */
+var cityMap={gd:['广州','深圳','东莞'],zj:['杭州','宁波','温州'],sc:['成都','绵阳','乐山']};
+function casRender(){
+  var prov=$('#casProv').value, city=$('#casCity'); city.innerHTML='';
+  cityMap[prov].forEach(function(c){ var o=document.createElement('option'); o.textContent=c; city.appendChild(o); });
+  casText();
+}
+function casText(){ $('#casText').textContent='已选：'+$('#casProv').selectedOptions[0].textContent+' · '+$('#casCity').value; }
+on($('#casProv'),'change',casRender);
+on($('#casCity'),'change',casText);
+if($('#casProv')) casRender();
+
+/* filter chips */
+$$('#chipDemo button').forEach(function(b){
+  b.addEventListener('click',function(){
+    if(b.textContent==='全部'){ $$('#chipDemo button').forEach(function(x){ x.classList.toggle('on', x===b); }); }
+    else { b.classList.toggle('on'); $('#chipDemo button').classList.remove('on'); if(!$$('#chipDemo button.on').length) $('#chipDemo button').classList.add('on'); }
+    var onList=$$('#chipDemo button.on').map(function(x){return x.textContent}).filter(function(t){return t!=='全部'});
+    $('#chipText').textContent='已开启筛选：'+(onList.length?onList.join('、'):'无（显示全部）');
+  });
+});
+
+/* drag sort */
+var sortList=$('#sortList'), dragEl=null;
+if(sortList){
+  $$('.sort-item',sortList).forEach(function(it){
+    it.addEventListener('dragstart',function(){ dragEl=it; });
+    it.addEventListener('dragover',function(e){ e.preventDefault(); if(dragEl && dragEl!==it){ var r=it.getBoundingClientRect(); if(e.clientY < r.top + r.height/2) sortList.insertBefore(dragEl,it); else sortList.insertBefore(dragEl,it.nextSibling); } });
+    $$('.mv button',it).forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var dir=parseInt(btn.getAttribute('data-mv'),10);
+        if(dir<0 && it.previousElementSibling) sortList.insertBefore(it,it.previousElementSibling);
+        if(dir>0 && it.nextElementSibling) sortList.insertBefore(it.nextElementSibling,it);
+      });
+    });
+  });
+}
+
+/* pull refresh */
+on($('#pullBtn'),'click',function(){
+  var hint=$('#pullHint'); hint.textContent='⟳ 正在刷新…';
+  setTimeout(function(){ hint.textContent='✓ 已刷新 · 刚刚更新了内容（演示）'; showToast('刷新完成'); },900);
+});
+
+/* swipe delete */
+var swiped=false;
+on($('#swipeToggle'),'click',function(){
+  swiped=!swiped;
+  $('#swipeFront').style.transform=swiped?'translateX(-78px)':'';
+  this.textContent=swiped?'→ 收起':'← 左滑';
+});
+on($('#swipeDel'),'click',function(){ $('#swipeText').textContent='✓ 这条会话已删除（演示）'; $('#swipeFront').style.transform=''; $('#swipeFront').style.opacity='.45'; swiped=false; });
+
+/* flip card */
+on($('#flipInner'),'click',function(){ this.classList.toggle('flipped'); });
+
+/* typewriter */
+var typeStr='你好，我是打字机效果，一个字一个字出现。', typeTimer=null;
+function typeRun(){
+  var el=$('#typeText'); if(!el) return;
+  clearInterval(typeTimer); var i=0; el.textContent='';
+  typeTimer=setInterval(function(){ i++; el.textContent=typeStr.slice(0,i); if(i>=typeStr.length) clearInterval(typeTimer); },70);
+}
+on($('#typeBtn'),'click',typeRun); typeRun();
+
+/* confetti */
+on($('#confettiBtn'),'click',function(){
+  var box=$('#confettiBox'), colors=['#0F766E','#F59E0B','#DC2626','#1D4ED8','#EC4899'];
+  for(var i=0;i<28;i++){
+    var p=document.createElement('i'); p.style.background=colors[i%colors.length];
+    box.appendChild(p);
+    var ang=Math.random()*Math.PI*2, dist=60+Math.random()*110;
+    p.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:'translate('+Math.cos(ang)*dist+'px,'+(Math.sin(ang)*dist+90)+'px) rotate('+(Math.random()*540-270)+'deg)',opacity:0}],{duration:1100+Math.random()*600,easing:'cubic-bezier(.2,.8,.4,1)'});
+    (function(el){ setTimeout(function(){ el.remove(); },1800); })(p);
+  }
+});
+
+/* ripple */
+on($('#rippleBtn'),'click',function(e){
+  var r=this.getBoundingClientRect(), d=Math.max(r.width,r.height);
+  var rip=document.createElement('span'); rip.className='rip';
+  rip.style.width=rip.style.height=d+'px';
+  rip.style.left=(e.clientX-r.left-d/2)+'px'; rip.style.top=(e.clientY-r.top-d/2)+'px';
+  this.appendChild(rip); setTimeout(function(){ rip.remove(); },650);
+});
+
+/* parallax */
+var pBox=$('#paraBox');
+if(pBox){ pBox.addEventListener('scroll',function(){
+  var y=pBox.scrollTop;
+  $('#paraSun').style.transform='translateY('+(y*0.35)+'px)';
+  $('#paraMtn').style.transform='translateY('+(y*0.55)+'px)';
+});}
+
+/* double-tap like */
+var lastTap=0;
+on($('#dblStage'),'click',function(e){
+  var now=Date.now();
+  if(now-lastTap<350){
+    var h=document.createElement('span'); h.className='dbl-heart'; h.textContent='❤️';
+    h.style.left=(e.offsetX-22)+'px'; h.style.top=(e.offsetY-22)+'px';
+    this.appendChild(h); var self=h; setTimeout(function(){ self.remove(); },820);
+    $('#dblText').textContent='❤️ 已点赞（演示）· 再双击还能再爱一次';
+  }
+  lastTap=now;
+});
+})();
+</script>
+</body>
+</html>
