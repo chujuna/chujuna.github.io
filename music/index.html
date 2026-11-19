@@ -434,7 +434,32 @@
    id   : 从对应平台链接里提取的 ID
    ============================================================ */
 const COLLECTIONS = [
-  { kind:'toplist', type:'qq', id:'26', title:'热歌榜', source:'QQ音乐 · 排行榜' },
+  {"kind": "toplist", "type": "qq", "id": "26", "title": "热歌榜", "source": "QQ音乐 · 排行榜"},
+  {"kind": "toplist", "type": "wy", "id": "3778678", "title": "热歌榜", "source": "网易云音乐 · 排行榜"},
+  {"kind": "list", "type": "qq", "id": "2206788506", "title": "我喜欢", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "8681902392", "title": "旋律一听到底", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "wy", "id": "17980906438", "title": "国风/古风大赏", "source": "网易云音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "2957461099", "title": "国语女声情歌", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "7039749142", "title": "百听不厌的周杰伦", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "7738799663", "title": "不朽乐队Beyond", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "9258597522", "title": "刀郎金曲全集", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "7506006231", "title": "是思念蔓延的痕迹", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "6268734727", "title": "传遍大街小巷的新潮风", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "8257217996", "title": "300首失恋情歌，痛到窒息的心酸", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "9735600364", "title": "进度已过半，好运正赶来", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "8651583551", "title": "听不懂闽南语，却很喜欢这个调调", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "7594100601", "title": "筷子兄弟精选歌曲", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "7086885316", "title": "老歌手的情怀", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "638180121", "title": "粤语流行 | 经典传承岁月如歌", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "8987958787", "title": "缘起缘落，有人热恋着有人走散了", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "7309056065", "title": "倾城一暖，浅笑安然", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "8807683122", "title": "若有安静纯音相伴", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "3563840294", "title": "「合唱情结」猝不及防的爱上网络歌曲", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "875000768", "title": "欧美丨快乐旋律与你同在", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "9014954697", "title": "一天一首DJ，emo不翼而飞！", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "4074697557", "title": "最佳导演奖影片主题曲", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "9735677631", "title": "夯爆了！当DJ碰撞古风", "source": "QQ音乐 · 歌单"},
+  {"kind": "list", "type": "qq", "id": "7971818868", "title": "再热闹的街，一个人走也是孤独的", "source": "QQ音乐 · 歌单"},
 ];
 const PLATFORMS = [
   { type:'qq', name:'QQ音乐' }, { type:'wy', name:'网易云' }, { type:'kw', name:'酷我' },
@@ -548,6 +573,14 @@ function parseCollection(data, type){
     }
     return out;
   }
+  if(data.playlist && Array.isArray(data.playlist.tracks)){
+    if(data.playlist.coverImgUrl) out.cover = httpsUp(data.playlist.coverImgUrl);
+    for(const it of data.playlist.tracks){
+      const n = normalizeSearchItem(it, type);
+      if(n) out.songs.push(n);
+    }
+    return out;
+  }
   const arr = Array.isArray(data) ? data : (data.list || data.songs || data.tracks || null);
   if(Array.isArray(arr)){
     for(const it of arr){
@@ -654,13 +687,9 @@ function fillCover(box, pic){
   box.innerHTML = coverHTML();
   if(pic) box.appendChild(makeImg(pic));
 }
-async function loadCollections(){
-  const wrap = $('#colWrap');
-  wrap.className = viewMode === 'grid' ? 'col-grid' : 'col-list';
-  wrap.innerHTML = COLLECTIONS.map(() =>
-    '<div class="skl-card"><div class="skl skl-cover"></div><div class="skl skl-line" style="width:62%"></div><div class="skl skl-line" style="width:40%"></div></div>'
-  ).join('');
-  for(const col of COLLECTIONS){
+function loadCollection(col){
+  if(col._p) return col._p;
+  col._p = (async () => {
     try{
       const data = await api(col.kind, { id: col.id, type: col.type });
       const parsed = parseCollection(data, col.type);
@@ -670,8 +699,39 @@ async function loadCollections(){
     }catch(e){
       col.songs = []; col.error = e.message;
     }
-    renderCollections();
+    updateCardEl(COLLECTIONS.indexOf(col));
+    if(currentCol === col && !$('#detailView').classList.contains('hidden')){
+      fillCover($('#dCover'), col.cover);
+      $('#dSub').textContent = col.source + ' · 共 ' + (col.songs ? col.songs.length : 0) + ' 首';
+      if(col.songs) renderSongRows($('#dSongs'), col.songs);
+    }
+  })();
+  return col._p;
+}
+function updateCardEl(i){
+  const wrap = $('#colWrap');
+  const el = wrap.children[i];
+  if(!el || !el.classList.contains('col-card')){ renderCollections(); return; }
+  const col = COLLECTIONS[i];
+  const p = el.querySelector('.meta p');
+  if(p) p.textContent = col.source + ' · ' + (col.error ? '加载失败' : (col.songs ? col.songs.length + ' 首' : '加载中…'));
+  const coverBox = el.querySelector('.cover');
+  if(coverBox && col.cover && !coverBox.querySelector('img')) fillCover(coverBox, col.cover);
+}
+/* 骨架屏先出,3 路并发渐进加载,卡片逐个补齐封面与数量 */
+async function loadCollections(){
+  const wrap = $('#colWrap');
+  wrap.className = viewMode === 'grid' ? 'col-grid' : 'col-list';
+  wrap.innerHTML = COLLECTIONS.map(() =>
+    '<div class="skl-card"><div class="skl skl-cover"></div><div class="skl skl-line" style="width:62%"></div><div class="skl skl-line" style="width:40%"></div></div>'
+  ).join('');
+  let next = 0;
+  async function worker(){
+    while(next < COLLECTIONS.length){
+      await loadCollection(COLLECTIONS[next++]);
+    }
   }
+  await Promise.all([worker(), worker(), worker()]);
 }
 function renderCollections(){
   const wrap = $('#colWrap');
@@ -681,7 +741,7 @@ function renderCollections(){
   COLLECTIONS.forEach((col, i) => {
     const btn = document.createElement('button');
     btn.className = 'col-card';
-    const count = col.songs ? col.songs.length + ' 首' : (col.error ? '加载失败' : '加载中…');
+    const count = col.error ? '加载失败' : (col.songs ? col.songs.length + ' 首' : '加载中…');
     btn.innerHTML =
       '<div class="cover">' + coverHTML() + '</div>' +
       '<div class="meta"><h3></h3><p></p></div>';
@@ -703,14 +763,23 @@ $('#viewToggleBtn').innerHTML = viewMode === 'grid' ? ICON.list : ICON.grid;
 /* ---------- 详情页 ---------- */
 function openCollection(i){
   currentCol = COLLECTIONS[i];
-  if(!currentCol.songs){
-    toast('歌单还在加载中,请稍候');
-    return;
-  }
   fillCover($('#dCover'), currentCol.cover);
   $('#dTitle').textContent = currentCol.title;
-  $('#dSub').textContent = currentCol.source + ' · 共 ' + currentCol.songs.length + ' 首';
-  renderSongRows($('#dSongs'), currentCol.songs);
+  if(currentCol.songs){
+    $('#dSub').textContent = currentCol.source + ' · 共 ' + currentCol.songs.length + ' 首';
+    renderSongRows($('#dSongs'), currentCol.songs);
+  }else if(currentCol.error){
+    $('#dSub').textContent = currentCol.source;
+    const box = document.createElement('div');
+    box.className = 'empty-box';
+    box.textContent = '加载失败:' + currentCol.error;
+    $('#dSongs').innerHTML = '';
+    $('#dSongs').appendChild(box);
+  }else{
+    $('#dSub').textContent = currentCol.source + ' · 加载中…';
+    $('#dSongs').innerHTML = '<div class="loading-center"><div class="spinner"></div><div>加载中…</div></div>';
+    loadCollection(currentCol);
+  }
   showView('detail');
 }
 $('#playAllBtn').addEventListener('click', () => {
