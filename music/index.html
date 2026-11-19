@@ -127,14 +127,14 @@
 
   /* 歌单卡片:网格 */
   .col-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(136px,1fr)); gap:20px 16px; }
-  .col-card{ cursor:pointer; text-align:left; width:100%; }
+  .col-card{ cursor:pointer; text-align:left; width:100%; min-width:0; }
   .col-card .cover{
     position:relative; width:100%; aspect-ratio:1/1; border-radius:var(--radius);
     overflow:hidden; background:linear-gradient(145deg,#E9E9EE,#DCDCE2);
     transition:transform .25s ease, box-shadow .25s ease;
   }
   .col-card:hover .cover{ transform:translateY(-3px); box-shadow:0 14px 28px rgba(0,0,0,.13); }
-  .col-card .cover img{ width:100%; height:100%; object-fit:cover; }
+  .col-card .cover img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .cover .ph{
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#A7A7AE;
   }
@@ -144,6 +144,8 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .col-card p{ margin-top:3px; font-size:12.5px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .col-card .meta{ min-width:0; }
+  .skl-card{ min-width:0; }
 
   /* 歌单卡片:列表模式 */
   .col-list{ display:flex; flex-direction:column; gap:12px; }
@@ -303,7 +305,7 @@
     #appMain{ padding:20px 16px 168px; }
     .appbar-in{ padding:0 14px; }
     .appbar-left h1{ font-size:24px; }
-    .col-grid{ grid-template-columns:repeat(3,1fr); gap:18px 12px; }
+    .col-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px 12px; }
     .col-card h3{ margin-top:8px; font-size:13.5px; }
     .col-card p{ font-size:11.5px; }
     .col-card .cover .ph svg{ width:30px; height:30px; }
@@ -591,7 +593,46 @@ function parseCollection(data, type){
       if(n) out.songs.push(n);
     }
   }
+  /* 深度扫描兜底:QQ 歌单等接口把歌曲藏在 cdlist 等未知嵌套层里,
+     在 5 层内找到第一个"像歌曲数组"的数组就用它 */
+  if(!out.songs.length){
+    const deep = deepFindSongs(data, 0);
+    if(deep){
+      for(const item of deep){
+        const s = item && item.data ? item.data : item;
+        const song = mapQQSong(s) || normalizeSearchItem(s, type);
+        if(song) out.songs.push(song);
+      }
+    }
+    if(!out.cover){
+      const cd = Array.isArray(data.cdlist) ? data.cdlist[0] : null;
+      const c = data.logo || data.coverImgUrl || data.picUrl || (cd && (cd.logo || cd.picUrl || cd.coverImgUrl));
+      if(c) out.cover = httpsUp(c);
+    }
+  }
   return out;
+}
+function looksLikeSong(o){
+  return !!(o && typeof o === 'object' && (o.songname || o.songName || o.name) &&
+    (o.songmid != null || o.songid != null || o.id != null || o.mid != null));
+}
+function deepFindSongs(node, depth){
+  if(!node || depth > 5) return null;
+  if(Array.isArray(node)){
+    if(node.length && node.some((it) => looksLikeSong(it && it.data ? it.data : it))) return node;
+    for(const it of node){
+      const r = deepFindSongs(it, depth + 1);
+      if(r) return r;
+    }
+    return null;
+  }
+  if(typeof node === 'object'){
+    for(const k of Object.keys(node)){
+      const r = deepFindSongs(node[k], depth + 1);
+      if(r) return r;
+    }
+  }
+  return null;
 }
 async function fetchPic(song){
   if(song.pic !== null) return song.pic;
@@ -717,7 +758,7 @@ function updateCardEl(i){
   if(!el || !el.classList.contains('col-card')){ renderCollections(); return; }
   const col = COLLECTIONS[i];
   const p = el.querySelector('.meta p');
-  if(p) p.textContent = col.source + ' · ' + (col.error ? '加载失败' : (col.songs ? col.songs.length + ' 首' : '加载中…'));
+  if(p) p.textContent = col.source + ' · ' + (col.error ? '加载失败' : (col.songs ? (col.songs.length ? col.songs.length + ' 首' : '暂无歌曲') : '加载中…'));
   const coverBox = el.querySelector('.cover');
   if(coverBox && col.cover && !coverBox.querySelector('img')) fillCover(coverBox, col.cover);
 }
@@ -744,7 +785,7 @@ function renderCollections(){
   COLLECTIONS.forEach((col, i) => {
     const btn = document.createElement('button');
     btn.className = 'col-card';
-    const count = col.error ? '加载失败' : (col.songs ? col.songs.length + ' 首' : '加载中…');
+    const count = col.error ? '加载失败' : (col.songs ? (col.songs.length ? col.songs.length + ' 首' : '暂无歌曲') : '加载中…');
     btn.innerHTML =
       '<div class="cover">' + coverHTML() + '</div>' +
       '<div class="meta"><h3></h3><p></p></div>';
