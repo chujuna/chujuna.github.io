@@ -492,17 +492,58 @@ async function api(path, params){
   }
   return json.data;
 }
-function zipSongs(data, type){
-  if(!data || !Array.isArray(data.songId)) return [];
-  const out = [];
-  for(let i = 0; i < data.songId.length; i++){
-    out.push({
-      id: String(data.songId[i]),
-      name: (data.songName && data.songName[i]) || '未知歌曲',
-      artist: (data.artistName && data.artistName[i]) || '',
-      album: (data.albumName && data.albumName[i]) || '',
-      type: type, pic: null, url: null,
-    });
+function httpsUp(u){ return u ? String(u).replace(/^http:\/\//i, 'https://') : u; }
+function qqCover(albummid){
+  return albummid ? 'https://y.qq.com/music/photo_new/T002R300x300M000' + albummid + '.jpg' : null;
+}
+function mapQQSong(s){
+  if(!s || !s.songname || (s.songmid == null && s.songid == null)) return null;
+  return {
+    id: String(s.songmid != null ? s.songmid : s.songid),
+    altId: (s.songmid != null && s.songid != null) ? String(s.songid) : '',
+    name: s.songname,
+    artist: Array.isArray(s.singer) ? s.singer.map((x) => (x && x.name) || '').filter(Boolean).join(' / ') : '',
+    album: s.albumname || '',
+    type: 'qq',
+    pic: qqCover(s.albummid),
+    url: null,
+    interval: s.interval || 0,
+  };
+}
+/* 解析歌单/排行榜/专辑返回:兼容三种真实结构
+   1) 文档的平行数组 songId/songName/albumName/artistName
+   2) QQ 原生榜单透传 data.songlist[].data(自带封面与榜单图)
+   3) 对象数组(网易风格 ar/al 等,走通用映射) */
+function parseCollection(data, type){
+  const out = { songs: [], cover: '' };
+  if(!data) return out;
+  if(Array.isArray(data.songId)){
+    for(let i = 0; i < data.songId.length; i++){
+      out.songs.push({
+        id: String(data.songId[i]), altId: '',
+        name: (data.songName && data.songName[i]) || '未知歌曲',
+        artist: (data.artistName && data.artistName[i]) || '',
+        album: (data.albumName && data.albumName[i]) || '',
+        type: type, pic: null, url: null, interval: 0,
+      });
+    }
+    return out;
+  }
+  if(Array.isArray(data.songlist)){
+    if(data.topinfo && data.topinfo.pic) out.cover = httpsUp(data.topinfo.pic);
+    for(const item of data.songlist){
+      const s = item && item.data ? item.data : item;
+      const song = (type === 'qq' || (s && (s.songmid != null || s.songname))) ? mapQQSong(s) : normalizeSearchItem(s, type);
+      if(song) out.songs.push(song);
+    }
+    return out;
+  }
+  const arr = Array.isArray(data) ? data : (data.list || data.songs || data.tracks || null);
+  if(Array.isArray(arr)){
+    for(const it of arr){
+      const n = normalizeSearchItem(it, type);
+      if(n) out.songs.push(n);
+    }
   }
   return out;
 }
@@ -595,8 +636,10 @@ async function loadCollections(){
   for(const col of COLLECTIONS){
     try{
       const data = await api(col.kind, { id: col.id, type: col.type });
-      col.songs = zipSongs(data, col.type);
-      if(col.songs.length) col.cover = await fetchPic(col.songs[0]);
+      const parsed = parseCollection(data, col.type);
+      col.songs = parsed.songs;
+      col.cover = parsed.cover || (col.songs.length ? col.songs[0].pic : '') || '';
+      if(!col.cover && col.songs.length) col.cover = await fetchPic(col.songs[0]);
     }catch(e){
       col.songs = []; col.error = e.message;
     }
@@ -678,6 +721,7 @@ function renderSongRows(container, songs){
     row.innerHTML =
       '<div class="s-cover"><div class="ph">' + ICON.note + '</div></div>' +
       '<div class="s-meta"><div class="s-name"></div><div class="s-artist"></div></div>' +
+      (song.interval ? '<span style="flex:none;font-size:12px;color:#B0B0B5;font-variant-numeric:tabular-nums;">' + fmt(song.interval) + '</span>' : '') +
       '<div class="s-actions">' +
         '<button class="icon-btn small" data-act="dl" aria-label="下载">' + ICON.download + '</button>' +
         '<button class="icon-btn small" data-act="link" aria-label="复制外链">' + ICON.link + '</button>' +
@@ -728,26 +772,41 @@ function refreshPlayingMarks(){
 /* ---------- 播放 ---------- */
 async function resolveSong(song){
   if(song.url) return song;
-  const d = await api('info', { id: song.id, type: song.type, url: 1, pic: 1 });
-  if(d && typeof d === 'object'){
-    song.url = d.url || d.mp3 || d.playUrl || '';
-    if(!song.pic && (d.pic || d.picUrl)) song.pic = d.pic || d.picUrl;
-    if(d.name) song.name = d.name;
-    if(d.artist || d.singer) song.artist = d.artist || d.singer;
-    if(d.album) song.album = d.album;
-  }else if(typeof d === 'string'){
-    song.url = d;
+  const ids = [song.id];
+  if(song.altId && song.altId !== song.id) ids.push(song.altId);
+  let lastErr = null;
+  for(const id of ids){
+    try{
+      const d = await api('info', { id: id, type: song.type, url: 1, pic: 1 });
+      if(d && typeof d === 'object'){
+        song.url = d.url || d.mp3 || d.playUrl || '';
+        if(!song.pic && (d.pic || d.picUrl)) song.pic = httpsUp(d.pic || d.picUrl);
+        if(d.name) song.name = d.name;
+        if(d.artist || d.singer) song.artist = d.artist || d.singer;
+        if(d.album) song.album = d.album;
+      }else if(typeof d === 'string'){
+        song.url = d;
+      }
+    }catch(e){ lastErr = e; }
+    if(!song.url){
+      try{
+        const u = await api('url', { id: id, type: song.type });
+        song.url = typeof u === 'string' ? u : (u && (u.url || u.mp3)) || '';
+      }catch(e){ lastErr = e; }
+    }
+    if(song.url){
+      song.id = id;
+      if(!song.pic) fetchPic(song);
+      return song;
+    }
   }
-  if(!song.url){
-    const u = await api('url', { id: song.id, type: song.type });
-    song.url = typeof u === 'string' ? u : (u && (u.url || u.mp3)) || '';
-  }
-  if(!song.pic) fetchPic(song);
-  return song;
+  throw lastErr || new Error('获取失败');
 }
+let skipCount = 0;
 async function playFromList(list, idx){
   queue = list.slice();
   qIndex = idx;
+  skipCount = 0;
   await playCurrent();
 }
 async function playCurrent(){
@@ -760,14 +819,22 @@ async function playCurrent(){
   setPlayIcon(false);
   try{
     await resolveSong(song);
-    if(!song.url) throw new Error('没有拿到播放地址');
+    if(!song.url) throw new Error('获取失败');
     $('#pCover').innerHTML = coverHTML(song.pic);
     audio.src = song.url;
     await audio.play();
     setPlayIcon(true);
     updateMediaSession(song);
+    skipCount = 0;
   }catch(e){
-    toast('播放失败:' + (e.message || '请重试'));
+    /* 取不到播放地址的歌(下架/付费等)自动跳到下一首,不再卡住 */
+    if(qIndex + 1 < queue.length && skipCount < queue.length){
+      skipCount++;
+      toast('《' + song.name + '》无法播放(' + (e.message || '获取失败') + '),已自动跳过');
+      qIndex++;
+      return playCurrent();
+    }
+    toast('播放失败:' + (e.message || '获取失败'));
     setPlayIcon(false);
   }
   refreshPlayingMarks();
@@ -809,6 +876,19 @@ audio.addEventListener('ended', () => {
 });
 audio.addEventListener('pause', () => setPlayIcon(false));
 audio.addEventListener('play', () => setPlayIcon(true));
+let lastAudioErrAt = 0;
+audio.addEventListener('error', () => {
+  if(!nowPlaying || !audio.src) return;
+  const now = Date.now();
+  if(now - lastAudioErrAt < 3000) return;
+  lastAudioErrAt = now;
+  if(qIndex + 1 < queue.length && skipCount < queue.length){
+    skipCount++;
+    toast('《' + nowPlaying.name + '》音频加载失败,已自动跳过');
+    qIndex++;
+    playCurrent();
+  }
+});
 
 /* 进度条 */
 function fmt(t){
@@ -932,18 +1012,25 @@ $('#searchForm').addEventListener('submit', (e) => {
 });
 function normalizeSearchItem(it, type){
   if(!it || typeof it !== 'object') return null;
-  const id = it.id != null ? it.id : (it.songId != null ? it.songId : (it.mid != null ? it.mid : null));
-  if(id === null || id === '') return null;
+  const rawId = it.songmid != null ? it.songmid : (it.id != null ? it.id : (it.songId != null ? it.songId : (it.mid != null ? it.mid : null)));
+  if(rawId === null || rawId === '') return null;
+  let altId = '';
+  if(it.songmid != null && it.songid != null && String(it.songid) !== String(it.songmid)) altId = String(it.songid);
   let artist = it.artist || it.artistName || it.singer || it.singerName || '';
-  if(Array.isArray(artist)) artist = artist.map((a) => (a && a.name) || a).join(' / ');
+  if(!artist && Array.isArray(it.ar)) artist = it.ar;
+  if(Array.isArray(artist)) artist = artist.map((a) => (a && a.name) || a).filter(Boolean).join(' / ');
+  const album = it.album || it.albumName || (it.al && it.al.name) || '';
+  const pic = it.pic || it.picUrl || it.cover || it.albumPic || (it.al && it.al.picUrl) || (type === 'qq' ? qqCover(it.albummid) : null);
   return {
-    id: String(id),
-    name: it.name || it.songName || it.title || '未知歌曲',
+    id: String(rawId),
+    altId: altId,
+    name: it.name || it.songName || it.songname || it.title || '未知歌曲',
     artist: artist,
-    album: it.album || it.albumName || '',
+    album: album,
     type: type,
-    pic: it.pic || it.picUrl || it.cover || it.albumPic || null,
+    pic: pic ? httpsUp(pic) : pic,
     url: null,
+    interval: it.interval || (it.dt ? Math.round(it.dt / 1000) : 0) || 0,
   };
 }
 function startSearch(){
