@@ -126,7 +126,7 @@
   .section-head span{ font-size:13px; color:var(--sub); }
 
   /* 歌单卡片:网格 */
-  .col-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:22px 18px; }
+  .col-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(136px,1fr)); gap:20px 16px; }
   .col-card{ cursor:pointer; text-align:left; width:100%; }
   .col-card .cover{
     position:relative; width:100%; aspect-ratio:1/1; border-radius:var(--radius);
@@ -303,7 +303,10 @@
     #appMain{ padding:20px 16px 168px; }
     .appbar-in{ padding:0 14px; }
     .appbar-left h1{ font-size:24px; }
-    .col-grid{ grid-template-columns:repeat(2,1fr); gap:20px 14px; }
+    .col-grid{ grid-template-columns:repeat(3,1fr); gap:18px 12px; }
+    .col-card h3{ margin-top:8px; font-size:13.5px; }
+    .col-card p{ font-size:11.5px; }
+    .col-card .cover .ph svg{ width:30px; height:30px; }
     .detail-head{ gap:16px; }
     .detail-head .d-cover{ width:104px; height:104px; border-radius:14px; }
     .detail-head h2{ font-size:21px; }
