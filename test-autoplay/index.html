@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>静音自动播放验证</title>
+<style>
+  * { touch-action: manipulation; }
+  body { margin: 0; background: #000; color: #fff; font-family: -apple-system, "PingFang SC", sans-serif;
+         display: flex; flex-direction: column; align-items: center; padding: 28px 16px; gap: 14px; }
+  h1 { font-size: 19px; margin: 0; }
+  p.desc { color: rgba(255,255,255,.6); font-size: 13px; margin: 0; text-align: center; line-height: 1.6; }
+  video { width: min(78vw, 300px); aspect-ratio: 1; background: #101018; border-radius: 14px; }
+  #status { font-size: 30px; font-weight: 700; }
+  #status.playing { color: #30d158; }
+  #status.blocked { color: #ff453a; }
+  #time { font-size: 15px; color: rgba(255,255,255,.75); font-variant-numeric: tabular-nums; }
+  #log { width: 100%; max-width: 520px; background: rgba(255,255,255,.07); border-radius: 10px;
+         padding: 10px 12px; font: 11px/1.7 ui-monospace, Menlo, monospace; color: #7ee787;
+         white-space: pre-wrap; word-break: break-all; min-height: 120px; }
+</style>
+</head>
+<body>
+<h1>静音自动播放验证</h1>
+<p class="desc">MP4（H.264 画面轨 + AAC 音轨）·《落空》— 印子月<br>打开后不要碰屏幕，看状态和时间是否自己往前走；然后点任意处解除静音。</p>
+<video id="v" src="luokong.mp4" autoplay muted playsinline loop preload="auto"></video>
+<div id="status">加载中…</div>
+<div id="time">t = 0.0s</div>
+<div id="log"></div>
+<script>
+(function () {
+  var v = document.getElementById('v');
+  var status = document.getElementById('status');
+  var timeEl = document.getElementById('time');
+  var logEl = document.getElementById('log');
+  var t0 = Date.now();
+  function log(s) {
+    logEl.textContent += ((Date.now() - t0) / 1000).toFixed(1) + 's ' + s + '\n';
+  }
+  ['play', 'playing', 'pause', 'ended', 'canplay', 'loadstart', 'error'].forEach(function (ev) {
+    v.addEventListener(ev, function () {
+      log('EV ' + ev + ' t=' + v.currentTime.toFixed(1) + ' muted=' + v.muted + (ev === 'error' ? ' code=' + (v.error && v.error.code) : ''));
+    });
+  });
+  log('page loaded, ua=' + navigator.userAgent.slice(0, 60) + '…');
+  var p = v.play();
+  if (p && p.catch) p.catch(function (e) { log('play() REJECTED: ' + e.name); });
+  document.addEventListener('pointerdown', function () {
+    if (v.muted) { v.muted = false; log('tap: unmuted'); }
+    if (v.paused) { v.play(); log('tap: play()'); }
+  });
+  setInterval(function () {
+    timeEl.textContent = 't = ' + v.currentTime.toFixed(1) + 's / ' + (isFinite(v.duration) ? v.duration.toFixed(1) : '?') + 's';
+    if (!v.paused && v.currentTime > 0.3) {
+      status.textContent = v.muted ? '▶ 正在静音播放' : '▶ 正在播放（有声）';
+      status.className = 'playing';
+    } else if (v.paused && v.readyState >= 3) {
+      status.textContent = '⏸ 被暂停（t=' + v.currentTime.toFixed(1) + '）';
+      status.className = 'blocked';
+    }
+  }, 250);
+})();
+</script>
+</body>
+</html>
