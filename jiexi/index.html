@@ -218,26 +218,53 @@ function extractUrl(text) {
 
 /* ---------- api ---------- */
 function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-async function fetchJsonOnce(target) {
-  try {
-    var r = await fetch(target, { method: 'GET' });
-    return await r.json();
-  } catch (e) {
-    var rp = await fetch(PROXY + encodeURIComponent(target), { method: 'GET' });
-    return await rp.json();
-  }
-}
-async function fetchApi(apiPath, link) {
+function attemptOnce(apiPath, useProxy, link, signal) {
   var target = API + apiPath + '?url=' + encodeURIComponent(link);
-  var json = null;
-  for (var i = 0; i < 3; i++) {
-    json = await fetchJsonOnce(target);
-    if (json && (json.code === 429 || /concurrency|频繁|稍后/.test(String(json.msg || '')))) {
-      if (i < 2) { await sleep(((json.retry_after || 3) * 1000)); continue; }
+  var url = useProxy ? PROXY + encodeURIComponent(target) : target;
+  return fetch(url, { method: 'GET', signal: signal }).then(function (r) { return r.json(); }).then(function (json) {
+    var n = normalize(json);
+    if (n) return { ok: true, answered: true, data: n, platform: json.platform || '' };
+    var ra = (json && json.retry_after) || (json && json.data && !Array.isArray(json.data) ? json.data.retry_after : 0) || 0;
+    return { ok: false, answered: true, code: json ? json.code : 0, msg: (json && (json.msg || json.message)) || '', retryAfter: ra };
+  }).catch(function (e) { return { ok: false, answered: false, code: 0, msg: '', retryAfter: 0 }; });
+}
+function raceRound(link, paths) {
+  return new Promise(function (resolve) {
+    var done = false, remaining = paths.length * 2, lastMsg = '', rateLimited = false, retryAfter = 0;
+    var directPending = paths.length, directUnanswered = 0;
+    var ctrls = [], timers = [];
+    function finish(v) {
+      if (done) return; done = true;
+      timers.forEach(clearTimeout);
+      ctrls.forEach(function (c) { try { c.abort(); } catch (e) {} });
+      resolve(v);
     }
-    break;
-  }
-  return json;
+    function fail() { return { ok: false, msg: lastMsg, rateLimited: rateLimited, retryAfter: retryAfter }; }
+    function start(apiPath, useProxy, delay) {
+      timers.push(setTimeout(function () {
+        if (done) return;
+        var ctrl = new AbortController(); ctrls.push(ctrl);
+        var killer = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 35000);
+        attemptOnce(apiPath, useProxy, link, ctrl.signal).then(function (r) {
+          clearTimeout(killer);
+          if (done) return;
+          if (r.ok) { finish({ ok: true, data: r.data, platform: r.platform }); return; }
+          if (r.code === 429) { rateLimited = true; if (r.retryAfter) retryAfter = r.retryAfter; }
+          if (r.msg) lastMsg = r.msg;
+          remaining--;
+          if (!useProxy) {
+            directPending--;
+            if (!r.answered) directUnanswered++;
+            if (directPending <= 0 && directUnanswered <= 0) { finish(fail()); return; }
+          }
+          if (remaining <= 0) finish(fail());
+        });
+      }, delay));
+    }
+    paths.forEach(function (p) { start(p, false, 0); });
+    paths.forEach(function (p) { start(p, true, 6000); });
+    timers.push(setTimeout(function () { finish({ ok: false, msg: lastMsg, rateLimited: rateLimited, retryAfter: retryAfter }); }, 42000));
+  });
 }
 function str(v) { return typeof v === 'string' ? v : ''; }
 function normalizeBackup(b) {
@@ -295,15 +322,36 @@ async function parseLink(link) {
   var plat = detectPlatform(link);
   var paths = [];
   if (plat && plat.api) paths.push(plat.api);
-  paths.push('/api/short_videos');
-  var lastMsg = '';
-  for (var i = 0; i < paths.length; i++) {
-    var json = await fetchApi(paths[i], link);
-    var n = normalize(json);
-    if (n) { n.platformName = (plat && plat.name) || json.platform || ''; return n; }
-    if (json && json.msg) lastMsg = json.msg;
+  if (paths.indexOf('/api/short_videos') < 0) paths.push('/api/short_videos');
+  var res = await raceRound(link, paths);
+  if (!res.ok && res.rateLimited) {
+    await sleep(Math.min((res.retryAfter || 2), 5) * 1000);
+    res = await raceRound(link, paths);
   }
-  throw new Error(lastMsg || '解析失败');
+  if (res.ok) {
+    res.data.platformName = (plat && plat.name) || res.platform || '';
+    return res.data;
+  }
+  throw new Error(res.msg || '解析失败');
+}
+/* ---------- result cache (20 min) ---------- */
+var CACHE_KEY = 'jiexi_cache_v1';
+function cacheGet(link) {
+  try {
+    var c = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    var e = c[link];
+    if (e && Date.now() - e.t < 20 * 60 * 1000) return e.n;
+  } catch (err) {}
+  return null;
+}
+function cacheSet(link, n) {
+  try {
+    var c = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    c[link] = { t: Date.now(), n: n };
+    var keys = Object.keys(c);
+    if (keys.length > 10) keys.slice(0, keys.length - 10).forEach(function (k) { delete c[k]; });
+    localStorage.setItem(CACHE_KEY, JSON.stringify(c));
+  } catch (err) {}
 }
 
 /* ---------- download ---------- */
@@ -491,17 +539,26 @@ async function doParse() {
   if (parsing) return;
   var link = refreshExtract();
   if (!link) { toast(input.value.trim() ? '没有找到链接' : '请先粘贴链接'); input.focus(); return; }
+  var cached = cacheGet(link);
+  if (cached) { lastParsedLink = link; render(cached, link); return; }
   parsing = true;
-  parseBtn.disabled = true; parseBtn.textContent = '解析中…';
+  parseBtn.disabled = true;
   loading.classList.add('show');
   resultCard.classList.remove('show');
+  var t0 = Date.now();
+  parseBtn.textContent = '解析中…';
+  var tick = setInterval(function () {
+    parseBtn.textContent = '解析中… ' + Math.floor((Date.now() - t0) / 1000) + 's';
+  }, 500);
   try {
     var n = await parseLink(link);
     lastParsedLink = link;
+    cacheSet(link, n);
     render(n, link);
   } catch (e) {
     toast(e && e.message ? e.message : '解析失败');
   } finally {
+    clearInterval(tick);
     parsing = false;
     parseBtn.disabled = false; parseBtn.textContent = '解析';
     loading.classList.remove('show');
@@ -534,7 +591,7 @@ $('logo').addEventListener('click', function () { location.reload(); });
   if (t) { input.value = t; if (refreshExtract()) doParse(); }
 })();
 
-window.__jiexi = { extractUrl: extractUrl, extractAllUrls: extractAllUrls, detectPlatform: detectPlatform, normalize: normalize, cleanUrl: cleanUrl };
+window.__jiexi = { extractUrl: extractUrl, extractAllUrls: extractAllUrls, detectPlatform: detectPlatform, normalize: normalize, cleanUrl: cleanUrl, parseLink: parseLink, cacheGet: cacheGet, cacheSet: cacheSet };
 </script>
 </body>
 </html>
