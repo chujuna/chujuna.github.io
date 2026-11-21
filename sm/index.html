@@ -1223,7 +1223,11 @@ function drawExport(){
   ctx.fillStyle='#AEAEB2'; ctx.font='400 20px -apple-system,"PingFang SC",sans-serif';
   ctx.textAlign='center';
   FORM_FOOTER.split('\n').forEach(function(line,li){ ctx.fillText(line, W/2, H-118+li*30); });
-  ctx.fillText('chujuna.github.io/sm', W/2, H-118+3*30);
+  var siteText='';
+  if(/^https?:$/.test(location.protocol)){
+    siteText=location.host+location.pathname.replace(/\/index\.html?$/,'').replace(/\/+$/,'');
+  }
+  if(siteText) ctx.fillText(siteText, W/2, H-118+3*30);
   ctx.textAlign='left';
   return canvas.toDataURL('image/png');
 }
