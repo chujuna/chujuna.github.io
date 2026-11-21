@@ -31,7 +31,7 @@ html,body{margin:0;padding:0}
 /* 顶部留白：内容与顶部小胶囊之间的间隔，要和胶囊离屏幕上沿的距离一样大。
    胶囊上沿距屏幕 = 10px + 安全区，胶囊高约 46px，故内容起点 = 10+46+10 再加两份安全区；
    .wrap 自带 10px 上内边距，扣掉后正文 padding-top 取 56px + 两份安全区 */
-body{font-family:var(--font); background:var(--bg); color:var(--ink); font-size:15px; line-height:1.55; padding-top:calc(56px + env(safe-area-inset-top) + env(safe-area-inset-top)); padding-bottom:168px}
+body{font-family:var(--font); background:var(--bg); color:var(--ink); font-size:15px; line-height:1.55; padding-top:calc(56px + env(safe-area-inset-top) + env(safe-area-inset-top)); padding-bottom:calc(108px + env(safe-area-inset-bottom))}
 /* 发布面板打开期间锁住页面本体滚动：否则从面板内容区下滑会链式滚到页面、右缘冒出滚动条 */
 html.lock,body.lock{overflow:hidden}
 button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
@@ -590,6 +590,54 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .field input[type=password],.field input[type=email],.field input[type=number]{width:100%; border:1px solid var(--line); background:var(--card); border-radius:12px; padding:12px 14px; outline:none}
 .field input[type=password]:focus,.field input[type=email]:focus,.field input[type=number]:focus{border-color:var(--blue)}
 .unread-dot{width:9px; height:9px; border-radius:50%; background:var(--accent); flex:none}
+
+/* ---------- 本轮修复补充 ---------- */
+/* 第 1 条：按钮文字一律不换行——展开层动作行/投票行在窄屏被挤成圆形、文字竖排就是缺了 nowrap + flex 收缩失控 */
+.btn{white-space:nowrap}
+.vote-btn{white-space:nowrap}
+.mini-btn{white-space:nowrap}
+.expand-actions .btn{flex:1 1 0; min-width:0; padding-left:8px; padding-right:8px}
+.expand-actions .btn svg{flex:none}
+.vote-btn svg{flex:none}
+@media (max-width:420px){
+  .expand-actions{gap:7px}
+  .expand-actions .btn{font-size:13px; padding:10px 4px}
+  .vote-btn{font-size:11px; gap:3px; padding:5px 3px}
+  .expand-card{padding:22px 16px 18px}
+}
+/* 第 3 条：筛选按钮只在世界显示——离开世界时按钮收缩消失，积分胶囊随 flex 布局动画滑到它的位置 */
+.filter-toggle{transition:background .2s, color .2s, opacity .3s ease, transform .3s ease, width .3s ease, margin-left .3s ease, padding .3s ease, border-color .3s ease; overflow:hidden}
+body.in-page .filter-toggle{opacity:0; transform:scale(.4); width:0; min-width:0; padding:0; border-width:0; margin-left:-8px; pointer-events:none}
+body.in-page .filter-drawer{display:none !important}
+/* 第 5 条：版权行贴着内容（上方间距 18px），页面底部只留避开胶囊的空间（body padding-bottom 已改） */
+.copyright{margin-top:18px}
+/* 第 13 条：DEMO 标识 */
+.demo-tag{background:rgba(0,113,227,.12)!important; color:var(--blue)!important}
+.bubble .b-demo{font-size:9px; font-weight:800; letter-spacing:.08em; color:rgba(0,80,180,.88); background:rgba(0,113,227,.16); padding:2px 7px; border-radius:999px; white-space:nowrap}
+@media (prefers-color-scheme: dark){ .bubble .b-demo{color:rgba(160,205,255,.92); background:rgba(0,113,227,.30)} }
+/* 头像图片（avatar_url）：图填满圆形、裁切不变形 */
+.avatar{overflow:hidden}
+.avatar img{width:100%; height:100%; border-radius:50%; object-fit:cover; display:block}
+/* 第 12 条：子页首次加载的小泡泡动画（无缓存时显示，不许白屏） */
+.page-loading{display:flex; gap:9px; align-items:flex-end; justify-content:center; padding:34px 0}
+.page-loading i{border-radius:50%; will-change:transform,opacity; backface-visibility:hidden;
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55), inset 3px 4px 8px rgba(255,255,255,.32), 0 4px 10px rgba(90,90,160,.18);
+  animation:ldRise 1.3s ease-in-out infinite}
+.page-loading i:nth-child(1){width:20px; height:20px; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(56,189,248,.88) 55%, rgba(2,132,199,.90))}
+.page-loading i:nth-child(2){width:28px; height:28px; animation-delay:.18s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(167,139,250,.88) 55%, rgba(124,58,237,.90))}
+.page-loading i:nth-child(3){width:16px; height:16px; animation-delay:.36s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(52,211,153,.88) 55%, rgba(5,150,105,.90))}
+/* 第 8/9 条：设置组弹窗（参数全进弹窗，整页只剩分组行） */
+.set-modal{width:min(92vw,440px); text-align:left; max-height:86vh; overflow-y:auto}
+.set-modal h4{margin-bottom:14px}
+.set-modal .row{display:flex; gap:10px; margin-top:16px}
+.set-modal .row .btn{flex:1}
+.set-modal .switch-row{display:flex; align-items:center; gap:12px; padding:4px 0 10px}
+.set-modal .switch-row .tx{flex:1}
+.set-modal .switch-row .tx b{display:block; font-size:14px}
+.set-modal .switch-row .tx small{color:var(--ink3); font-size:12px; line-height:1.5}
+.set-modal .pwd-wrap{display:flex; align-items:center; gap:6px}
+.set-modal .pwd-wrap input{flex:1; min-width:0}
+.set-modal .pwd-wrap .mini-btn{flex:none}
 </style>
 </head>
 <body>
@@ -676,7 +724,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 const SUPABASE_URL = 'https://hzxcgqmzvforzcktlcqc.supabase.co'; /* Supabase 项目 URL */
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6eGNncW16dmZvcnpja3RsY3FjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyNzI5MzgsImV4cCI6MjExMDg0ODkzOH0.0YJ0KkOliwQeU4fGnd9YZ-FNUZYiS1jjFqEv93blR34'; /* anon key（公开，配合 RLS） */
 const MEDIA_API = 'https://feiyu-proxy.netlify.app/api'; /* 媒体上传/删除函数基址 */
-const COPYRIGHT = '协助Muse · ©️By FeiYu';
+/* 版权行在 copyrightEl() 里组装：版权符号用 Lucide 官方 copyright 图标，不用 emoji 字符 */
 </script>
 <script>
 /* ================= Lucide 官方图标（24 网格，描边 1.8） ================= */
@@ -723,6 +771,7 @@ const P = {
   logOut:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
   settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'
 };
+P.copyright = '<circle cx="12" cy="12" r="10"/><path d="M14.83 14.83a4 4 0 1 1 0-5.66"/>'; /* Lucide 官方 copyright 图标 */
 function icon(name, cls){ return '<svg class="ic '+(cls||'')+'" viewBox="0 0 24 24" aria-hidden="true">'+(P[name]||'')+'</svg>'; }
 function setIcon(el, name, cls){ el.innerHTML = icon(name, cls); }
 /* 小样同款图标输出：<svg width height viewBox fill/stroke>，路径与小样 ICONS 表一致（Lucide 官方） */
@@ -761,6 +810,38 @@ function fmtTimeShort(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2
 function emptyNoteEl(text){ const d=h('div'); d.style.cssText='padding:26px;text-align:center;color:var(--ink3);font-size:14px'; d.textContent=text; return d; }
 function chevSvg(){ return '<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'; }
 function tagEl(cls, text, style){ const t=h('span','tag'+(cls?' '+cls:''), text); if(style) t.style.cssText=style; return t; }
+/* 头像填充：有 avatar_url 显示图片，没有显示昵称首字（配色沿用小样 AV_COLORS） */
+function fillAvatar(el, name, url){
+  el.innerHTML = '';
+  if(url && isHttps(url)){
+    el.style.background = 'rgba(120,120,128,.15)';
+    const img = document.createElement('img'); img.alt=''; img.loading='lazy'; img.src = url;
+    img.addEventListener('error', ()=>{ el.innerHTML=''; el.textContent = String(name||'用').charAt(0); el.style.background = avColor(name||''); });
+    el.appendChild(img);
+  } else {
+    el.textContent = String(name||'用').charAt(0);
+    el.style.background = avColor(name||'');
+  }
+}
+/* 子页加载动画（无缓存首次进入时占位，不白屏） */
+function pageLoadingEl(){
+  const d = h('div','page-loading'); d.setAttribute('aria-hidden','true');
+  d.append(h('i'), h('i'), h('i'));
+  return d;
+}
+/* 通用媒体上传（头像 / Logo 用；发布面板有自己的 PUB 流程）：返回 { url, path } */
+async function uploadFileToMedia(file, kind){
+  const maxMB = kind==='image' ? 5 : 10;
+  if(file.size > maxMB*1024*1024) throw new Error('文件不能超过 '+maxMB+'MB');
+  const { data } = await sb.auth.getSession();
+  const jwt = data && data.session ? data.session.access_token : '';
+  const dataUrl = await new Promise((res, rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+  const data_base64 = String(dataUrl).split(',')[1] || '';
+  const resp = await fetch(MEDIA_API+'/upload', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt }, body: JSON.stringify({ kind, filename:file.name, mime:file.type, data_base64 }) });
+  const json = await resp.json().catch(()=>({}));
+  if(!resp.ok) throw new Error(json.message || json.error || '上传失败');
+  return json;
+}
 
 /* ================= 基础工具（安全：用户内容只走 textContent） ================= */
 function h(tag, cls, text){ const el=document.createElement(tag); if(cls) el.className=cls; if(text!=null) el.textContent=text; return el; }
@@ -799,7 +880,31 @@ function banned(){ return !!(S.profile && S.profile.is_banned); }
 async function loadSettings(){
   const { data } = await sb.from('settings').select('*').limit(1);
   S.settings = (data && data[0]) || {};
+  applySiteIdentity();
   return S.settings;
+}
+/* 第 10 条：网站名称 / Logo / SEO——settings 加载后应用到标题、品牌胶囊与 meta */
+function setMetaTag(attr, key, content){
+  if(content==null || content==='') return;
+  let m = document.querySelector('meta['+attr+'="'+key+'"]');
+  if(!m){ m = document.createElement('meta'); m.setAttribute(attr, key); document.head.appendChild(m); }
+  m.setAttribute('content', content);
+}
+function applySiteIdentity(){
+  const name = (S.settings && S.settings.site_name) || '泡泡世界';
+  document.title = name;
+  const h1 = document.querySelector('.brand h1'); if(h1) h1.textContent = name;
+  const mark = document.querySelector('.brand-mark');
+  if(mark){
+    const logo = S.settings && S.settings.site_logo_url;
+    if(logo && isHttps(logo)){ mark.style.background = 'url("'+logo+'") center / cover no-repeat'; }
+    else { mark.style.background = ''; }
+  }
+  const desc = (S.settings && S.settings.site_desc) || '';
+  setMetaTag('name','description', desc);
+  setMetaTag('name','keywords', (S.settings && S.settings.site_keywords) || '');
+  setMetaTag('property','og:title', name);
+  setMetaTag('property','og:description', desc);
 }
 function setGet(key, dflt){ const v=S.settings ? S.settings[key] : undefined; return (v===undefined||v===null) ? dflt : v; }
 
@@ -826,7 +931,7 @@ async function loadMyMarks(){
 async function authorsFor(rows){
   const ids=[...new Set(rows.map(r=>r.user_id).filter(id=>!S.authors.has(id)))];
   if(ids.length){
-    const { data } = await sb.from('profiles').select('id,user_no,nickname,role').in('id', ids);
+    const { data } = await sb.from('profiles').select('id,user_no,nickname,role,avatar_url').in('id', ids);
     (data||[]).forEach(p=>S.authors.set(p.id,p));
   }
 }
@@ -879,12 +984,13 @@ function makeBubbleEl(b){
   if(S.user && b.user_id===S.user.id) el.classList.add('mine');
   if(a.role==='admin' || b.is_permanent) el.style.animationDelay = (-(Math.random()*3)).toFixed(2)+'s';
   const ico = h('span','b-ico'); ico.innerHTML = typeIcon(b.type, 20);
-  const nm = h('span','b-name', String(a.nickname || '用户').slice(0,6));
+  const nm = h('span','b-name', b.is_demo ? 'DEMO' : String(a.nickname || '用户').slice(0,6));
   el.append(ico, nm);
-  if(a.role==='admin' || b.is_permanent){
+  if(a.role==='admin' || b.is_permanent || b.is_demo){
     const flags = h('span','b-flags');
     if(a.role==='admin') flags.appendChild(h('span','b-admin','管理员'));
     if(b.is_permanent) flags.appendChild(h('span','b-perm','∞ 永久'));
+    if(b.is_demo) flags.appendChild(h('span','b-demo','DEMO'));
     el.appendChild(flags);
   }
   el.dataset.id = b.id;
@@ -948,23 +1054,31 @@ function tick(ts){
       it.idlePhase += dt*0.7;
       it.x += (it.vx + Math.sin(it.idlePhase)*4)*dt;
       it.y += (it.vy + Math.cos(it.idlePhase*0.8)*3)*dt;
+      /* 速度软上限：被挤压/被拖动推开攒下的速度逐帧缓降回漂移速度，位置始终逐帧连续 */
+      const sp = Math.hypot(it.vx, it.vy);
+      if(sp > 34){ const ns = 34 + (sp-34)*Math.max(0, 1-3*dt); it.vx *= ns/sp; it.vy *= ns/sp; }
       if(it.x < 2){ it.x=2; it.vx=Math.abs(it.vx); }
       if(it.x > w-it.d-2){ it.x=w-it.d-2; it.vx=-Math.abs(it.vx); }
       if(it.y < 66){ it.y=66; it.vy=Math.abs(it.vy); }
       if(it.y > h-it.d-108){ it.y=h-it.d-108; it.vy=-Math.abs(it.vy); }
     }
   }
-  /* 两两挤压 */
+  /* 两两挤压：禁止按重叠量整段平移位置（旧版那样会让泡泡碰撞后瞬间闪现到别处）。
+     改为：位置修正每帧限幅（重叠再深也分多帧平滑分开）+ 给一小股分离速度让它们继续漂开，
+     任何一帧的位移都连续可循 */
+  const maxCorr = 130*dt;
   for(let i=0;i<items.length;i++) for(let j=i+1;j<items.length;j++){
     const a=items[i], c=items[j]; if(a.drag||c.drag) continue;
     const ax=a.x+a.d/2, ay=a.y+a.d/2, cx=c.x+c.d/2, cy=c.y+c.d/2;
     let dx=cx-ax, dy=cy-ay; let dist=Math.hypot(dx,dy); const min=(a.d+c.d)/2+3;
     if(dist>0.01 && dist<min){
       const push=(min-dist)/2, ux=dx/dist, uy=dy/dist;
-      if(!a.entering){ a.x-=ux*push*0.5; a.y-=uy*push*0.5; }
-      if(!c.entering){ c.x+=ux*push*0.5; c.y+=uy*push*0.5; }
-      if(a.entering && !c.entering){ c.x+=ux*push; c.y+=uy*push; }
-      if(c.entering && !a.entering){ a.x-=ux*push; a.y-=uy*push; }
+      const corr = Math.min(push, maxCorr);
+      const kick = Math.min(push, 26)*7*dt;
+      if(!a.entering){ a.x-=ux*corr*0.5; a.y-=uy*corr*0.5; a.vx-=ux*kick; a.vy-=uy*kick; }
+      if(!c.entering){ c.x+=ux*corr*0.5; c.y+=uy*corr*0.5; c.vx+=ux*kick; c.vy+=uy*kick; }
+      if(a.entering && !c.entering){ c.x+=ux*corr; c.y+=uy*corr; }
+      if(c.entering && !a.entering){ a.x-=ux*corr; a.y-=uy*corr; }
     }
   }
   for(const it of [...items]){
@@ -997,11 +1111,14 @@ function attachBubblePointer(item){
     item.vx = (e.clientX-lastX)/dtm*1000*0.35; lastX=e.clientX; lastT=now;
     item.x = nx; item.y = ny;
     el.style.transform = 'translate('+item.x+'px,'+item.y+'px)';
-    /* 拖动挤压周围 */
+    /* 拖动挤压周围：只给速度、不挪位置，被推的泡泡自己滑开，不会跳位 */
     for(const o of W.list){ if(o===item||o.drag) continue;
       const dx=(o.x+o.d/2)-(item.x+item.d/2), dy=(o.y+o.d/2)-(item.y+item.d/2);
       const dist=Math.hypot(dx,dy), min=(o.d+item.d)/2+16;
-      if(dist>0.01 && dist<min){ o.x += dx/dist*3.2; o.y += dy/dist*3.2; }
+      if(dist>0.01 && dist<min){
+        o.vx = Math.max(-48, Math.min(48, o.vx + dx/dist*7));
+        o.vy = Math.max(-48, Math.min(48, o.vy + dy/dist*7));
+      }
     }
   });
   const up = ()=>{
@@ -1093,7 +1210,14 @@ function blip(freq, t0, dur, gain){
   o.connect(g).connect(ac.destination); o.start(ac.currentTime+t0); o.stop(ac.currentTime+t0+dur+0.05);
 }
 function blipSounds(){ for(let i=0;i<6;i++) blip(280+i*70+Math.random()*40, i*0.07, 0.16, 0.05); }
-function popSound(){ blip(520, 0, 0.14, 0.07); }
+/* iOS 上 AudioContext 必须在用户手势里创建/resume，否则会被系统静默：
+   每次 pointerdown 顺手预热解锁（已 running 时几乎零成本），保证关闭泡泡时爆点音效必响 */
+document.addEventListener('pointerdown', ()=>{ audioCtx(); }, { passive:true });
+function popSound(){
+  const ac = audioCtx(); if(!ac) return;
+  if(ac.state==='suspended'){ ac.resume().then(()=>blip(520, 0, 0.14, 0.07)).catch(()=>{}); }
+  else blip(520, 0, 0.14, 0.07);
+}
 </script>
 <script>
 /* ================= 展开层 ================= */
@@ -1104,6 +1228,7 @@ function cleanupExpandMedia(){
   if(EX.vjsEl){ try{ EX.vjsEl.remove(); }catch(e){} EX.vjsEl=null; }
 }
 function closeExpand(popFromWorld){
+  if(popFromWorld) audioCtx(); /* 关闭手势内先 resume 音频上下文，爆点音效才不会被 iOS 静默 */
   const overlay = $('expandOverlay');
   const wasWorld = EX.source==='world' && popFromWorld && EX.b;
   cleanupExpandMedia();
@@ -1124,9 +1249,9 @@ async function openExpand(b, source){
   const card = $('expandCard'); card.innerHTML='';
   /* 头部：与小样 expand-meta 同结构（头像 + who + 右列标签/时间） */
   const meta = h('div','expand-meta');
-  const av = h('span','avatar', String(a.nickname||'用户').charAt(0)); av.style.background = avColor(a.nickname||'');
+  const av = h('span','avatar'); fillAvatar(av, b.is_demo ? 'DEMO' : (a.nickname||'用户'), b.is_demo ? '' : a.avatar_url);
   const who = h('span','who');
-  const wb = h('b'); wb.textContent = String(a.nickname||'用户').slice(0,6) + ((S.user && b.user_id===S.user.id) ? '（我）' : '');
+  const wb = h('b'); wb.textContent = (b.is_demo ? 'DEMO' : String(a.nickname||'用户').slice(0,6)) + ((S.user && b.user_id===S.user.id) ? '（我）' : '');
   const wid = h('small','who-id','ID '+a.user_no);
   who.append(wb, wid);
   const mr = h('span','meta-right');
@@ -1135,6 +1260,7 @@ async function openExpand(b, source){
   else if(b.is_permanent) prio = tagEl('perm-tag','∞ 永久泡泡');
   else if((b.like_count||0) >= 8) prio = tagEl('like-tag','高赞泡泡');
   else if((b.report_count||0) > 0) prio = tagEl('report-tag','被举报 '+(b.report_count||0)+' 次 · 低优先');
+  else if(b.is_demo) prio = tagEl('demo-tag','DEMO');
   else { prio = tagEl('',''); prio.style.cssText='background:rgba(255,159,10,.16);color:var(--orange)'; prio.textContent = b.cost+' 积分 · '+TYPE_META[b.type].name; }
   mr.append(prio, h('small','who-time', fmtTimeShort(b.created_at)+' 发布'));
   meta.append(av, who, mr); card.appendChild(meta);
@@ -1233,6 +1359,7 @@ async function openExpand(b, source){
   try{
     await sb.rpc('record_view',{ p_bubble: b.id });
     b.view_count = (b.view_count||0)+1;
+    if(S.user){ CACHE.footprints = null; CACHE.counts = null; }
   }catch(e){}
 }
 function needLogin(){ if(!S.user){ toast('先登录才能操作'); showPage('mine'); renderAuth(); return true; } return false; }
@@ -1266,6 +1393,7 @@ async function doFavorite(b, btn, txEl){
   if(error){ toast(errText(error)); return; }
   if(S.myFavorites.has(b.id)){ S.myFavorites.delete(b.id); toast('已取消收藏'); }
   else{ S.myFavorites.add(b.id); toast('已收藏'); }
+  CACHE.favorites = null; CACHE.counts = null;
   if(btn) btn.classList.toggle('on', S.myFavorites.has(b.id));
   if(txEl) txEl.textContent = S.myFavorites.has(b.id) ? '已收藏' : '收藏';
 }
@@ -1294,6 +1422,7 @@ function confirmDeleteBubble(b, inExpand){
     }catch(e){ err = e; }
     if(err){ toast(errText(err)); return; }
     if(b.media_path) deleteMediaFile(b.media_path, b.id);
+    CACHE.myBubbles = null; CACHE.favorites = null; CACHE.footprints = null; CACHE.counts = null;
     S.pool = S.pool.filter(x=>x.id!==b.id); S.poolById.delete(b.id);
     const item = W.list.find(it=>it.b.id===b.id); if(item) removeItem(item);
     toast('已删除');
@@ -1588,11 +1717,12 @@ async function submitPublish(codeIn){
     p_cost:PUB.cost, p_perm_code: permCode||null
   });
   if(error){ toast(errText(error)); return; }
+  CACHE.myBubbles = null; CACHE.counts = null;
   closePublish(); toast('发布成功');
   await Promise.all([loadProfile(), loadPool()]);
   const nb = data && (data.id ? S.poolById.get(data.id) : (typeof data==='string' ? S.poolById.get(data) : null));
   setWorldTarget(); showWorld();
-  if(nb){ const it = spawnBubble(nb, 0); if(it){ it.y = stageSize().h*0.4; it.entering=false; it.el.classList.add('fresh'); } }
+  if(nb){ const it = spawnBubble(nb, 0); if(it) it.el.classList.add('fresh'); /* 只从屏幕底部飘入，不瞬移到屏中间 */ }
   else topUp();
 }
 </script>
@@ -1602,12 +1732,17 @@ function showWorld(){
   S.view='world'; $('page').hidden = true; $('stage').style.visibility='visible';
   $('refreshBtn').style.visibility='visible'; $('topCaps').style.visibility='visible';
   $('tabWorld').classList.add('on'); $('tabMine').classList.remove('on');
+  document.body.classList.remove('in-page'); /* 世界：筛选按钮动画出现、积分胶囊移回 */
   startWorld(); topUp();
 }
 function showPage(kind){
   S.view = kind; $('page').hidden = false; $('stage').style.visibility='hidden';
   $('refreshBtn').style.visibility='hidden';
   $('tabWorld').classList.remove('on'); $('tabMine').classList.add('on');
+  document.body.classList.add('in-page'); /* 非世界：筛选按钮动画消失、积分胶囊滑到筛选位 */
+  const fm = $('filterMenu'); if(fm) fm.classList.remove('open');
+  const fb = $('filterBtn'); if(fb){ fb.classList.remove('open'); fb.setAttribute('aria-expanded','false'); }
+  viewSeq++;
   window.scrollTo(0,0);
 }
 function backLink(text, fn){
@@ -1616,7 +1751,14 @@ function backLink(text, fn){
   b.appendChild(document.createTextNode(text));
   b.onclick = fn; return b;
 }
-function copyrightEl(){ return h('div','copyright', COPYRIGHT); }
+function copyrightEl(){
+  const d = h('div','copyright');
+  d.append(document.createTextNode('协助Muse · '));
+  const ic = h('span');
+  ic.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px" aria-hidden="true">'+P.copyright+'</svg>';
+  d.append(ic, document.createTextNode(' By FeiYu'));
+  return d;
+}
 const ICO19 = {
   user:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
   calendar:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>',
@@ -1645,43 +1787,69 @@ function secTitle(text, small){
   return t;
 }
 
+/* ================= 「我的」数据缓存（第 12 条：先渲染后刷新，不白屏） ================= */
+const CACHE = { counts:null, myBubbles:null, favorites:null, footprints:null, checkinSigned:null, pointsLog:null, notifications:null };
+let viewSeq = 0;
+function resetCache(){ Object.keys(CACHE).forEach(k=>{ CACHE[k]=null; }); }
+
 /* ================= 我的 ================= */
 async function renderMine(){
   showPage('mine');
   const wrap = $('pageWrap'); wrap.innerHTML='';
   if(!S.user){ renderAuth(); return; }
-  await loadProfile();
+  const seq = ++viewSeq;
+  /* 先用缓存资料立刻渲染整页，计数与最新资料在后台回来后静默补上（第 12 条） */
   const p = S.profile || {};
   const mini = h('button','card profile-mini');
-  const av = h('span','avatar', String(p.nickname||'用').charAt(0)); av.style.background = avColor(p.nickname||'');
+  const av = h('span','avatar'); fillAvatar(av, p.nickname||'用', p.avatar_url);
   const tx = h('span','pm-tx');
-  tx.append(h('b',null,p.nickname||'用户'), h('small',null,(S.user.email||'')+' · '+(p.role==='admin'?'管理员':'普通用户')));
+  const nameB = h('b',null,p.nickname||'用户');
+  const subS = h('small',null,(S.user.email||'')+' · '+(p.role==='admin'?'管理员':'普通用户'));
+  tx.append(nameB, subS);
   mini.append(av, tx);
   const ar = h('span'); ar.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--ink3); flex:none"><path d="m9 18 6-6-6-6"/></svg>';
   mini.appendChild(ar.firstChild);
-  mini.onclick = renderAccount;
+  mini.onclick = renderAccount; /* 第 14 条：点头像卡进资料页，菜单不再有「账号信息」 */
   wrap.appendChild(mini);
   if(p.is_banned){ const bn = h('div',null,'账号已被封禁：能浏览，不能发布与签到'); bn.style.cssText='color:var(--accent);font-size:13px;margin:-4px 2px 12px'; wrap.appendChild(bn); }
+  const c0 = CACHE.counts || {};
+  const card = h('div','card menu-card');
+  const rowCheckin = menuRow(ICO19.calendar,'签到与积分','每日签到 +'+setGet('checkin_points',2)+' 积分',(p.points||0)+' 积分',renderCheckin);
+  const rowBubbles = menuRow(ICO19.bubbles,'发布的泡泡','出现 / 被查看次数都在这里，删除不退积分', c0.my!=null ? c0.my+' 个' : '', renderMyBubbles);
+  const rowFavs = menuRow(ICO19.star,'收藏的泡泡','在泡泡展开层点「收藏」就会存到这里', S.myFavorites.size+' 个', renderFavorites);
+  const rowHist = menuRow(ICO19.history,'泡泡足迹','我看过的泡泡，按最近查看排在前面', c0.hist!=null ? c0.hist+' 条' : '', renderFootprints);
+  const rowNoti = menuRow(ICO19.bell,'站内提醒','赠送、审核等消息都在这里', c0.unread ? c0.unread+' 条未读' : '', renderNotifications);
+  card.append(rowCheckin, rowBubbles, rowFavs, rowHist, rowNoti);
+  let rowAdmin = null;
+  if(isAdmin()){ rowAdmin = menuRow(ICO19.shield,'管理员后台','数据、审核、用户、授权码与设置', c0.pending ? c0.pending+' 条待审' : '', renderAdminHome); card.appendChild(rowAdmin); }
+  wrap.appendChild(card);
+  wrap.appendChild(copyrightEl());
+  const setVal = (row, v)=>{
+    if(!row) return;
+    let mv = row.querySelector('.m-val');
+    if(!mv){ if(!v) return; mv = h('span','m-val',''); row.insertBefore(mv, row.lastChild); }
+    mv.textContent = v;
+  };
+  loadProfile().then(np=>{
+    if(seq!==viewSeq || !np) return;
+    nameB.textContent = np.nickname||'用户';
+    subS.textContent = (S.user.email||'')+' · '+(np.role==='admin'?'管理员':'普通用户');
+    fillAvatar(av, np.nickname||'用', np.avatar_url);
+    setVal(rowCheckin, (np.points||0)+' 积分');
+  });
   const [bc, nc, vc] = await Promise.all([
     sb.from('bubbles').select('id').eq('user_id', S.user.id).is('deleted_at', null),
     sb.from('notifications').select('id').eq('user_id', S.user.id).eq('is_read', false),
     sb.from('bubble_views').select('bubble_id').eq('user_id', S.user.id)
   ]);
-  const myCount = (bc.data||[]).length, unread = (nc.data||[]).length, histCount = (vc.data||[]).length;
   let pending = 0;
   if(isAdmin()){ try{ const { data: pr } = await sb.rpc('admin_pending_reviews'); pending = (pr||[]).length; }catch(e){} }
-  const card = h('div','card menu-card');
-  card.append(
-    menuRow(ICO19.user,'账号信息','昵称、邮箱与退出登录','',renderAccount),
-    menuRow(ICO19.calendar,'签到与积分','每日签到 +'+setGet('checkin_points',2)+' 积分',(p.points||0)+' 积分',renderCheckin),
-    menuRow(ICO19.bubbles,'发布的泡泡','出现 / 被查看次数都在这里，删除不退积分',myCount+' 个',renderMyBubbles),
-    menuRow(ICO19.star,'收藏的泡泡','在泡泡展开层点「收藏」就会存到这里',S.myFavorites.size+' 个',renderFavorites),
-    menuRow(ICO19.history,'泡泡足迹','我看过的泡泡，按最近查看排在前面',histCount+' 条',renderFootprints),
-    menuRow(ICO19.bell,'站内提醒','赠送、审核等消息都在这里',unread ? unread+' 条未读' : '',renderNotifications)
-  );
-  if(isAdmin()) card.appendChild(menuRow(ICO19.shield,'管理员后台','数据、审核、用户、授权码与设置', pending ? pending+' 条待审' : '', renderAdminHome));
-  wrap.appendChild(card);
-  wrap.appendChild(copyrightEl());
+  if(seq!==viewSeq) return;
+  CACHE.counts = { my:(bc.data||[]).length, unread:(nc.data||[]).length, hist:(vc.data||[]).length, pending };
+  setVal(rowBubbles, CACHE.counts.my+' 个');
+  setVal(rowHist, CACHE.counts.hist+' 条');
+  setVal(rowNoti, CACHE.counts.unread ? CACHE.counts.unread+' 条未读' : '');
+  if(rowAdmin) setVal(rowAdmin, pending ? pending+' 条待审' : '');
 }
 /* ---------- 登录 / 注册 ---------- */
 function renderAuth(){
@@ -1747,19 +1915,21 @@ function renderAuth(){
 async function afterAuth(){
   const { data } = await sb.auth.getSession();
   S.user = data && data.session ? data.session.user : null;
+  resetCache();
   await Promise.all([loadProfile(), loadMyMarks()]);
   renderMine();
 }
-/* ---------- 账号信息 ---------- */
+/* ---------- 资料页（预览 + 修改资料，第 4 条） ---------- */
 async function renderAccount(){
   S.view='account'; showPage('account');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
-  await loadProfile(); const p = S.profile||{};
+  const p = S.profile||{};
   const card = h('div','card profile-card');
   const top = h('div','profile-top');
-  const av = h('span','avatar', String(p.nickname||'用').charAt(0)); av.style.background = avColor(p.nickname||'');
+  const av = h('span','avatar'); fillAvatar(av, p.nickname||'用', p.avatar_url);
   const mid = h('div');
   const h3 = h('h3'); h3.append(document.createTextNode(p.nickname||'用户'), h('span','profile-id','ID '+p.user_no));
   mid.append(h3, h('p',null, S.user.email||''));
@@ -1767,62 +1937,158 @@ async function renderAccount(){
   roleTag.style.cssText = 'margin-left:auto; ' + (p.role==='admin' ? 'background:rgba(250,36,60,.12); color:var(--accent)' : 'background:rgba(0,113,227,.12); color:var(--blue)');
   top.append(av, mid, roleTag); card.appendChild(top);
   const kvs = h('div'); kvs.style.marginTop='14px';
-  const kv = (k,v,color)=>{ const r=h('div','kv'); r.append(h('span',null,k)); const b=h('b',null,v); if(color) b.style.color=color; r.appendChild(b); kvs.appendChild(r); };
+  const kv = (k,v,color,attr)=>{ const r=h('div','kv'); r.append(h('span',null,k)); const b=h('b',null,v); if(color) b.style.color=color; if(attr) b.dataset.kv=attr; r.appendChild(b); kvs.appendChild(r); return b; };
+  kv('邮箱', S.user.email||'');
   kv('注册日期', p.created_at ? fmtDate(p.created_at) : '');
   kv('账号状态', p.is_banned ? '已封禁' : '正常', p.is_banned ? 'var(--accent)' : 'var(--green)');
-  kv('积分余额', String(p.points||0)+' 分');
+  const pointsB = kv('积分余额', String(p.points||0)+' 分', null, 'points');
   card.appendChild(kvs);
-  const nf = h('div','field'); nf.style.marginTop='16px';
-  nf.appendChild(h('label',null,'昵称（最多 6 个字）'));
-  const nickIn = h('input'); nickIn.type='text'; nickIn.maxLength=6; nickIn.value=p.nickname||''; nickIn.placeholder='最多 6 个字'; nf.appendChild(nickIn); card.appendChild(nf);
-  const pf = h('div','field');
-  pf.appendChild(h('label',null,'新密码（至少 6 位，不改请留空）'));
-  const pwIn = h('input'); pwIn.type='password'; pwIn.placeholder='输入新密码'; pwIn.autocomplete='new-password'; pf.appendChild(pwIn); card.appendChild(pf);
+  /* 按钮行：修改资料（展开/收起表单） + 退出登录 */
   const row = h('div'); row.style.cssText='display:flex; gap:10px; margin-top:18px';
-  const save = h('button','btn btn-ghost','保存修改'); save.style.flex='1';
-  save.onclick = async ()=>{
+  const editBtn = h('button','btn btn-blue','修改资料'); editBtn.style.flex='1';
+  const out = h('button','btn btn-ghost','退出登录'); out.style.cssText='flex:1; color:var(--accent)';
+  out.onclick = ()=>confirmBox('退出登录？','退出后需要重新登录才能发布和签到。','退出',false, async ()=>{ await sb.auth.signOut(); S.user=null; S.profile=null; resetCache(); updatePointsCap(); toast('已退出'); renderMine(); showWorld(); });
+  row.append(editBtn, out); card.appendChild(row);
+  /* 修改表单（默认收起） */
+  const form = h('div'); form.style.display='none'; form.style.marginTop='18px';
+  card.appendChild(form);
+  /* 头像 */
+  const avF = h('div','field');
+  avF.appendChild(h('label',null,'头像'));
+  const avRow = h('div'); avRow.style.cssText='display:flex; align-items:center; gap:12px';
+  const avPrev = h('span','avatar'); avPrev.style.cssText='width:52px; height:52px; font-size:20px';
+  fillAvatar(avPrev, p.nickname||'用', p.avatar_url);
+  const avBtn = h('button','mini-btn','更换头像'); avBtn.type='button';
+  const avFile = h('input'); avFile.type='file'; avFile.accept='image/*'; avFile.hidden=true;
+  avBtn.onclick = ()=>avFile.click();
+  avFile.onchange = async ()=>{
+    const f = avFile.files && avFile.files[0]; if(!f) return;
+    if(!setGet('media_upload_enabled', true)){ toast('管理员已关闭文件上传'); return; }
+    avBtn.disabled = true; avBtn.textContent = '上传中…';
+    try{
+      const res = await uploadFileToMedia(f, 'image');
+      const { error } = await sb.from('profiles').update({ avatar_url: res.url }).eq('id', S.user.id);
+      if(error){ toast(errText(error)); return; }
+      if(S.profile) S.profile.avatar_url = res.url;
+      S.authors.delete(S.user.id);
+      fillAvatar(avPrev, p.nickname||'用', res.url);
+      fillAvatar(av, p.nickname||'用', res.url);
+      toast('头像已更新');
+    }catch(e){ toast(errText(e)); }
+    avBtn.disabled = false; avBtn.textContent = '更换头像'; avFile.value='';
+  };
+  avRow.append(avPrev, avBtn, avFile); avF.appendChild(avRow); form.appendChild(avF);
+  /* 邮箱 */
+  const emF = h('div','field'); emF.appendChild(h('label',null,'邮箱'));
+  const emIn = h('input'); emIn.type='text'; emIn.setAttribute('inputmode','email'); emIn.value = S.user.email||''; emIn.placeholder='you@example.com'; emF.appendChild(emIn); form.appendChild(emF);
+  /* 用户名（昵称） */
+  const nf = h('div','field'); nf.appendChild(h('label',null,'用户名（最多 6 个字）'));
+  const nickIn = h('input'); nickIn.type='text'; nickIn.maxLength=6; nickIn.value=p.nickname||''; nickIn.placeholder='最多 6 个字'; nf.appendChild(nickIn); form.appendChild(nf);
+  const saveInfo = h('button','btn btn-blue','保存资料'); saveInfo.style.cssText='width:100%; min-height:46px';
+  saveInfo.onclick = async ()=>{
     const v = nickIn.value.trim();
-    if(!v){ toast('昵称不能为空'); return; }
-    if(v.length>6){ toast('昵称最多 6 个字'); return; }
+    if(!v){ toast('用户名不能为空'); return; }
+    if(v.length>6){ toast('用户名最多 6 个字'); return; }
+    saveInfo.disabled = true;
     if(v !== (p.nickname||'')){
       const { error } = await sb.from('profiles').update({ nickname:v }).eq('id', S.user.id);
-      if(error){ toast(errText(error)); return; }
+      if(error){ toast(errText(error)); saveInfo.disabled=false; return; }
+      if(S.profile) S.profile.nickname = v;
+      S.authors.delete(S.user.id);
     }
-    const np = pwIn.value;
-    if(np){
-      if(np.length<6){ toast('密码至少 6 位'); return; }
-      const { error } = await sb.auth.updateUser({ password: np });
-      if(error){ toast(errText(error)); return; }
+    const newEmail = emIn.value.trim();
+    if(newEmail && newEmail !== (S.user.email||'')){
+      const { error } = await sb.auth.updateUser({ email:newEmail });
+      if(error){ toast(errText(error)); saveInfo.disabled=false; return; }
+      toast('资料已保存；邮箱确认邮件已发到新邮箱，点链接确认后生效');
+    } else {
+      toast('资料已保存');
     }
-    toast('已保存'); renderAccount();
+    saveInfo.disabled = false;
+    renderAccount();
   };
-  const out = h('button','btn btn-ghost','退出登录'); out.style.cssText='flex:1; color:var(--accent)';
-  out.onclick = ()=>confirmBox('退出登录？','退出后需要重新登录才能发布和签到。','退出',false, async ()=>{ await sb.auth.signOut(); S.user=null; S.profile=null; updatePointsCap(); toast('已退出'); renderMine(); showWorld(); });
-  row.append(save, out); card.appendChild(row);
+  form.appendChild(saveInfo);
+  /* 密码：验旧密码；邮箱验证开启时还要邮件验证码（reauthenticate nonce） */
+  const pwTitle = h('div'); pwTitle.style.cssText='font-size:14px; font-weight:700; margin:20px 0 10px'; pwTitle.textContent='修改密码';
+  form.appendChild(pwTitle);
+  const needMailCode = !!setGet('email_verify_required', true);
+  const oldF = h('div','field'); oldF.appendChild(h('label',null,'旧密码'));
+  const oldIn = h('input'); oldIn.type='password'; oldIn.placeholder='输入当前密码'; oldIn.autocomplete='current-password'; oldF.appendChild(oldIn); form.appendChild(oldF);
+  const newF = h('div','field'); newF.appendChild(h('label',null,'新密码（至少 6 位）'));
+  const newIn = h('input'); newIn.type='password'; newIn.placeholder='输入新密码'; newIn.autocomplete='new-password'; newF.appendChild(newIn); form.appendChild(newF);
+  let nonceIn = null;
+  if(needMailCode){
+    const ncF = h('div','field'); ncF.appendChild(h('label',null,'邮件验证码'));
+    const ncRow = h('div'); ncRow.style.cssText='display:flex; gap:8px';
+    nonceIn = h('input'); nonceIn.type='text'; nonceIn.placeholder='邮箱收到的验证码'; nonceIn.style.flex='1'; nonceIn.style.minWidth='0';
+    const sendBtn = h('button','mini-btn blue','发送验证码'); sendBtn.type='button'; sendBtn.style.flex='none';
+    sendBtn.onclick = async ()=>{
+      sendBtn.disabled = true;
+      const { error } = await sb.auth.reauthenticate();
+      if(error){ toast(errText(error)); sendBtn.disabled=false; return; }
+      toast('验证码已发送到你的邮箱');
+      sendBtn.disabled = false;
+    };
+    ncRow.append(nonceIn, sendBtn); ncF.appendChild(ncRow); form.appendChild(ncF);
+  }
+  const savePw = h('button','btn btn-ghost','修改密码'); savePw.style.cssText='width:100%; min-height:46px';
+  savePw.onclick = async ()=>{
+    const old = oldIn.value, np = newIn.value;
+    if(!old){ toast('先填旧密码'); return; }
+    if(!np || np.length<6){ toast('新密码至少 6 位'); return; }
+    savePw.disabled = true;
+    const { error: e1 } = await sb.auth.signInWithPassword({ email: S.user.email, password: old });
+    if(e1){ toast('旧密码不正确'); savePw.disabled=false; return; }
+    if(needMailCode){
+      const nonce = nonceIn ? nonceIn.value.trim() : '';
+      if(!nonce){ toast('请先获取并填写邮件验证码'); savePw.disabled=false; return; }
+      const { error } = await sb.auth.updateUser({ password: np, nonce });
+      if(error){ toast(errText(error)); savePw.disabled=false; return; }
+    } else {
+      const { error } = await sb.auth.updateUser({ password: np });
+      if(error){ toast(errText(error)); savePw.disabled=false; return; }
+    }
+    oldIn.value=''; newIn.value=''; if(nonceIn) nonceIn.value='';
+    toast('密码已修改');
+    savePw.disabled = false;
+  };
+  form.appendChild(savePw);
+  editBtn.onclick = ()=>{
+    const open = form.style.display==='none';
+    form.style.display = open ? '' : 'none';
+    editBtn.textContent = open ? '收起修改' : '修改资料';
+  };
   panel.appendChild(card);
   wrap.appendChild(panel);
   wrap.appendChild(copyrightEl());
+  loadProfile().then(np=>{
+    if(seq!==viewSeq || !np) return;
+    pointsB.textContent = String(np.points||0)+' 分';
+  });
 }
 /* ---------- 签到与积分 ---------- */
 async function renderCheckin(){
   S.view='checkin'; showPage('checkin');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
-  await loadProfile(); const p = S.profile||{};
+  const p = S.profile||{};
   const card = h('div','card points-card');
   card.appendChild(h('div','lbl','我的积分'));
-  card.appendChild(h('div','big', String(p.points||0)));
-  const today = shanghaiToday();
-  const { data: done } = await sb.from('checkins').select('id').eq('user_id', S.user.id).eq('checkin_date', today);
-  const signed = (done||[]).length>0;
-  const btn = h('button','btn btn-blue', signed ? '今日已签到，明日再来' : '每日签到 +'+setGet('checkin_points',2)+' 积分');
+  const big = h('div','big', String(p.points||0)); card.appendChild(big);
+  const paintBtn = (signed)=>{
+    btn.textContent = signed ? '今日已签到，明日再来' : '每日签到 +'+setGet('checkin_points',2)+' 积分';
+    btn.disabled = signed || banned();
+  };
+  const btn = h('button','btn btn-blue','每日签到 +'+setGet('checkin_points',2)+' 积分');
   btn.style.cssText='min-width:190px; min-height:48px; font-size:15px';
-  btn.disabled = signed || banned();
+  if(CACHE.checkinSigned!=null) paintBtn(CACHE.checkinSigned);
   btn.onclick = async ()=>{
     btn.disabled = true;
     const { error } = await sb.rpc('daily_checkin');
     if(error){ toast(errText(error)); btn.disabled=false; return; }
+    CACHE.checkinSigned = true; CACHE.pointsLog = null; CACHE.counts = null;
     toast('签到成功 +'+setGet('checkin_points',2)); renderCheckin();
   };
   card.appendChild(btn);
@@ -1832,15 +2098,29 @@ async function renderCheckin(){
   const list = h('div','log-list'); panel.appendChild(list);
   wrap.appendChild(panel);
   wrap.appendChild(copyrightEl());
-  const { data: logs } = await sb.from('points_log').select('*').eq('user_id', S.user.id).order('created_at',{ascending:false}).limit(60);
-  if(!logs || !logs.length) list.appendChild(emptyNoteEl('还没有积分记录'));
-  (logs||[]).forEach(l=>{
-    const r = h('div','log-row');
-    const left = h('span'); const bt = h('b',null, reasonText(l)); bt.style.fontWeight='600';
-    left.append(bt, h('small',null, fmtDate(l.created_at)));
-    const amt = h('span','amt '+(l.change>0?'plus':l.change<0?'minus':''), (l.change>0?'+':'')+l.change);
-    r.append(left, amt); list.appendChild(r);
-  });
+  const paintLogs = (logs)=>{
+    list.innerHTML='';
+    if(!logs || !logs.length){ list.appendChild(emptyNoteEl('还没有积分记录')); return; }
+    logs.forEach(l=>{
+      const r = h('div','log-row');
+      const left = h('span'); const bt = h('b',null, reasonText(l)); bt.style.fontWeight='600';
+      left.append(bt, h('small',null, fmtDate(l.created_at)));
+      const amt = h('span','amt '+(l.change>0?'plus':l.change<0?'minus':''), (l.change>0?'+':'')+l.change);
+      r.append(left, amt); list.appendChild(r);
+    });
+  };
+  if(CACHE.pointsLog) paintLogs(CACHE.pointsLog); else list.appendChild(pageLoadingEl());
+  loadProfile().then(np=>{ if(seq===viewSeq && np) big.textContent = String(np.points||0); });
+  const today = shanghaiToday();
+  const [doneRes, logsRes] = await Promise.all([
+    sb.from('checkins').select('id').eq('user_id', S.user.id).eq('checkin_date', today),
+    sb.from('points_log').select('*').eq('user_id', S.user.id).order('created_at',{ascending:false}).limit(60)
+  ]);
+  if(seq!==viewSeq) return;
+  CACHE.checkinSigned = (doneRes.data||[]).length>0;
+  paintBtn(CACHE.checkinSigned);
+  CACHE.pointsLog = logsRes.data||[];
+  paintLogs(CACHE.pointsLog);
 }
 function reasonText(l){
   const map = { checkin:'每日签到', publish:'发布泡泡', publish_permanent:'发布永久泡泡', admin_gift:'管理员赠送', newbie:'新手赠送' };
@@ -1872,6 +2152,7 @@ function bubbleTags(b, extra){
   const tags = [];
   const a = S.authors.get(b.user_id);
   if(a && a.role==='admin') tags.push(tagEl('admin-tag','管理员'));
+  if(b.is_demo) tags.push(tagEl('demo-tag','DEMO'));
   if(b.is_permanent) tags.push(tagEl('perm-tag','∞ 永久'));
   if(b.status==='hidden') tags.push(tagEl('hidden-tag','已下架'));
   if(b.archived_at) tags.push(tagEl('hidden-tag','已归档'));
@@ -1880,100 +2161,164 @@ function bubbleTags(b, extra){
 }
 async function renderMyBubbles(){
   S.view='mine'; showPage('mine');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
   panel.appendChild(secTitle('发布的泡泡','删除不退还积分'));
   const list = h('div','my-list'); panel.appendChild(list);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  const paint = (data)=>{
+    list.innerHTML='';
+    if(!data || !data.length){ list.appendChild(emptyNoteEl('还没有发布过泡泡，点底部「泡泡」发第一个')); return; }
+    data.forEach(b=>{
+      const hidden = (b.report_count||0) >= Number(setGet('report_hide_threshold',3));
+      const tags = bubbleTags(b, hidden ? tagEl('hidden-tag','已隐藏') : null);
+      list.appendChild(listRow(b, [
+        TYPE_META[b.type].name+' · '+b.cost+' 积分 · '+fmtTimeShort(b.created_at)+(hidden?' · 举报达阈值已隐藏':''),
+        '出现 '+(b.show_count||0)+' 次 · 被查看 '+(b.view_count||0)+' 次 · 点赞 '+(b.like_count||0)
+      ], { tags, onView:()=>openExpand(b,'list'), onDelete:()=>confirmDeleteBubble(b,false) }));
+    });
+  };
+  if(CACHE.myBubbles) paint(CACHE.myBubbles); else list.appendChild(pageLoadingEl());
   const { data } = await sb.from('bubbles').select('*').eq('user_id', S.user.id).is('deleted_at', null).order('created_at',{ascending:false}).limit(100);
-  if(!data || !data.length){ list.appendChild(emptyNoteEl('还没有发布过泡泡，点底部「泡泡」发第一个')); return; }
-  await authorsFor(data);
-  data.forEach(b=>{
-    const hidden = (b.report_count||0) >= Number(setGet('report_hide_threshold',3));
-    const tags = bubbleTags(b, hidden ? tagEl('hidden-tag','已隐藏') : null);
-    list.appendChild(listRow(b, [
-      TYPE_META[b.type].name+' · '+b.cost+' 积分 · '+fmtTimeShort(b.created_at)+(hidden?' · 举报达阈值已隐藏':''),
-      '出现 '+(b.show_count||0)+' 次 · 被查看 '+(b.view_count||0)+' 次 · 点赞 '+(b.like_count||0)
-    ], { tags, onView:()=>openExpand(b,'list'), onDelete:()=>confirmDeleteBubble(b,false) }));
-  });
+  if(seq!==viewSeq) return;
+  CACHE.myBubbles = data||[];
+  await authorsFor(CACHE.myBubbles);
+  if(seq!==viewSeq) return;
+  paint(CACHE.myBubbles);
 }
 async function renderFavorites(){
   S.view='mine'; showPage('mine');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
   panel.appendChild(secTitle('收藏的泡泡','点任意一条重新打开查看'));
   const list = h('div','my-list'); panel.appendChild(list);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  const paint = (cached)=>{
+    list.innerHTML='';
+    const favs = cached.favs, map = cached.map;
+    if(!favs || !favs.length){ list.appendChild(emptyNoteEl('还没有收藏的泡泡')); return; }
+    favs.forEach(f=>{
+      const b = map.get(f.bubble_id);
+      if(!b || b.deleted_at || b.status!=='visible'){
+        list.appendChild(listRow(b || { type:'text', content:'', cost:5 }, ['原泡泡已删除或下架'], { title:'泡泡已失效', tags:[tagEl('hidden-tag','已失效')] }));
+        return;
+      }
+      list.appendChild(listRow(b, ['收藏于 '+fmtDate(f.created_at)], { tags:bubbleTags(b), onView:()=>openExpand(b,'list') }));
+    });
+  };
+  if(CACHE.favorites) paint(CACHE.favorites); else list.appendChild(pageLoadingEl());
   const { data: favs } = await sb.from('favorites').select('bubble_id,created_at').eq('user_id', S.user.id).order('created_at',{ascending:false}).limit(100);
-  if(!favs || !favs.length){ list.appendChild(emptyNoteEl('还没有收藏的泡泡')); return; }
+  if(seq!==viewSeq) return;
+  if(!favs || !favs.length){ CACHE.favorites = { favs:[], map:new Map() }; paint(CACHE.favorites); return; }
   const ids = favs.map(f=>f.bubble_id);
   const { data: bs } = await sb.from('bubbles').select('*').in('id', ids);
-  const map = new Map((bs||[]).map(b=>[b.id,b]));
+  if(seq!==viewSeq) return;
   await authorsFor(bs||[]);
-  favs.forEach(f=>{
-    const b = map.get(f.bubble_id);
-    if(!b || b.deleted_at || b.status!=='visible'){
-      list.appendChild(listRow(b || { type:'text', content:'', cost:5 }, ['原泡泡已删除或下架'], { title:'泡泡已失效', tags:[tagEl('hidden-tag','已失效')] }));
-      return;
-    }
-    list.appendChild(listRow(b, ['收藏于 '+fmtDate(f.created_at)], { tags:bubbleTags(b), onView:()=>openExpand(b,'list') }));
-  });
+  if(seq!==viewSeq) return;
+  CACHE.favorites = { favs, map:new Map((bs||[]).map(b=>[b.id,b])) };
+  paint(CACHE.favorites);
 }
 async function renderFootprints(){
   S.view='mine'; showPage('mine');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
-  panel.appendChild(secTitle('泡泡足迹','看过的泡泡都在这里'));
-  const list = h('div','my-list'); panel.appendChild(list);
-  wrap.appendChild(panel); wrap.appendChild(copyrightEl());
-  const { data: vs } = await sb.from('bubble_views').select('bubble_id,viewed_at').eq('user_id', S.user.id).order('viewed_at',{ascending:false}).limit(100);
-  if(!vs || !vs.length){ list.appendChild(emptyNoteEl('还没有看过泡泡')); return; }
-  const ids = vs.map(v=>v.bubble_id);
-  const { data: bs } = await sb.from('bubbles').select('*').in('id', ids);
-  const map = new Map((bs||[]).map(b=>[b.id,b])); await authorsFor(bs||[]);
-  vs.forEach(v=>{
-    const b = map.get(v.bubble_id);
-    if(!b || b.deleted_at || b.status!=='visible'){
-      if(b) list.appendChild(listRow(b, ['看过 '+fmtDate(v.viewed_at)], { tags:[tagEl('hidden-tag','已失效')] }));
-      return;
-    }
-    list.appendChild(listRow(b, ['看过 '+fmtDate(v.viewed_at)], { tags:bubbleTags(b), onView:()=>openExpand(b,'list') }));
-  });
-  const clr = h('button','btn btn-ghost','清空足迹');
-  clr.style.cssText='margin-top:12px; width:100%';
+  /* 第 7 条：「清空足迹」小按钮放在主标题右侧同一行 */
+  const head = h('div','sec-title');
+  head.appendChild(document.createTextNode('泡泡足迹'));
+  const clr = h('button','mini-btn red','清空足迹'); clr.style.flex='none';
   clr.onclick = ()=>confirmBox('清空足迹？','看过的泡泡记录会被全部清空。','清空',true, async ()=>{
     const { error } = await sb.from('bubble_views').delete().eq('user_id', S.user.id);
     if(error){ toast(errText(error)); return; }
+    CACHE.footprints = null; CACHE.counts = null;
     toast('已清空'); renderFootprints();
   });
-  panel.appendChild(clr);
+  head.appendChild(clr);
+  panel.appendChild(head);
+  const list = h('div','my-list'); panel.appendChild(list);
+  wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  const paint = (cached)=>{
+    list.innerHTML='';
+    const vs = cached.vs, map = cached.map;
+    if(!vs || !vs.length){ list.appendChild(emptyNoteEl('还没有看过泡泡')); return; }
+    vs.forEach(v=>{
+      const b = map.get(v.bubble_id);
+      if(!b || b.deleted_at || b.status!=='visible'){
+        if(b) list.appendChild(listRow(b, ['看过 '+fmtDate(v.viewed_at)], { tags:[tagEl('hidden-tag','已失效')] }));
+        return;
+      }
+      list.appendChild(listRow(b, ['看过 '+fmtDate(v.viewed_at)], { tags:bubbleTags(b), onView:()=>openExpand(b,'list') }));
+    });
+  };
+  if(CACHE.footprints) paint(CACHE.footprints); else list.appendChild(pageLoadingEl());
+  const { data: vs } = await sb.from('bubble_views').select('bubble_id,viewed_at').eq('user_id', S.user.id).order('viewed_at',{ascending:false}).limit(100);
+  if(seq!==viewSeq) return;
+  if(!vs || !vs.length){ CACHE.footprints = { vs:[], map:new Map() }; paint(CACHE.footprints); return; }
+  const ids = vs.map(v=>v.bubble_id);
+  const { data: bs } = await sb.from('bubbles').select('*').in('id', ids);
+  if(seq!==viewSeq) return;
+  await authorsFor(bs||[]);
+  if(seq!==viewSeq) return;
+  CACHE.footprints = { vs, map:new Map((bs||[]).map(b=>[b.id,b])) };
+  paint(CACHE.footprints);
 }
 async function renderNotifications(){
   S.view='mine'; showPage('mine');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
   panel.appendChild(secTitle('站内提醒','打开后自动标为已读'));
   const list = h('div','log-list'); panel.appendChild(list);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  const paint = (rows)=>{
+    list.innerHTML='';
+    if(!rows || !rows.length){ list.appendChild(emptyNoteEl('暂无提醒')); return; }
+    rows.forEach(n=>{
+      const r = h('div','log-row');
+      const left = h('span'); const bt = h('b',null, n.text||''); bt.style.fontWeight='600';
+      left.append(bt, h('small',null, fmtDate(n.created_at)));
+      r.appendChild(left);
+      if(!n.is_read) r.appendChild(h('span','unread-dot'));
+      list.appendChild(r);
+    });
+  };
+  if(CACHE.notifications) paint(CACHE.notifications); else list.appendChild(pageLoadingEl());
   const { data } = await sb.from('notifications').select('*').eq('user_id', S.user.id).order('created_at',{ascending:false}).limit(60);
-  if(!data || !data.length) list.appendChild(emptyNoteEl('暂无提醒'));
-  (data||[]).forEach(n=>{
-    const r = h('div','log-row');
-    const left = h('span'); const bt = h('b',null, n.text||''); bt.style.fontWeight='600';
-    left.append(bt, h('small',null, fmtDate(n.created_at)));
-    r.appendChild(left);
-    if(!n.is_read) r.appendChild(h('span','unread-dot'));
-    list.appendChild(r);
-  });
+  if(seq!==viewSeq) return;
+  CACHE.notifications = data||[];
+  paint(CACHE.notifications);
   await sb.from('notifications').update({ is_read:true }).eq('user_id', S.user.id).eq('is_read', false);
+  CACHE.notifications.forEach(n=>{ n.is_read = true; });
+  if(CACHE.counts) CACHE.counts.unread = 0;
 }
 </script>
 <script>
 /* ================= 管理员后台 ================= */
+/* 第 6 条：操作日志 action 一律映射成中文显示，禁止直接露英文代码 */
+const ACTION_TEXT = {
+  gift_points:'赠送积分', bubble_hide:'泡泡下架', bubble_restore:'泡泡恢复', bubble_delete:'泡泡删除',
+  review_restore:'审核恢复显示', review_hide:'审核下架', review_delete:'审核删除',
+  ban_user:'封禁用户', unban_user:'解除封禁', delete_user:'删除账号', delete_user_soft:'删除账号',
+  gen_codes:'生成授权码', import_codes:'导入授权码', delete_codes:'删除授权码', clear_codes:'清空授权码',
+  save_settings:'保存设置', seed_demo:'添加 DEMO 泡泡', clear_demo:'清空 DEMO 泡泡'
+};
+function actionText(l){
+  if(!l || !l.action) return '其他操作';
+  if(l.action==='set_ban'){
+    let d = l.detail;
+    if(typeof d==='string'){ try{ d = JSON.parse(d); }catch(e){ d = null; } }
+    if(d && d.banned===true) return '封禁用户';
+    if(d && d.banned===false) return '解除封禁';
+    return '封禁设置';
+  }
+  return ACTION_TEXT[l.action] || '其他操作';
+}
 function trowEl(lead, title, tags, smallNodes, onClick, hot){
   const row = h('div','trow clickable'+(hot?' review-hot':''));
   row.appendChild(lead);
@@ -2057,7 +2402,7 @@ async function renderAdminReviews(){
   if(!logs || !logs.length) logsBox.appendChild(emptyNoteEl('暂无记录'));
   (logs||[]).forEach(l=>{
     const r = h('div','log-row');
-    const left = h('span'); const bt = h('b',null, String(l.action||'')); bt.style.fontWeight='600';
+    const left = h('span'); const bt = h('b',null, actionText(l)); bt.style.fontWeight='600';
     left.append(bt, h('small',null, fmtDate(l.created_at)));
     r.appendChild(left); logsBox.appendChild(r);
   });
@@ -2110,6 +2455,27 @@ async function renderAdminBubbles(){
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
   panel.appendChild(secTitle('泡泡管理','筛选组合生效 · 点一条看详情'));
+  /* 第 13 条：DEMO 泡泡一键添加 / 清空（丰富世界内容，署名 DEMO，后期可一键删） */
+  const demoBar = h('div','code-tools');
+  const seedBtn = h('button','mini-btn blue','添加 DEMO 泡泡'); seedBtn.type='button';
+  seedBtn.onclick = async ()=>{
+    seedBtn.disabled = true;
+    const { data, error } = await sb.rpc('admin_seed_demo',{ p_count:20 });
+    seedBtn.disabled = false;
+    if(error){ toast(errText(error)); return; }
+    toast('已添加 '+(data==null?20:data)+' 个 DEMO 泡泡');
+    CACHE.myBubbles = null;
+    await loadPool(); renderAdminBubbles();
+  };
+  const clearDemoBtn = h('button','mini-btn red','清空 DEMO'); clearDemoBtn.type='button';
+  clearDemoBtn.onclick = ()=>confirmBox('清空全部 DEMO 泡泡？','所有署名 DEMO 的泡泡都会被删除，普通泡泡不受影响。','清空',true, async ()=>{
+    const { data, error } = await sb.rpc('admin_clear_demo');
+    if(error){ toast(errText(error)); return; }
+    toast('已清空 '+(data||0)+' 个 DEMO 泡泡');
+    CACHE.myBubbles = null;
+    await loadPool(); renderAdminBubbles();
+  });
+  demoBar.append(seedBtn, clearDemoBtn); panel.appendChild(demoBar);
   const bar = h('div','filter-bar');
   const mkSel = (val, opts, fn)=>{
     const sel = h('select');
@@ -2148,6 +2514,7 @@ async function renderAdminBubbles(){
     const a = authorOf(b);
     const tags = [];
     if(a.role==='admin') tags.push(tagEl('admin-tag','管理员'));
+    if(b.is_demo) tags.push(tagEl('demo-tag','DEMO'));
     if(b.is_permanent) tags.push(tagEl('perm-tag','∞ 永久'));
     if((b.like_count||0)>=8 && a.role!=='admin' && !b.is_permanent) tags.push(tagEl('like-tag','高赞'));
     if((b.report_count||0) >= thr) tags.push(tagEl('hidden-tag','已隐藏'));
@@ -2172,6 +2539,7 @@ function renderAdminBubbleDetail(b){
   info.append(h('b',null, bubbleTitle(b)), h('small',null, (a.nickname||'用户')+' · '+fmtTimeShort(b.created_at)));
   const tags = [];
   if(a.role==='admin') tags.push(tagEl('admin-tag','管理员'));
+  if(b.is_demo) tags.push(tagEl('demo-tag','DEMO'));
   if(b.is_permanent) tags.push(tagEl('perm-tag','∞ 永久'));
   if((b.like_count||0)>=8 && a.role!=='admin' && !b.is_permanent) tags.push(tagEl('like-tag','高赞'));
   if((b.report_count||0) >= thr) tags.push(tagEl('hidden-tag','已隐藏'));
@@ -2230,8 +2598,9 @@ async function renderAdminUsers(kwVal){
   if(error){ table.appendChild(emptyNoteEl(errText(error))); return; }
   if(!data || !data.length) table.appendChild(emptyNoteEl('没有找到这个用户'));
   (data||[]).forEach(u=>{
-    const av = h('span','avatar', String(u.nickname||'用').charAt(0));
-    av.style.cssText='width:38px;height:38px;font-size:15px;background:'+avColor(u.nickname||'');
+    const av = h('span','avatar');
+    av.style.cssText='width:38px;height:38px;font-size:15px';
+    fillAvatar(av, u.nickname||'用', u.avatar_url);
     table.appendChild(trowEl(av, u.nickname||'用户', [statusTagFor(u)],
       [document.createTextNode((u.email||'')+' · ID '+u.user_no)],
       ()=>renderAdminUserDetail(u), false));
@@ -2245,8 +2614,9 @@ function renderAdminUserDetail(u){
   panel.appendChild(secTitle('用户详情'));
   const card = h('div','card'); card.style.overflow='hidden';
   const head = h('div','detail-head');
-  const av = h('span','avatar', String(u.nickname||'用').charAt(0));
-  av.style.cssText='width:48px;height:48px;font-size:19px;background:'+avColor(u.nickname||'');
+  const av = h('span','avatar');
+  av.style.cssText='width:48px;height:48px;font-size:19px';
+  fillAvatar(av, u.nickname||'用', u.avatar_url);
   const info = h('span','info');
   const bb = h('b'); bb.textContent = u.nickname||'用户'; bb.appendChild(document.createTextNode(' ')); bb.appendChild(statusTagFor(u));
   info.append(bb, h('small',null, (u.email||'')+' · ID '+u.user_no));
@@ -2469,133 +2839,183 @@ async function exportCodes(){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
 }
-/* ---------- 系统设置（5 张独立卡片） ---------- */
-function setGroupEl(title, desc){
-  const sec = h('section','card set-group');
-  const head = h('div','set-group-head'); head.append(h('h4',null,title), h('p',null,desc));
-  sec.appendChild(head); return sec;
-}
-function setRowEl(sec, label, small, control){
-  const r = h('div','set-row');
-  const tx = h('div','tx'); tx.append(h('b',null,label), h('small',null,small));
-  r.append(tx, control); sec.appendChild(r); return r;
-}
-function numIn(val){ const i=h('input'); i.type='number'; i.value=(val==null?'':val); return i; }
-function unitSpan(t){ const u=h('span',null,t); u.style.cssText='font-size:13px; color:var(--ink2)'; return u; }
-function numWithUnit(val, unit){
-  const wrap = h('span'); wrap.style.cssText='display:flex; align-items:center; gap:8px';
-  const i = numIn(val); wrap.append(i, unitSpan(unit)); return { wrap, input:i };
-}
+/* ---------- 系统设置（分组行 + 弹窗，第 8/9/10 条：整页只剩分组行，参数全进弹窗） ---------- */
 function switchEl(checked){ const sw=h('label','switch'); const i=h('input'); i.type='checkbox'; i.checked=!!checked; sw.append(i, h('i')); return { sw, input:i }; }
 async function renderAdminSettings(){
   S.view='admin'; showPage('admin');
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
-  panel.appendChild(secTitle('系统设置','改完即时生效，存数据库配置'));
-  const stack = h('div','settings-stack'); panel.appendChild(stack);
+  panel.appendChild(secTitle('系统设置','点「设置」修改，每组单独保存'));
+  const card = h('div','card'); card.style.overflow='hidden';
+  panel.appendChild(card);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
   await loadSettings(); const s = S.settings||{};
-  const saveAll = async (patch)=>{
-    const { error } = await sb.rpc('admin_save_settings',{ p: patch });
-    if(error){ toast(errText(error)); return; }
-    Object.assign(S.settings, patch); toast('设置已保存'); setWorldTarget();
+  const savePatch = async (patch)=>{
+    const { error } = await sb.rpc('admin_save_settings',{ p_patch: patch });
+    if(error){ toast(errText(error)); return false; }
+    Object.assign(S.settings, patch); setWorldTarget();
+    return true;
   };
-  /* 1 积分规则 */
-  const g1 = setGroupEl('积分规则','签到与新用户注册时发放的积分');
-  const ci = numWithUnit(setGet('checkin_points',2),'积分'); setRowEl(g1,'签到奖励','用户每天签到一次得到的积分', ci.wrap);
-  const ni = numWithUnit(setGet('newbie_points',5),'积分'); setRowEl(g1,'注册赠送','新用户注册成功赠送的积分', ni.wrap);
-  const dl = numWithUnit(setGet('daily_limit',20),'个'); setRowEl(g1,'每日发布上限','用户每天最多能发布多少个泡泡', dl.wrap);
-  stack.appendChild(g1);
-  /* 2 世界与治理 */
-  const g2 = setGroupEl('世界与治理','世界里泡泡的数量、出现顺序与举报处理');
-  const th = numWithUnit(setGet('report_hide_threshold',3),'次'); setRowEl(g2,'举报隐藏阈值','单个泡泡被举报达到此次数，直接不在世界显示（待管理员审核）', th.wrap);
-  const wcWrap = h('span'); wcWrap.style.cssText='display:flex; align-items:center; gap:8px; flex-wrap:wrap';
-  const ww = numIn(setGet('world_count_wide',60)), wn = numIn(setGet('world_count_narrow',30));
-  wcWrap.append(unitSpan('宽屏'), ww, unitSpan('个 · 窄屏'), wn, unitSpan('个'));
-  const wcRow = setRowEl(g2,'世界泡泡数量','世界里同时漂浮的泡泡上限，按屏幕宽度分别设置（≥760px 算宽屏）；数量越多越挤、越容易卡，窄屏建议少一些', wcWrap);
-  wcRow.style.flexWrap='wrap';
-  setRowEl(g2,'世界出现优先级','管理员泡泡 ＞ 永久泡泡 ＞ 点赞多 ＞ 普通泡泡 ＞ 被举报泡泡；点赞越多权重越高、越容易被抽中出现', tagEl('','已生效','background:rgba(0,113,227,.12); color:var(--blue)'));
-  const ad = numWithUnit(setGet('archive_days',30),'天'); setRowEl(g2,'普通泡泡归档','普通泡泡发布多少天后自动归档、不再出现在世界', ad.wrap);
-  stack.appendChild(g2);
-  /* 3 邮箱验证 + 发件账号 */
-  const g3 = setGroupEl('邮箱验证','是否要求验证邮箱，以及验证邮件从哪个账号发出');
-  const vsw = switchEl(setGet('email_verify_required', true)); setRowEl(g3,'邮箱验证','开启后，未验证邮箱不能发布 / 签到', vsw.sw);
-  const mail = h('div','mail-group');
-  const mgHead = h('div','mg-head'); mgHead.append(h('b',null,'自定义发件邮箱账号'), h('small',null,'验证邮件通过下面这台 SMTP 服务器、用这个账号登录后发出；改完点底部「保存设置」'));
-  mail.appendChild(mgHead);
-  const mrow = (label, small, control)=>{ const r=h('div','set-row'); const tx=h('div','tx'); tx.append(h('b',null,label), h('small',null,small)); r.append(tx, control); mail.appendChild(r); return r; };
-  const txtIn = (val, ph, mode)=>{ const i=h('input'); i.type='text'; if(mode) i.setAttribute('inputmode',mode); i.value=val||''; if(ph) i.placeholder=ph; return i; };
-  const senderEmail = txtIn(s.sender_email,'如 noreply@paopao.cn','email'); mrow('发件邮箱','用户收件箱里看到的发件人地址，通常与下面的登录账号相同', senderEmail);
-  const senderName = txtIn(s.sender_name,'如 泡泡世界'); mrow('发件人名称','收件箱里显示在发件邮箱前面的名字', senderName);
-  const smtpHost = txtIn(s.smtp_host,'如 smtp.qq.com'); smtpHost.autocapitalize='off'; smtpHost.spellcheck=false; mrow('SMTP 服务器','邮箱服务商的发送服务器地址，如 QQ 邮箱 smtp.qq.com、163 邮箱 smtp.163.com、Gmail smtp.gmail.com', smtpHost);
-  const portW = numWithUnit(s.smtp_port||465,'端口'); mrow('SMTP 端口','SSL 常用 465，STARTTLS 常用 587，无加密常用 25；切换加密方式会自动带出常用端口，可再改', portW.wrap);
-  const smtpSecure = h('select'); [['ssl','SSL'],['starttls','STARTTLS'],['none','无加密']].forEach(([v,t])=>{ const o=h('option',null,t); o.value=v; if((s.smtp_secure||'ssl')===v) o.selected=true; smtpSecure.appendChild(o); });
-  smtpSecure.onchange=()=>{ portW.input.value = smtpSecure.value==='ssl' ? '465' : smtpSecure.value==='starttls' ? '587' : '25'; };
-  mrow('加密方式','与服务商要求和端口对应：465 用 SSL，587 用 STARTTLS', smtpSecure);
-  const smtpUser = txtIn(s.smtp_user,'如 noreply@paopao.cn'); smtpUser.autocapitalize='off'; smtpUser.spellcheck=false; mrow('登录账号','登录 SMTP 服务器的账号，一般就是发件邮箱全址', smtpUser);
-  const pwdWrap = h('span','mail-pwd-wrap');
-  const smtpPass = h('input'); smtpPass.type='password'; smtpPass.placeholder='填写 SMTP 密码或授权码'; smtpPass.autocomplete='new-password';
-  const eye = h('button','mini-btn pwd-eye','显示'); eye.type='button'; eye.setAttribute('aria-label','显示或隐藏密码');
-  eye.onclick=()=>{ const show = smtpPass.type==='password'; smtpPass.type = show ? 'text' : 'password'; eye.textContent = show ? '隐藏' : '显示'; };
-  pwdWrap.append(smtpPass, eye);
-  mrow('密码 / 授权码','QQ / 163 / Gmail 等要填邮箱里开启 SMTP 后生成的「授权码」，不是网页登录密码；只存服务端配置、不下发到页面', pwdWrap);
-  const testBtn = h('button','mini-btn blue','发送测试邮件'); testBtn.type='button';
-  testBtn.onclick=()=>{
-    if(!senderEmail.value.trim() || !smtpHost.value.trim() || !smtpUser.value.trim()){ toast('先把发件邮箱、SMTP 服务器、登录账号填齐'); return; }
-    toast('配置已记录；实际发信需在 Supabase 后台同步同一套 SMTP 后发送测试');
+  const fld = (label, control, hint)=>{
+    const f = h('div','field'); f.appendChild(h('label',null,label)); f.appendChild(control);
+    if(hint) f.appendChild(h('div','hint',hint));
+    return f;
   };
-  mrow('发送测试邮件','用当前填写的服务器与账号给发件邮箱自己发一封，验证配置能不能发出去', testBtn);
-  const mnote = h('div','mail-note','提示：先到邮箱设置里开启 SMTP 服务并生成授权码，再把服务器、端口、加密方式、账号和授权码填到这里；任一项对不上，验证邮件都会发送失败。');
-  mail.appendChild(mnote);
-  g3.appendChild(mail);
-  const syncMail = ()=>{ mail.style.display = vsw.input.checked ? '' : 'none'; };
-  vsw.input.onchange = syncMail; syncMail();
-  stack.appendChild(g3);
-  /* 4 媒体存储 */
-  const g4 = setGroupEl('媒体存储','图片与音频文件存放到哪里、经哪个代理上传');
-  setRowEl(g4,'媒体存储','图片 / 音频经上传代理存入 GitHub 仓库，Token 只存在代理端、页面不接触；删除泡泡时同步删除仓库文件', tagEl('','GitHub 仓库','background:rgba(52,199,89,.14); color:var(--green)'));
-  const proxyIn = h('input'); proxyIn.type='text'; proxyIn.value = MEDIA_API; proxyIn.readOnly = true;
-  proxyIn.style.cssText='width:180px; border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:var(--card)';
-  setRowEl(g4,'上传代理地址','持有 GitHub Token 的代理接口（如 Netlify 函数）', proxyIn);
-  const msw = switchEl(setGet('media_upload_enabled', true)); setRowEl(g4,'允许上传','关闭后发布时只能粘贴链接，不能上传图片 / 音频文件', msw.sw);
-  stack.appendChild(g4);
-  /* 5 公告弹窗 */
-  const g5 = setGroupEl('公告弹窗','进入世界时弹出的公告：开关、内容与重复间隔');
-  const nsw = switchEl(setGet('notice_enabled', false)); setRowEl(g5,'公告弹窗','进入世界时弹出，不再固定在顶部；同一浏览器在间隔内不重复弹，改了标题或内容会立刻重新弹一次', nsw.sw);
-  const nTitle = h('input'); nTitle.type='text'; nTitle.value = s.notice_title||'';
-  nTitle.style.cssText='width:170px; border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:var(--card)';
-  setRowEl(g5,'弹窗标题','公告弹窗顶部的标题', nTitle);
-  const nBody = h('textarea'); nBody.value = s.notice_body||'';
-  setRowEl(g5,'弹窗内容','显示在公告弹窗正文里', nBody);
-  const hours0 = Number(setGet('notice_interval_hours',24))||24;
-  const asDays = hours0 % 24 === 0;
-  const gapWrap = h('span'); gapWrap.style.cssText='display:flex; align-items:center; gap:8px';
-  const gapNum = numIn(asDays ? hours0/24 : hours0);
-  const gapUnit = h('select'); [['h','小时'],['d','天']].forEach(([v,t])=>{ const o=h('option',null,t); o.value=v; if((asDays?'d':'h')===v) o.selected=true; gapUnit.appendChild(o); });
-  gapWrap.append(gapNum, gapUnit);
-  setRowEl(g5,'弹窗间隔','用户关掉后，隔多久再弹一次（记录存在用户本地浏览器）', gapWrap);
-  const prevBtn = h('button','mini-btn blue','预览弹窗'); prevBtn.type='button';
-  prevBtn.onclick=()=>showNotice({ title:nTitle.value, body:nBody.value }, true);
-  setRowEl(g5,'重置演示','清掉本机记录，立刻再看一次公告弹窗效果', prevBtn);
-  stack.appendChild(g5);
-  /* 保存（小样为整页一个保存按钮） */
-  const saveBtn = h('button','btn btn-primary','保存设置');
-  saveBtn.style.cssText='margin-top:18px; min-height:46px; padding:10px 28px';
-  saveBtn.onclick=()=>{
-    const patch = {
-      checkin_points:Number(ci.input.value)||0, newbie_points:Number(ni.input.value)||0, daily_limit:Number(dl.input.value)||0,
-      report_hide_threshold:Number(th.input.value)||3, world_count_wide:Number(ww.value)||60, world_count_narrow:Number(wn.value)||30, archive_days:Number(ad.input.value)||30,
-      email_verify_required: vsw.input.checked, sender_email:senderEmail.value.trim(), sender_name:senderName.value.trim(),
-      smtp_host:smtpHost.value.trim(), smtp_port:Number(portW.input.value)||465, smtp_secure:smtpSecure.value, smtp_user:smtpUser.value.trim(),
-      media_upload_enabled: msw.input.checked,
-      notice_enabled: nsw.input.checked, notice_title: nTitle.value, notice_body: nBody.value,
-      notice_interval_hours: (Number(gapNum.value)||24) * (gapUnit.value==='d' ? 24 : 1)
+  const tIn = (val, ph)=>{ const i=h('input'); i.type='text'; i.value=val||''; if(ph) i.placeholder=ph; return i; };
+  const nIn = (val)=>{ const i=h('input'); i.type='number'; i.value=(val==null?'':val); return i; };
+  const noteBox = (text)=>{ const d=h('div',null,text); d.style.cssText='font-size:13px; color:var(--ink2); padding:10px 12px; border:1px solid var(--line2); border-radius:12px; background:var(--card2); line-height:1.6'; return d; };
+  const switchRow = (label, small, checked)=>{
+    const r = h('div','switch-row');
+    const tx = h('div','tx'); tx.append(h('b',null,label), h('small',null,small));
+    const sw = switchEl(checked);
+    r.append(tx, sw.sw); return { row:r, input:sw.input };
+  };
+  const openGroup = (title, build)=>{
+    const mc = h('div','confirm-card set-modal');
+    mc.appendChild(h('h4',null,title));
+    const body = h('div'); const saveFn = build(body); mc.appendChild(body);
+    const btns = h('div','row');
+    const ca = h('button','btn btn-ghost','取消'); ca.onclick=closeModal;
+    const ok = h('button','btn btn-blue','保存');
+    ok.onclick = async ()=>{
+      ok.disabled = true;
+      const done = saveFn ? await saveFn() : true;
+      ok.disabled = false;
+      if(done!==false){ closeModal(); toast('设置已保存'); renderAdminSettings(); }
     };
-    if(smtpPass.value) patch.smtp_pass = smtpPass.value;
-    saveAll(patch);
+    btns.append(ca, ok); mc.appendChild(btns);
+    openModal(mc);
   };
-  panel.appendChild(saveBtn);
+  const rowFor = (title, small, controls)=>{
+    const r = h('div','set-row');
+    const tx = h('div','tx'); tx.append(h('b',null,title), h('small',null,small));
+    r.appendChild(tx);
+    (controls||[]).forEach(c=>r.appendChild(c));
+    card.appendChild(r); return r;
+  };
+  const setBtn = (fn)=>{ const b=h('button','mini-btn blue','设置'); b.type='button'; b.onclick=fn; return b; };
+
+  /* 积分规则 */
+  rowFor('积分规则','签到、注册赠送、每日发布上限', [ setBtn(()=>openGroup('积分规则', body=>{
+    const ci = nIn(setGet('checkin_points',2)), ni = nIn(setGet('newbie_points',5)), dl = nIn(setGet('daily_limit',20));
+    body.append(fld('签到奖励（积分）', ci), fld('注册赠送（积分）', ni), fld('每日发布上限（个）', dl));
+    return async ()=> savePatch({ checkin_points:Number(ci.value)||0, newbie_points:Number(ni.value)||0, daily_limit:Number(dl.value)||0 });
+  })) ]);
+  /* 世界与治理 */
+  rowFor('世界与治理','泡泡数量、举报阈值与归档', [ setBtn(()=>openGroup('世界与治理', body=>{
+    const th = nIn(setGet('report_hide_threshold',3)), ww = nIn(setGet('world_count_wide',60)), wn = nIn(setGet('world_count_narrow',30)), ad = nIn(setGet('archive_days',30));
+    body.append(
+      fld('举报隐藏阈值（次）', th, '单个泡泡被举报达到此次数，直接不在世界显示（待管理员审核）'),
+      fld('世界泡泡数量 · 宽屏（个）', ww, '≥760px 宽屏同时漂浮的泡泡上限'),
+      fld('世界泡泡数量 · 窄屏（个）', wn, '窄屏上限；数量越多越挤、越容易卡'),
+      fld('普通泡泡归档（天）', ad, '普通泡泡发布多少天后自动归档、不再出现在世界'),
+      fld('世界出现优先级', noteBox('管理员 ＞ 永久 ＞ 高赞 ＞ 普通 ＞ 被举报（固定规则，不可改）'))
+    );
+    return async ()=> savePatch({ report_hide_threshold:Number(th.value)||3, world_count_wide:Number(ww.value)||60, world_count_narrow:Number(wn.value)||30, archive_days:Number(ad.value)||30 });
+  })) ]);
+  /* 邮箱验证：行内 = 设置按钮 + 右侧开关（开关即时保存） */
+  const vsw = switchEl(setGet('email_verify_required', true));
+  vsw.input.onchange = async ()=>{
+    const okSave = await savePatch({ email_verify_required: vsw.input.checked });
+    if(!okSave){ vsw.input.checked = !vsw.input.checked; return; }
+    toast('设置已保存');
+  };
+  rowFor('邮箱验证','发件账号、SMTP 与邮件模板', [ setBtn(()=>openGroup('邮箱验证', body=>{
+    const senderEmail = tIn(s.sender_email,'如 noreply@paopao.cn'); senderEmail.setAttribute('inputmode','email');
+    const senderName = tIn(s.sender_name,'如 泡泡世界');
+    const smtpHost = tIn(s.smtp_host,'如 smtp.qq.com'); smtpHost.autocapitalize='off'; smtpHost.spellcheck=false;
+    const smtpPort = nIn(s.smtp_port||465);
+    const smtpSecure = h('select'); [['ssl','SSL'],['starttls','STARTTLS'],['none','无加密']].forEach(([v,t])=>{ const o=h('option',null,t); o.value=v; if((s.smtp_secure||'ssl')===v) o.selected=true; smtpSecure.appendChild(o); });
+    smtpSecure.onchange = ()=>{ smtpPort.value = smtpSecure.value==='ssl' ? '465' : smtpSecure.value==='starttls' ? '587' : '25'; };
+    const smtpUser = tIn(s.smtp_user,'如 noreply@paopao.cn'); smtpUser.autocapitalize='off'; smtpUser.spellcheck=false;
+    const pwdWrap = h('div','pwd-wrap');
+    const smtpPass = h('input'); smtpPass.type='password'; smtpPass.placeholder='填写 SMTP 密码或授权码'; smtpPass.autocomplete='new-password';
+    const eye = h('button','mini-btn','显示'); eye.type='button';
+    eye.onclick = ()=>{ const show = smtpPass.type==='password'; smtpPass.type = show ? 'text' : 'password'; eye.textContent = show ? '隐藏' : '显示'; };
+    pwdWrap.append(smtpPass, eye);
+    const testBtn = h('button','mini-btn blue','发送测试邮件'); testBtn.type='button';
+    testBtn.onclick = ()=>{
+      if(!senderEmail.value.trim() || !smtpHost.value.trim() || !smtpUser.value.trim()){ toast('先把发件邮箱、SMTP 服务器、登录账号填齐'); return; }
+      toast('配置已记录；实际发信需在 Supabase 后台同步同一套 SMTP 后发送测试');
+    };
+    const tplSubject = tIn(s.mail_tpl_subject,'如 验证你的邮箱');
+    const tplBody = h('textarea'); tplBody.value = s.mail_tpl_body||''; tplBody.rows = 4; tplBody.placeholder='点击链接完成验证：{{链接}}';
+    body.append(
+      fld('发件邮箱', senderEmail, '用户收件箱里看到的发件人地址，通常与登录账号相同'),
+      fld('发件人名称', senderName),
+      fld('SMTP 服务器', smtpHost, '如 QQ 邮箱 smtp.qq.com、163 邮箱 smtp.163.com、Gmail smtp.gmail.com'),
+      fld('SMTP 端口', smtpPort, 'SSL 常用 465，STARTTLS 常用 587，无加密常用 25；切换加密方式会自动带出常用端口'),
+      fld('加密方式', smtpSecure),
+      fld('登录账号', smtpUser, '登录 SMTP 服务器的账号，一般就是发件邮箱全址'),
+      fld('密码 / 授权码', pwdWrap, 'QQ / 163 / Gmail 等填开启 SMTP 后生成的「授权码」，不是网页登录密码；只存服务端配置、不下发到页面'),
+      fld('发送测试邮件', testBtn, '用当前填写的服务器与账号给发件邮箱自己发一封，验证配置能不能发出去'),
+      fld('验证邮件标题', tplSubject),
+      fld('验证邮件正文模板', tplBody, '正文里可用 {{链接}} 代表验证链接占位符')
+    );
+    return async ()=>{
+      const patch = {
+        sender_email:senderEmail.value.trim(), sender_name:senderName.value.trim(),
+        smtp_host:smtpHost.value.trim(), smtp_port:Number(smtpPort.value)||465, smtp_secure:smtpSecure.value, smtp_user:smtpUser.value.trim(),
+        mail_tpl_subject:tplSubject.value, mail_tpl_body:tplBody.value
+      };
+      if(smtpPass.value) patch.smtp_pass = smtpPass.value;
+      return savePatch(patch);
+    };
+  })), vsw.sw ]);
+  /* 媒体存储 */
+  rowFor('媒体存储','图片 / 音频上传与代理', [ setBtn(()=>openGroup('媒体存储', body=>{
+    const msw = switchRow('允许上传','关闭后发布时只能粘贴链接，不能上传图片 / 音频文件', setGet('media_upload_enabled', true));
+    const proxyIn = tIn(MEDIA_API); proxyIn.readOnly = true;
+    body.append(msw.row, fld('存储位置', noteBox('图片 / 音频经上传代理存入 GitHub 仓库，Token 只存在代理端、页面不接触；删除泡泡时同步删除仓库文件')), fld('上传代理地址', proxyIn, '持有 GitHub Token 的代理接口（如 Netlify 函数），只读'));
+    return async ()=> savePatch({ media_upload_enabled: msw.input.checked });
+  })) ]);
+  /* 公告弹窗 */
+  rowFor('公告弹窗','进入世界时弹出的公告', [ setBtn(()=>openGroup('公告弹窗', body=>{
+    const nsw = switchRow('开启公告','进入世界时弹出；同一浏览器在间隔内不重复弹，改了标题或内容会立刻重新弹一次', setGet('notice_enabled', false));
+    const nTitle = tIn(s.notice_title,'公告标题');
+    const nBody = h('textarea'); nBody.value = s.notice_body||''; nBody.rows = 4;
+    const hours0 = Number(setGet('notice_interval_hours',24))||24;
+    const asDays = hours0 % 24 === 0;
+    const gapNum = nIn(asDays ? hours0/24 : hours0);
+    const gapUnit = h('select'); [['h','小时'],['d','天']].forEach(([v,t])=>{ const o=h('option',null,t); o.value=v; if((asDays?'d':'h')===v) o.selected=true; gapUnit.appendChild(o); });
+    const gapWrap = h('div'); gapWrap.style.cssText='display:flex; gap:8px'; gapNum.style.flex='1'; gapNum.style.minWidth='0'; gapWrap.append(gapNum, gapUnit);
+    const prevBtn = h('button','mini-btn blue','预览弹窗'); prevBtn.type='button';
+    prevBtn.onclick = ()=>showNotice({ title:nTitle.value, body:nBody.value }, true);
+    body.append(nsw.row, fld('弹窗标题', nTitle), fld('弹窗内容', nBody), fld('弹窗间隔', gapWrap, '用户关掉后，隔多久再弹一次（记录存在用户本地浏览器）'), fld('预览', prevBtn, '预览会替换当前弹窗，关闭后重新点「设置」继续编辑'));
+    return async ()=> savePatch({ notice_enabled:nsw.input.checked, notice_title:nTitle.value, notice_body:nBody.value, notice_interval_hours:(Number(gapNum.value)||24) * (gapUnit.value==='d' ? 24 : 1) });
+  })) ]);
+  /* 网站与 SEO（第 10 条） */
+  rowFor('网站与 SEO','网站名称、Logo 与搜索引擎信息', [ setBtn(()=>openGroup('网站与 SEO', body=>{
+    const nameIn = tIn(setGet('site_name','泡泡世界'));
+    const logoIn = tIn(s.site_logo_url,'粘贴 https:// 图片地址，或点右侧上传');
+    const logoRow = h('div'); logoRow.style.cssText='display:flex; gap:8px';
+    logoIn.style.flex='1'; logoIn.style.minWidth='0';
+    const upBtn = h('button','mini-btn','上传'); upBtn.type='button'; upBtn.style.flex='none';
+    const logoFile = h('input'); logoFile.type='file'; logoFile.accept='image/*'; logoFile.hidden=true;
+    upBtn.onclick = ()=>logoFile.click();
+    logoFile.onchange = async ()=>{
+      const f = logoFile.files && logoFile.files[0]; if(!f) return;
+      upBtn.disabled = true; upBtn.textContent='上传中…';
+      try{ const res = await uploadFileToMedia(f, 'image'); logoIn.value = res.url||''; toast('Logo 已上传，保存后生效'); }
+      catch(e){ toast(errText(e)); }
+      upBtn.disabled = false; upBtn.textContent='上传'; logoFile.value='';
+    };
+    logoRow.append(logoIn, upBtn, logoFile);
+    const descIn = h('textarea'); descIn.value = s.site_desc||''; descIn.rows = 3;
+    const kwIn = tIn(s.site_keywords,'如 泡泡,世界,漂浮');
+    body.append(
+      fld('网站名称', nameIn, '显示在品牌胶囊与浏览器标题上'),
+      fld('网站 Logo', logoRow, '留空时用现在的渐变圆'),
+      fld('SEO 描述', descIn, '搜索引擎结果与分享时显示的一句话介绍'),
+      fld('SEO 关键词', kwIn, '多个关键词用逗号分隔')
+    );
+    return async ()=>{
+      const okSave = await savePatch({ site_name:nameIn.value.trim()||'泡泡世界', site_logo_url:logoIn.value.trim(), site_desc:descIn.value, site_keywords:kwIn.value });
+      if(okSave) applySiteIdentity();
+      return okSave;
+    };
+  })) ]);
 }
 </script>
 <script>
