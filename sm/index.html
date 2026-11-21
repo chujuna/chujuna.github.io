@@ -118,8 +118,9 @@ svg{display:block}
 .heart-btn svg{width:24px;height:24px;fill:none;stroke:#C7C7CC;stroke-width:1.6;transition:all .15s}
 .heart-btn.on svg{fill:var(--accent);stroke:var(--accent)}
 .reject-btn{
-  font-size:13px;color:var(--sub);border:1px solid var(--line);background:#fff;
-  padding:8px 16px;border-radius:999px;transition:all .2s;min-height:36px;
+  width:36px;height:36px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:13px;line-height:1;color:var(--sub);border:1px solid var(--line);background:#fff;
+  border-radius:50%;transition:all .2s;
 }
 .reject-btn.on{background:var(--text);border-color:var(--text);color:#fff;font-weight:600}
 
@@ -240,7 +241,8 @@ svg{display:block}
   .hearts{gap:0}
   .heart-btn{width:40px;height:40px}
   .heart-btn svg{width:26px;height:26px}
-  .reject-btn{min-height:40px;padding:9px 18px}
+  .reject-btn{width:40px;height:40px}
+  .lewd-controls:not(.yn){justify-content:flex-end}
   .mask{align-items:flex-end}
 }
 @media (max-width:360px){
@@ -907,7 +909,7 @@ function renderBdsm(){
             hearts.appendChild(b);
           })(h);
         }
-        var rej=document.createElement('button'); rej.type='button'; rej.className='reject-btn'; rej.textContent='拒绝';
+        var rej=document.createElement('button'); rej.type='button'; rej.className='reject-btn'; rej.textContent='✕'; rej.setAttribute('aria-label','拒绝');
         rej.addEventListener('click',function(){
           var cur=getR(k);
           setR(k, cur===REJECT?0:REJECT);
