@@ -1229,7 +1229,7 @@ function drawExport(){
   if(/^https?:$/.test(location.protocol)){
     siteText=location.host+location.pathname.replace(/\/index\.html?$/,'').replace(/\/+$/,'');
   }
-  if(siteText) ctx.fillText(siteText, W/2, H-118+3*30);
+  if(siteText) ctx.fillText('娱乐测评 '+siteText, W/2, H-118+3*30);
   ctx.textAlign='left';
   return canvas.toDataURL('image/png');
 }
