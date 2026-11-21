@@ -985,13 +985,39 @@ const TYPE_META = {
   audio:{ name:'音频', color:['rgba(253,186,116,.74)','rgba(251,146,60,.62)'], ico:'audioLines' },
   video:{ name:'视频', color:['rgba(196,181,253,.72)','rgba(167,139,250,.62)'], ico:'play' }
 };
-let W = { list:[], raf:0, last:0, running:false, target:30, showQueue:[], firstRendered:false };
-function stageSize(){ return { w: stage.clientWidth || innerWidth, h: stage.clientHeight || innerHeight }; }
+let W = { list:[], raf:0, last:0, running:false, target:30, showQueue:[], firstRendered:false,
+  /* 入场编排（对照小样 v66 的 spawnQueue / pairQueue）：所有新泡泡先进队列，由 tick
+     按波次放行、从屏外底部飘入——不许一次性全生、不许屏内凭空出现 */
+  spawnQueue:[], pairQueue:[], lastQueueAt:0, lastPairAt:0, spawnGateSince:0, pairGateSince:0,
+  shuffling:false, freshId:null, scaleKey:null,
+  /* 舞台尺寸缓存（对照小样 v66）：每帧读 clientWidth/Height 会强制同步布局，
+     改成 tick 里每 600ms 读一次（见 refreshStageSize） */
+  sizeCache:{ w:0, h:0 }, sizeAt:0 };
+function stageSize(){ return W.sizeCache.w ? W.sizeCache : { w: stage.clientWidth || innerWidth, h: stage.clientHeight || innerHeight }; }
+function refreshStageSize(ts){
+  if(!W.sizeCache.w || ts - W.sizeAt > 600){ W.sizeCache = { w: stage.clientWidth || innerWidth, h: stage.clientHeight || innerHeight }; W.sizeAt = ts; }
+  return W.sizeCache;
+}
+/* 容量缩放 worldScale（对照小样 v66）：直径只由积分档位决定、窄屏不打折（旧版窄屏
+   ×0.82 与定版相悖，已删）；入选泡泡总面积超过舞台 78% 时整体等比缩小，
+   缩放下限保证最小档（5 分）直径不低于 88px */
+const MIN_DIAM = 88;
+let worldScale = 1;
+function computeWorldScale(list){
+  const { w, h } = stageSize();
+  let total = 0;
+  for(const b of list){ const d0 = COST_SIZE[b.cost] || 90; total += d0 * d0; }
+  worldScale = Math.min(1, Math.sqrt((w * h * 0.78) / Math.max(1, total)));
+  worldScale = Math.max(worldScale, MIN_DIAM / (COST_SIZE[5] || 90));
+  return worldScale;
+}
 function bubbleSize(b){
-  let d = COST_SIZE[b.cost] || 90;
-  const { w } = stageSize();
-  if(w < 760) d = d * 0.82;
-  return Math.max(88, Math.round(d));
+  const { w, h } = stageSize();
+  let d = Math.round((COST_SIZE[b.cost] || 90) * worldScale);
+  d = Math.max(MIN_DIAM, d); /* 硬下限：无论舞台缩放多少，都不许小到装不下图标+用户名 */
+  d = Math.min(d, Math.min(w, h) - 24);
+  if(d < MIN_DIAM) d = MIN_DIAM; /* 极窄舞台宁可轻微溢出边缘，也不把名字挤没 */
+  return d;
 }
 function weightOf(b){
   const a = authorOf(b);
@@ -1007,6 +1033,36 @@ function pickWeighted(cands, exclude){
   let r = Math.random()*total;
   for(let i=0;i<cands.length;i++){ r-=ws[i]; if(r<=0) return cands[i]; }
   return cands[cands.length-1];
+}
+/* 入场优先级层级（对照小样 v66 bubbleTier，映射到正式版字段）：
+   0 管理员 ＞ 1 永久 ＞ 2 高赞（净赞 ≥8）＞ 3 普通 ＞ 4 被举报（未达隐藏阈值）；
+   DEMO 泡泡不套管理员层级、按普通泡泡排（与既有出现权重口径一致） */
+function bubbleTier(b){
+  const a = authorOf(b);
+  if(!b.is_demo && a.role==='admin') return 0;
+  if(b.is_permanent) return 1;
+  if((b.report_count||0) > 0) return 4;
+  if(((b.like_count||0) - (b.dislike_count||0)) >= 8) return 2;
+  return 3;
+}
+/* 入场排序键（对照小样 spawnRank）：层级越小越靠前，同层沿用既有出现权重（越大越靠前） */
+function spawnRank(b){ return bubbleTier(b) * 100000 - weightOf(b); }
+/* 入场名单（对照小样 selectForWorld）：池子 ≤ 目标数时全进（仍按优先级排序）；
+   超出时高层（管理员/永久）全保留占位，剩余名额按既有加权随机无放回抽取；
+   返回顺序 = 入场顺序（层级高→低、同层权重高→低），重要的先飘入 */
+function selectForWorld(pool, count){
+  const sorted = pool.slice().sort((a,b)=> spawnRank(a) - spawnRank(b));
+  if(sorted.length <= count) return sorted;
+  const picked = [], used = new Set();
+  for(const b of sorted){ if(bubbleTier(b) <= 1 && picked.length < count){ picked.push(b); used.add(b.id); } }
+  const rest = sorted.filter(b=>!used.has(b.id));
+  while(picked.length < count && rest.length){
+    const nxt = pickWeighted(rest);
+    rest.splice(rest.indexOf(nxt), 1);
+    picked.push(nxt); used.add(nxt.id);
+  }
+  picked.sort((a,b)=> spawnRank(a) - spawnRank(b));
+  return picked;
 }
 function visiblePool(){
   const hideN = Number(setGet('report_hide_threshold',3)) || 3;
@@ -1038,20 +1094,41 @@ function makeBubbleEl(b){
   el.dataset.id = b.id;
   return el;
 }
-function spawnBubble(b, delay){
-  const { w, hgt } = (function(){ const s=stageSize(); return { w:s.w, hgt:s.h }; })();
+function spawnBubble(b, mode){
+  /* 出生点专用尺寸：取缓存与实时尺寸的较大值（对照小样 v66）——开屏瞬间舞台可能
+     还在变高，若按偏小的高度定出生点，泡泡一生出来就落在真实屏内 = 屏内突然出现；
+     取大值保证整颗出生在真实屏外下方（y = Hb + 10），一像素不先在屏内露头。
+     之后它以不完整形态先在底部边缘露头、靠物理挤压逐步进入（见 tick 入场分支），
+     绝不整颗闪现到屏内 */
+  const cs = stageSize();
+  const Wb = Math.max(cs.w, stage.clientWidth || 0), Hb = Math.max(cs.h, stage.clientHeight || 0);
   const d = bubbleSize(b);
+  /* 入场模式（对照小样 v66 的 driftIn / enter / filterIn，速度已按位移系数换算 px/s）：
+     drift 普通飘入（补位/开屏）约 31–48px/s、wind 换一批吹入约 36–60px/s 起步、
+     filter 筛选飘入约 137–195px/s——三档都只从屏幕底部外升起，没有其他方向 */
+  const m = mode || 'drift';
+  let vx, vy;
+  if(m === 'wind'){ vx = (Math.random()-0.5)*30; vy = -(36 + Math.random()*24); }
+  else if(m === 'filter'){ vx = (Math.random()-0.5)*34; vy = -(137 + Math.random()*58); }
+  else { vx = (Math.random()-0.5)*25; vy = -(31 + Math.random()*17); }
   const item = {
     b, el: makeBubbleEl(b), d,
-    x: Math.max(4, Math.min(w-d-4, Math.random()*(w-d))),
-    y: hgt + 10 + (delay||0),
-    vx: (Math.random()-0.5)*9, vy: -(26 + Math.random()*22),
-    entering:true, leaving:false, drag:false, idlePhase: Math.random()*Math.PI*2,
+    x: 6 + Math.random()*Math.max(10, Wb - d - 12),
+    y: Hb + 10,
+    vx, vy,
+    /* mode：drift | wind | filter = 入场中；normal = 自由漂浮。
+       leaving + leaveKind（drift 轮换 | pushed 换一批 | filter 筛选）= 离场中 */
+    mode: m, leaving:false, leaveKind:'', drag:false, idlePhase: Math.random()*Math.PI*2,
+    enterT:0,
+    /* 出生地板线（对照小样 floorY）：入场泡泡被同批伙伴往下推时最多退到出生深度，
+       不被推回屏外更深、更不会被钳制反拽进屏内 */
+    floorY: Hb + 14,
     /* 常态轮换（对照小样 v66）：每颗泡泡有寿命 maxAge（16–31 秒随机），到龄后沿当前
        漂移方向飘出屏幕、整颗越界才移除并配对补位；age 只在自由漂浮时累计 */
     age:0, maxAge: 16000 + Math.random()*15000,
-    rotOut:false, rotDirX:0, rotDirY:-1, rotSpd:46
+    rotSpd:46
   };
+  if(W.freshId === b.id){ item.el.classList.add('fresh'); W.freshId = null; } /* 刚发布的泡泡飘入时带 fresh 高亮 */
   item.el.style.transform = 'translate('+item.x+'px,'+item.y+'px)';
   stage.appendChild(item.el);
   attachBubblePointer(item);
@@ -1073,21 +1150,24 @@ function removeItem(item){
   item.el.remove();
   W.list = W.list.filter(x=>x!==item);
 }
-/* 在场计数：离场中的（换一批/筛选 leaving、轮换 rotOut）不算在场，与小样 activeCount 一致 */
-function activeCount(){ return W.list.filter(it=>!it.leaving && !it.rotOut).length; }
-/* 轮换放行（对照小样 v66 rotationAllowed）：池子（已按筛选过滤）≥ 目标数 → 正常轮换；
-   不够时只有「池里还有没上场的泡泡」才允许继续出入（补满阶段），全部在场后停轮换、
-   只原地飘——免得同一批泡泡被迫出场又原样飘回来 */
+/* 在场计数（对照小样 v66 activeCount）：离场中的不算在场 */
+function activeCount(){ return W.list.filter(it=>!it.leaving).length; }
+/* 场上是否还有泡泡正在飘入中（优先级分段的垫底闸要用：重要的没飘稳前最低段不放行） */
+function anyEntering(){ return W.list.some(it=> it.mode==='drift' || it.mode==='wind' || it.mode==='filter'); }
+/* 轮换放行（对照小样 v66 rotationAllowed）：换场队列（配对/飘入）没走完时不叠加
+   自然轮换；池子（已按筛选过滤）≥ 目标数 → 正常轮换；不够时只有「池里还有没上场
+   的泡泡」才允许继续出入（补满阶段），全部在场后停轮换、只原地飘——免得同一批
+   泡泡被迫出场又原样飘回来 */
 function rotationAllowed(){
+  if(W.pairQueue.length || W.spawnQueue.length) return false;
   const pool = visiblePool();
   if(pool.length >= W.target) return true;
   const onIds = new Set(W.list.map(it=>it.b.id));
   return pool.some(b=>!onIds.has(b.id));
 }
-/* 年龄离场（对照小样 v66 beginDriftOut）：沿当前漂移方向继续飘；速度太小时朝最近的
-   边缘；初速约 46px/s、缓加速上限 68px/s（小样 0.5→0.8 单位换算）。整颗越出屏幕才
-   移除（见 tick 移除分支），全程可点可抓——pointerdown 抓到即捞回（清 rotOut、age 归零） */
-function startRotOut(it){
+/* 离场方向（对照小样 beginDriftOut / beginFilterOut 共用）：沿当前漂移方向；
+   速度太小时朝最近的边缘。返回单位方向 */
+function outDir(it){
   const { w, h } = stageSize();
   let dx = it.vx, dy = it.vy; const sp = Math.hypot(dx, dy);
   if(sp < 10){
@@ -1097,95 +1177,304 @@ function startRotOut(it){
     dx = mn===dl ? -1 : mn===dr ? 1 : 0;
     dy = mn===dtp ? -1 : mn===db ? 1 : 0;
   } else { dx /= sp; dy /= sp; }
-  it.rotDirX = dx; it.rotDirY = dy; it.rotSpd = 46;
-  it.rotOut = true;
+  return { dx, dy };
 }
+/* 年龄离场（对照小样 v66 beginDriftOut）：初速约 46px/s、缓加速上限 68px/s
+   （小样 0.5→0.8 单位按位移系数 0.085 换算）。整颗越出屏幕才移除（见 tick 移除
+   分支），全程可点可抓——pointerdown 抓到即捞回（清 leaving、age 归零） */
+function startRotOut(it){
+  const { dx, dy } = outDir(it);
+  it.vx = dx * 46; it.vy = dy * 46; it.rotSpd = 46;
+  it.leaving = true; it.leaveKind = 'drift';
+  it.el.classList.add('leaving');
+}
+/* 筛选离场（对照小样 v66 beginFilterOut）：方向同年龄离场，但速度约 250–330px/s
+   （小样 1.9 单位按位移系数 0.14 换算 ≈ 266px/s）——筛选要求 3 秒内换完场，
+   慢速从场中间飘出去要 5 秒以上；全程不透明、可点可抓 */
+function startFilterOut(it){
+  const { dx, dy } = outDir(it);
+  const spd = 250 + Math.random()*80;
+  it.vx = dx * spd; it.vy = dy * spd;
+  it.leaving = true; it.leaveKind = 'filter';
+  it.el.style.opacity = '1';
+  it.el.classList.add('leaving');
+}
+/* 换一批离场（对照小样 v66 pushOutBubble）：向外的冲出初速（左半区往左上、右半区
+   往右上，约 45–85 / 55–100px/s），之后在 tick 的 pushed 分支里按加速曲线持续
+   加速（合速度上限约 160px/s），整颗冲出屏幕外才移除；全程不透明 */
+function startPushOut(it){
+  const { w } = stageSize();
+  const dirx = (it.x + it.d/2) < w/2 ? -1 : 1;
+  it.vx = dirx * (45 + Math.random()*40);
+  it.vy = -(55 + Math.random()*45);
+  it.leaving = true; it.leaveKind = 'pushed';
+  it.el.style.opacity = '1';
+  it.el.classList.add('leaving');
+}
+/* ---------------- 飘入队列（对照小样 v66 enqueueSpawn） ----------------
+   任何新泡泡都不许在屏幕内凭空出现：统一先进队列，由 tick 按优先级分段、分波
+   放行，从屏外底部飘入。开屏、换一批、筛选、轮换补位、发布新泡泡全走队列或
+   配对队列。筛选了特定类型时，非同类型在这里统一拦截，绝不飘入 */
+function enqueueSpawn(b, mode, cap){
+  if(!b) return;
+  if(S.filter !== 'all' && b.type !== S.filter) return;
+  if(W.list.some(it=> it.b.id===b.id && !it.leaving)) return; /* 已在场（非离场中），不重复放 */
+  if(W.spawnQueue.some(q=>q.b.id===b.id)) return; /* 已在排队 */
+  /* 按优先级插入而不是排到队尾：队列始终保持重要的在前——补位抽到管理员/永久
+     泡泡时，它直接插到普通泡泡前面先飘入 */
+  const item = { b, mode: mode || 'drift', cap: !!cap };
+  const rk = spawnRank(b);
+  let pos = W.spawnQueue.length;
+  while(pos > 0 && spawnRank(W.spawnQueue[pos-1].b) > rk) pos--;
+  W.spawnQueue.splice(pos, 0, item);
+}
+/* 队列放行·优先级分段（对照小样 v66 processSpawnQueue）：
+   1）重要段（管理员/永久/高赞，层级 ≤2）：每约 140ms 放最多 3 颗，先飘入；
+   2）普通段：每约 170ms 放最多 2 颗，正常跟上；
+   3）最低段（被举报，层级 4）：等前面全部放完、且场上再没有泡泡还在飘入中，
+      才每约 260ms 放 1 颗垫底（另有 2.5 秒兜底，免得个别泡泡久不落位堵死队尾）。
+   同一波只放同一段、不跨段混放；屏上数量从小到大涨到目标数量后进入常态轮换 */
+function processSpawnQueue(ts){
+  if(!W.spawnQueue.length) return;
+  const headTier = bubbleTier(W.spawnQueue[0].b);
+  const seg = headTier <= 2 ? 0 : headTier === 4 ? 2 : 1;
+  const interval = seg === 0 ? 140 : seg === 2 ? 260 : 170;
+  if(ts - W.lastQueueAt < interval) return;
+  if(seg === 2 && anyEntering()){
+    if(!W.spawnGateSince) W.spawnGateSince = ts;
+    if(ts - W.spawnGateSince < 2500) return; /* 前面还有泡泡在飘入：最低段继续等 */
+  } else W.spawnGateSince = 0;
+  W.lastQueueAt = ts;
+  const maxN = seg === 0 ? 3 : seg === 2 ? 1 : 2;
+  let n = 0;
+  while(W.spawnQueue.length && n < maxN){
+    const q = W.spawnQueue[0];
+    if(W.list.some(it=> it.b.id===q.b.id && !it.leaving)){ W.spawnQueue.shift(); continue; } /* 已在场，丢弃 */
+    if(q.cap && activeCount() >= W.target){ W.spawnQueue.shift(); continue; } /* 已被补满，这颗不再硬塞 */
+    const t2 = bubbleTier(q.b);
+    if((t2 <= 2 ? 0 : t2 === 4 ? 2 : 1) !== seg) break; /* 跨到下一段：这一波到此为止 */
+    W.spawnQueue.shift();
+    spawnBubble(q.b, q.mode);
+    n++;
+  }
+  if(!W.spawnQueue.length && !W.pairQueue.length) W.shuffling = false;
+}
+/* ---------------- 配对换场队列（对照小样 v66 pairQueue / processPairQueue） ----------------
+   筛选 / 换一批专用，严格守恒：飘出去几个，就同时飘进来几个。换场时把「要走的
+   旧泡泡」与「要来的新泡泡」一一配成对，tick 放行波次：换一批每约 300ms 一波、
+   最多 4 对；筛选是快档——每 140ms 一波、每波数量按总对数放大（ceil(总对数/6)、
+   至少 4），全部配对约 6 波内同起步，整场 3 秒内收尾。同一波里旧泡泡这一刻开始
+   飘出、新泡泡同一刻从屏外底部飘入；数量不等时多出的一边单独成半对同批走 */
+function processPairQueue(ts){
+  if(!W.pairQueue.length) return;
+  const isFilterWave = W.pairQueue[0].kind === 'filter';
+  /* 优先级垫底闸（仅非筛选换场）：最低优先（被举报）的配对轮到时，若场上还有泡泡
+     在飘入，先等这一批飘稳再放这一对（出与入仍同波同步、只是整对推迟），2.5 秒
+     兜底防堵死；筛选换场有 3 秒硬约束，不走这道闸 */
+  if(!isFilterWave && W.pairQueue[0].b && bubbleTier(W.pairQueue[0].b) === 4 && anyEntering()){
+    if(!W.pairGateSince) W.pairGateSince = ts;
+    if(ts - W.pairGateSince < 2500) return;
+  } else W.pairGateSince = 0;
+  const interval = isFilterWave ? 140 : 300;
+  if(ts - W.lastPairAt < interval) return;
+  W.lastPairAt = ts;
+  const waveSize = isFilterWave ? Math.max(4, Math.ceil(W.pairQueue.length / 6)) : 4;
+  const wave = W.pairQueue.splice(0, waveSize);
+  for(const p of wave){
+    if(p.out && W.list.includes(p.out) && !p.out.leaving){
+      if(p.kind === 'filter') startFilterOut(p.out);
+      else if(p.mode === 'wind') startPushOut(p.out);
+      else startRotOut(p.out);
+    }
+    if(p.b){
+      if(S.filter !== 'all' && p.b.type !== S.filter && p.kind === 'filter') continue; /* 筛选时异类绝不飘入 */
+      if(W.list.some(it=> it.b.id===p.b.id && !it.leaving)) continue; /* 已在场，不重复出生 */
+      spawnBubble(p.b, p.kind === 'filter' ? 'filter' : p.mode);
+    }
+  }
+  if(!W.pairQueue.length && !W.spawnQueue.length) W.shuffling = false;
+}
+/* 补位入口（统一走飘入队列）：按入场名单（优先级序）从池里取不在场、不在队的
+   泡泡补到目标数量；开屏 / 回世界 / 轮换移除 / 自由泡泡整颗飘出 / 爆点 / 删除
+   后的补位全走这里，数量守恒靠 activeCount + 已排队数一起算 */
 function topUp(){
-  const { h } = stageSize();
-  const cands = visiblePool().filter(b => !W.list.some(it=>it.b.id===b.id));
-  let guard = 0;
-  while(activeCount() < W.target && cands.length && guard++ < W.target+4){
-    const b = pickWeighted(cands);
-    cands.splice(cands.indexOf(b),1);
-    spawnBubble(b, Math.random()*h*0.35);
+  const pool = visiblePool();
+  /* 容量缩放按入选名单算（与小样一致），但只在池子规模/目标数/筛选变化时重算：
+     轮换补位每颗都调 topUp，若每次都按加权随机的新名单重算，缩放会来回抖、
+     先后入场的泡泡直径对不上；池子增删（加载/发布/删除）时 key 变化才刷新 */
+  const skey = pool.length + '/' + W.target + '/' + S.filter;
+  if(W.scaleKey !== skey){ W.scaleKey = skey; computeWorldScale(selectForWorld(pool, W.target)); }
+  const onIds = new Set(W.list.map(it=>it.b.id));
+  const queuedIds = new Set(W.spawnQueue.map(q=>q.b.id));
+  const cands = pool.filter(b=> !onIds.has(b.id) && !queuedIds.has(b.id));
+  const queuedCap = W.spawnQueue.filter(q=>q.cap).length + W.pairQueue.filter(p=>p.b).length;
+  const need = W.target - activeCount() - queuedCap;
+  if(need > 0 && cands.length){
+    const list = selectForWorld(cands, Math.min(need, cands.length));
+    for(const b of list) enqueueSpawn(b, S.filter !== 'all' ? 'filter' : 'drift', true);
   }
   if(!W.firstRendered && W.list.length){ W.firstRendered = true; hideBoot(); }
 }
 function tick(ts){
   if(!W.running) return;
   const dt = Math.min(0.05, (ts - W.last)/1000 || 0.016); W.last = ts;
-  const { w, h } = stageSize();
+  const { w, h } = refreshStageSize(ts); /* 尺寸走 600ms 缓存，不再每帧读布局 */
+  processSpawnQueue(ts); /* 飘入队列放行：新泡泡分波从屏外底部飘入 */
+  processPairQueue(ts); /* 配对换场放行：筛选 / 换一批出入同波同步 */
+  const rotAllowed = rotationAllowed(); /* 本帧只算一次：池子是否足够支撑轮换 */
   const items = W.list;
-  for(const it of items){
-    if(it.drag) continue;
-    if(it.entering){
-      it.y += it.vy*dt*2.2; it.x += Math.sin(ts/700 + it.idlePhase)*7*dt + it.vx*dt;
-      /* 整颗飘进视口才转入自由漂浮（与小样一致：没整颗进来前不切状态、不钳位置） */
-      if(it.y < h - it.d - 2){ it.entering=false; it.age = 0; it.vy = (Math.random()-0.5)*7; }
-    } else if(it.rotOut){
-      /* 轮换离场（对照小样 driftingOut）：沿离场方向缓加速飘出（46→68px/s），带轻微
-         摇摆，全程不透明、不被钳回场内；整颗越出屏幕才在下方移除分支里移除并补位 */
-      it.rotSpd = Math.min(68, it.rotSpd * (1 + 0.075*dt));
-      it.x += it.rotDirX * it.rotSpd * dt + Math.sin(ts/1900 + it.idlePhase)*7*dt;
-      it.y += it.rotDirY * it.rotSpd * dt + Math.cos(ts/2300 + it.idlePhase)*6*dt;
-    } else if(it.leaving){
-      it.y -= 52*dt; it.x += it.vx*dt;
-    } else {
-      it.idlePhase += dt*0.7;
-      it.x += (it.vx + Math.sin(it.idlePhase)*4)*dt;
-      it.y += (it.vy + Math.cos(it.idlePhase*0.8)*3)*dt;
-      /* 速度软上限：被挤压/被拖动推开攒下的速度逐帧缓降回漂移速度，位置始终逐帧连续 */
-      const sp = Math.hypot(it.vx, it.vy);
-      if(sp > 34){ const ns = 34 + (sp-34)*Math.max(0, 1-3*dt); it.vx *= ns/sp; it.vy *= ns/sp; }
-      /* 活动范围 = 整个视口（与小样一致）：泡泡可以飘到顶栏/底部胶囊的下方、贴近四边，
-         不再被限制在上下悬浮层之间的中间带；边界就是视口四边（留 2px） */
-      if(it.x < 2){ it.x=2; it.vx=Math.abs(it.vx); }
-      if(it.x > w-it.d-2){ it.x=w-it.d-2; it.vx=-Math.abs(it.vx); }
-      if(it.y < 2){ it.y=2; it.vy=Math.abs(it.vy); }
-      if(it.y > h-it.d-2){ it.y=h-it.d-2; it.vy=-Math.abs(it.vy); }
-      /* 年龄轮换：到龄且池子允许轮换 → 转入 rotOut 飘出（下一帧起沿方向离场）；
-         池子不允许（符合类型的泡泡已全部在场、无可替换）→ 年龄归零、只原地飘，
-         与小样一致 */
-      it.age += dt*1000;
-      if(it.age > it.maxAge){
-        if(rotationAllowed()) startRotOut(it);
-        else it.age = 0;
-      }
-    }
-  }
-  /* 两两挤压：禁止按重叠量整段平移位置（旧版那样会让泡泡碰撞后瞬间闪现到别处）。
-     改为：位置修正每帧限幅（重叠再深也分多帧平滑分开）+ 给一小股分离速度让它们继续漂开，
-     任何一帧的位移都连续可循 */
-  const maxCorr = 130*dt;
+  const dragActive = items.some(it=>it.drag); /* 有泡泡正被拖着：被挤出界的自由泡泡暂缓移除判定（见 normal 分支） */
+  /* 两两挤压（对照小样 v66 的推挤豁免三类，不能一刀切）：
+     1）离场中的泡泡完全不参与：只管往外走，不被推回、也不推别人；
+     2）入场泡泡不被场内普通泡泡推回：相撞时只推普通泡泡那一侧——否则正在升起的
+        大泡泡每帧被推回下方好几像素，迟迟进不来；
+     3）同批入场的泡泡彼此必须互相推开：同波同在屏外底部出生、上升速度相近，
+        不推开就整团重叠着上升；被往下推的幅度有出生地板线兜底（见入场分支）。
+     推挤量 = 重叠深度 ×0.045（小样系数，60fps 基准、按 dt 换算），逐帧连续；
+     最小间距取 (d1+d2)×0.50，与小样一致 */
+  const pushK = 0.045 * (dt*1000/16.7);
   for(let i=0;i<items.length;i++) for(let j=i+1;j<items.length;j++){
     const a=items[i], c=items[j]; if(a.drag||c.drag) continue;
-    /* 轮换离场中的泡泡不参与推挤（对照小样：离场泡泡只管往外走，不被推回也不推别人） */
-    if(a.rotOut||c.rotOut) continue;
+    if(a.leaving || c.leaving) continue;
     const ax=a.x+a.d/2, ay=a.y+a.d/2, cx=c.x+c.d/2, cy=c.y+c.d/2;
-    let dx=cx-ax, dy=cy-ay; let dist=Math.hypot(dx,dy); const min=(a.d+c.d)/2+3;
-    if(dist>0.01 && dist<min){
-      const push=(min-dist)/2, ux=dx/dist, uy=dy/dist;
-      const corr = Math.min(push, maxCorr);
-      const kick = Math.min(push, 26)*7*dt;
-      if(!a.entering){ a.x-=ux*corr*0.5; a.y-=uy*corr*0.5; a.vx-=ux*kick; a.vy-=uy*kick; }
-      if(!c.entering){ c.x+=ux*corr*0.5; c.y+=uy*corr*0.5; c.vx+=ux*kick; c.vy+=uy*kick; }
-      if(a.entering && !c.entering){ c.x+=ux*corr; c.y+=uy*corr; }
-      if(c.entering && !a.entering){ a.x-=ux*corr; a.y-=uy*corr; }
-      /* 同批入场的泡泡彼此也要互相推开（对照小样）：否则同批从底部升起的泡泡会整团
-         重叠着上升、进场后才突然散开；这里只给位置推挤、不给速度，逐帧连续 */
-      if(a.entering && c.entering){ a.x-=ux*corr*0.5; a.y-=uy*corr*0.5; c.x+=ux*corr*0.5; c.y+=uy*corr*0.5; }
+    const dx=cx-ax, dy=cy-ay; const distSq=dx*dx+dy*dy; const minD=(a.d+c.d)*0.50;
+    if(distSq>0.0001 && distSq<minD*minD){
+      const dist=Math.sqrt(distSq), push=(minD-dist)*pushK, ux=dx/dist, uy=dy/dist;
+      const aIn = a.mode!=='normal', cIn = c.mode!=='normal';
+      if(!aIn || cIn){ a.x-=ux*push; a.y-=uy*push; }
+      if(!cIn || aIn){ c.x+=ux*push; c.y+=uy*push; }
     }
   }
   for(const it of [...items]){
-    /* 离场泡泡（换一批/筛选 leaving、轮换 rotOut）：任何一边整颗越出视口才移除
-       （不许未飘出就删 DOM），移除同一刻 topUp 从底部飘入新泡泡补位，出入配对 */
-    if((it.leaving || it.rotOut) && (it.y + it.d < -16 || it.y > h + 16 || it.x + it.d < -16 || it.x > w + 16)){ removeItem(it); topUp(); continue; }
-    if(!it.entering && !it.leaving && !it.rotOut){
-      if(it.x < 2) it.x=2; if(it.x > w-it.d-2) it.x=w-it.d-2;
-      if(it.y < 2) it.y=2; if(it.y > h-it.d-2) it.y=h-it.d-2;
+    if(it.drag){ it.el.style.transform = 'translate('+it.x+'px,'+it.y+'px)'; continue; }
+    if(it.leaving){
+      if(it.leaveKind === 'filter'){
+        /* 筛选离场：沿离场方向 250–330px/s 快速飘出（速度在 startFilterOut 定死），
+           带轻微摇摆，全程不透明；整颗越界才移除，且不自补位——补几个由配对队列
+           里同波的 filter 入场决定，出入严格同数 */
+        it.x += it.vx*dt + Math.sin(ts/1900 + it.idlePhase)*7*dt;
+        it.y += it.vy*dt + Math.cos(ts/2300 + it.idlePhase)*6*dt;
+      } else if(it.leaveKind === 'pushed'){
+        /* 换一批离场加速曲线（对照小样 v66 pushed 分支）：缓缓加速——纵向持续
+           加速（约 48px/s²）、横向朝外侧缓增（约 24px/s²），速度上限纵 160 /
+           横 140px/s（小样 vy 上限 1.6、vx 上限 1.4 单位按位移系数 0.10 换算），
+           整颗冲出屏幕外才移除，是被气流挤走、不是被弹飞；全程不透明 */
+        it.vy = Math.max(-160, it.vy - 48*dt);
+        it.vx += (it.vx >= 0 ? 1 : -1) * 24*dt;
+        it.vx = Math.max(-140, Math.min(140, it.vx));
+        it.x += it.vx*dt; it.y += it.vy*dt;
+      } else {
+        /* 轮换离场（对照小样 driftingOut）：沿离场方向缓加速飘出（46→68px/s），
+           带轻微摇摆，全程不透明、不被钳回场内 */
+        const sp = Math.hypot(it.vx, it.vy) || 1;
+        it.rotSpd = Math.min(68, it.rotSpd * (1 + 0.075*dt));
+        it.x += it.vx/sp * it.rotSpd * dt + Math.sin(ts/1900 + it.idlePhase)*7*dt;
+        it.y += it.vy/sp * it.rotSpd * dt + Math.cos(ts/2300 + it.idlePhase)*6*dt;
+      }
+      /* 离场泡泡：任何一边整颗越出视口（留 24px 余量）才移除。只有自然轮换离场
+         自补位（出入配对）；筛选 / 换一批的补位由配对队列严格守恒，删除的补位由
+         删除流程自己调 topUp——都不在这里另抽一颗破坏守恒 */
+      if(it.x + it.d < -24 || it.x > w + 24 || it.y + it.d < -24 || it.y > h + 24){
+        const kind = it.leaveKind;
+        removeItem(it);
+        if(kind === 'drift') topUp();
+        continue;
+      }
+      it.el.style.transform = 'translate('+it.x+'px,'+it.y+'px)';
+      continue;
+    }
+    if(it.mode !== 'normal'){
+      /* 入场（drift / wind / filter）：只从屏外底部升起。横向收边只挡整颗滑出左右
+         两侧，纵向只设出生地板线防掉回屏外更深；没进来够多前不钳位置、不切状态。
+         转入自由漂浮的条件是「过半进入」（用户边缘口径）：泡泡先以不完整形态在
+         底部边缘露头、靠碰撞挤压逐步进入，绝不整颗闪现到屏内——旧版要求整颗
+         进场才转 normal 且空间不够时整颗落在屏内显示，是边缘闪现的根源 */
+      it.enterT += dt*1000;
+      if(it.mode === 'wind'){
+        /* 换一批吹入的风力前强后弱（对照小样 enter 分支）：前 2.6 秒持续给上升风
+           （约 58px/s²），之后只靠惯性与摇摆缓升；纵速上限约 78px/s、横速钳住不乱窜 */
+        const windK = Math.max(0, 1 - it.enterT/2600);
+        it.vy = Math.max(-78, it.vy - 58*windK*dt);
+        it.vx = Math.max(-48, Math.min(48, it.vx));
+      }
+      it.x += it.vx*dt + Math.sin(ts/1700 + it.idlePhase)*10*dt;
+      it.y += it.vy*dt + Math.cos(ts/2100 + it.idlePhase)*7*dt;
+      if(it.x < 2){ it.x = 2; it.vx = Math.abs(it.vx)*0.4; }
+      if(it.x > w - it.d - 2){ it.x = w - it.d - 2; it.vx = -Math.abs(it.vx)*0.4; }
+      const fl = Math.max(h + 14, it.floorY || 0);
+      if(it.y > fl) it.y = fl; /* 出生地板线：同批互相推挤时最多退到出生深度 */
+      const halfIn = it.x >= -it.d*0.5 && it.x <= w - it.d*0.5 && it.y >= -it.d*0.5 && it.y <= h - it.d*0.5;
+      /* 超时兜底（对照小样 soft 版）：只把速度重新瞄准舞台中心、重置计时继续飘，
+         坐标一像素不动——旧版超时硬钳坐标是屏内跳变源，不许复发 */
+      if(!halfIn && it.enterT > (it.mode === 'filter' ? 6000 : 10000)){
+        const ccx = w/2 - (it.x + it.d/2), ccy = h/2 - (it.y + it.d/2);
+        const ccl = Math.hypot(ccx, ccy) || 1;
+        const spd = it.mode === 'filter' ? 110 : 55;
+        it.vx = ccx/ccl * spd; it.vy = ccy/ccl * spd;
+        it.enterT = 900;
+      }
+      if(halfIn && (it.mode !== 'wind' || it.enterT >= 1200)){
+        it.mode = 'normal'; it.age = 0;
+        /* 转入自由漂浮：速度归一到水流量级（对照小样 0.45 单位 ≈ 38px/s），
+           分量太小时补足下限，免得刚进场就停住 */
+        const nsp = Math.hypot(it.vx, it.vy) || 1;
+        it.vx = it.vx/nsp * 38; it.vy = it.vy/nsp * 38;
+        if(Math.abs(it.vx) < 15) it.vx = 17;
+        if(Math.abs(it.vy) < 15) it.vy = -15;
+      }
+      it.el.style.transform = 'translate('+it.x+'px,'+it.y+'px)';
+      continue;
+    }
+    /* 自由漂浮——水流漂移（对照小样 v66 normal 分支）：每颗泡泡带各自相位的缓变
+       「水流」持续转向（转向加速度约 38px/s²、按相位正弦/余弦缓变）；合速度高于
+       上限 0.85 单位（≈72px/s）整体限幅，低于下限 0.3 单位（≈25px/s）沿当前相位
+       补速（约 153px/s²）；再叠加小幅摇摆——泡泡始终以约 25–70px/s 在场内游走、
+       方向各异不会齐步走。旧版只有 ±4.5/±3.5px/s 初速 + 正弦摆，实测 5–11px/s
+       原地轻晃，世界没有活气。被挤压/抛掷攒下的超额速度由上限限幅逐帧收回，
+       位置始终逐帧连续 */
+    it.vx += Math.sin(ts/2400 + it.idlePhase) * 38 * dt;
+    it.vy += Math.cos(ts/2900 + it.idlePhase*1.7) * 38 * dt;
+    const spd = Math.hypot(it.vx, it.vy);
+    if(spd > 72){ it.vx *= 72/spd; it.vy *= 72/spd; }
+    else if(spd < 25){
+      it.vx += Math.cos(it.idlePhase + ts/1600) * 153 * dt;
+      it.vy += Math.sin(it.idlePhase + ts/1600) * 153 * dt;
+    }
+    it.x += it.vx*dt + Math.sin(ts/1900 + it.idlePhase)*12*dt;
+    it.y += it.vy*dt + Math.cos(ts/2300 + it.idlePhase)*10*dt;
+    it.vx = Math.max(-80, Math.min(80, it.vx));
+    it.vy = Math.max(-80, Math.min(80, it.vy));
+    /* 边缘放开（用户定稿口径）：自由泡泡不再被墙面硬钳/反弹成整齐贴边——只在
+       探出超过半颗时给一道朝场内的软推力（探出越深推得越强、上限 120px/s²），
+       允许泡泡部分探出边缘停留或飘过；软推力拦不住的（被挤出去、水流冲出去）
+       就顺其自然整颗飘出，由下方「整颗越界移除 + 补位」接管 */
+    const outL = -it.x - it.d*0.5, outR = it.x + it.d*0.5 - w, outT = -it.y - it.d*0.5, outB = it.y + it.d*0.5 - h;
+    if(outL > 0) it.vx += Math.min(outL*3, 120)*dt;
+    if(outR > 0) it.vx -= Math.min(outR*3, 120)*dt;
+    if(outT > 0) it.vy += Math.min(outT*3, 120)*dt;
+    if(outB > 0) it.vy -= Math.min(outB*3, 120)*dt;
+    /* 整颗越出视口 = 直接消失（用户定稿）：任何自由泡泡——不限于轮换离场标记
+       的——只要整颗越界（留 2px 余量，与「整颗」语义一致）即移除，并按出入配对
+       从底部补位一颗新的，与持续轮换衔接成不间断的飘出飘入；补位走飘入队列
+       （波次 + 优先级），数量守恒靠 activeCount/topUp。
+       例外：拖拽进行中不删被挤出的泡泡（防拖动中闪烁）——判定推迟到松手后的
+       第一帧，那时它若仍整颗在界外才移除补位 */
+    if(!dragActive && (it.x + it.d < -2 || it.x > w + 2 || it.y + it.d < -2 || it.y > h + 2)){
+      removeItem(it);
+      topUp();
+      continue;
+    }
+    /* 年龄轮换：到龄且池子允许轮换 → 转入轮换离场飘出（下一帧起沿方向离场）；
+       池子不允许（符合类型的泡泡已全部在场、无可替换）→ 年龄归零、只原地飘，
+       与小样一致 */
+    it.age += dt*1000;
+    if(it.age > it.maxAge){
+      if(rotAllowed) startRotOut(it);
+      else it.age = 0;
     }
     it.el.style.transform = 'translate('+it.x+'px,'+it.y+'px)';
   }
+  if(!W.firstRendered && W.list.length){ W.firstRendered = true; hideBoot(); }
   W.raf = requestAnimationFrame(tick);
 }
 function startWorld(){
@@ -1198,10 +1487,16 @@ function attachBubblePointer(item){
     e.preventDefault(); el.setPointerCapture(e.pointerId);
     item.drag = true; moved = 0; sx=e.clientX-item.x; sy=e.clientY-item.y; lastX=e.clientX; lastY=e.clientY; lastT=performance.now(); dragVX=0; dragVY=0;
     el.classList.add('dragging');
-    /* 捞回：抓到正在离场（换一批/筛选 leaving、轮换 rotOut）的泡泡 = 取消离场、年龄
-       归零，回到正常漂浮（与小样 catchBubble 一致） */
-    if(item.leaving){ item.leaving=false; item.entering=false; item.vy=(Math.random()-0.5)*7; el.classList.remove('leaving'); }
-    if(item.rotOut){ item.rotOut=false; item.age=0; item.vx=(Math.random()-0.5)*9; item.vy=(Math.random()-0.5)*7; }
+    /* 捞回：抓到正在离场（换一批/筛选/轮换任一 leaveKind）的泡泡 = 取消离场、年龄
+       归零、速度收回水流量级，回到正常漂浮（与小样 catchBubble 一致） */
+    if(item.leaving){
+      item.leaving = false; item.leaveKind = ''; item.age = 0; item.mode = 'normal';
+      const sp = Math.hypot(item.vx, item.vy) || 1;
+      item.vx = item.vx/sp * 38; item.vy = item.vy/sp * 38;
+      if(Math.abs(item.vx) < 15) item.vx = 17;
+      if(Math.abs(item.vy) < 15) item.vy = -15;
+      el.classList.remove('leaving'); el.style.opacity = '';
+    }
   });
   el.addEventListener('pointermove', e=>{
     if(!item.drag) return;
@@ -1211,10 +1506,12 @@ function attachBubblePointer(item){
     moved += Math.abs(dx) + Math.abs(dy);
     /* 抛掷速度平滑（对照小样：0.6 旧 + 0.4 新），松手时按它给泡泡初速 */
     dragVX = dragVX*0.6 + dx*0.4; dragVY = dragVY*0.6 + dy*0.4;
-    /* 拖动范围同样是全屏：钳在视口四边内（留 2px），泡泡不会被拖出屏幕丢失 */
+    /* 拖动范围（对照小样 onDragMove）：允许约四分之一探出边缘跟手——拖到边缘可以
+       部分出界，但至少留四分之三在屏内，泡泡不会被拖丢；松手后它仍是自由泡泡，
+       若被甩到整颗出界，按「整颗越界移除 + 补位」处理（见 tick normal 分支） */
     const ss = stageSize();
-    item.x = Math.max(2, Math.min(ss.w-item.d-2, e.clientX-sx));
-    item.y = Math.max(2, Math.min(ss.h-item.d-2, e.clientY-sy));
+    item.x = Math.max(-item.d*0.25, Math.min(ss.w - item.d*0.75, e.clientX-sx));
+    item.y = Math.max(-item.d*0.25, Math.min(ss.h - item.d*0.75, e.clientY-sy));
     el.style.transform = 'translate('+item.x+'px,'+item.y+'px)';
     /* 拖动挤压周围（对照小样 v66 onDragMove 原公式与参数）：拖动方向上、范围内的
        泡泡被逐帧推向同方向——位置推开（跟随拖动位移 + 径向挤出 + 按重叠深度让位）
@@ -1230,11 +1527,13 @@ function attachBubblePointer(item){
         /* 小样速度踢：dx*0.012*f*8（小样单位），换算到 px/s 约 ×85，再钳到 ±72 */
         o.vx = Math.max(-72, Math.min(72, o.vx + dx*0.096*f*85));
         o.vy = Math.max(-72, Math.min(72, o.vy + dy*0.096*f*85));
-        /* 被挤的是自由漂浮泡泡时，把它钳回场内（拖动者本人负责不把它推出屏幕；
-           入场/离场中的泡泡不钳，任其按自己的出入路径走） */
-        if(!o.entering && !o.leaving && !o.rotOut){
-          o.x = Math.max(2, Math.min(ss.w-o.d-2, o.x));
-          o.y = Math.max(2, Math.min(ss.h-o.d-2, o.y));
+        /* 边缘放开：被挤的泡泡不再钳回场内——自由泡泡允许被挤到部分探出边缘，
+           挤过头整颗出界的也不在拖动过程中删（防闪烁），等它处于非被拖状态时
+           由 tick 的「整颗越界移除 + 补位」处理；入场中的泡泡只守出生地板线，
+           不被推回屏外更深；离场中的不干预，任其按离场路径走 */
+        if(!o.leaving && o.mode !== 'normal'){
+          const fl = Math.max(ss.h + 14, o.floorY || 0);
+          if(o.y > fl) o.y = fl;
         }
       }
     }
@@ -1288,34 +1587,53 @@ function popBubble(item){
   setTimeout(()=>{ topUp(); }, 430);
 }
 function swapBatch(){
-  /* 换一批 = 同步换场（飘出飘入铁律）：旧泡泡此刻开始离场、新泡泡同一刻从屏幕底部吹入，
-     两边同场交错——新泡泡上升时靠飘动与碰撞把旧泡泡继续往上、往外挤，旧泡泡整颗飘出
-     屏幕外才移除，全程不透明、不原地消失。旧版是旧泡泡先延时离场、500ms 后才补新泡泡，
-     且离场带 CSS 淡出，等于旧的在屏内淡没、新的凭空冒出——已废除 */
+  /* 换一批 = 配对换场（对照小样 v66 shuffleBtn）：此刻在场的旧泡泡与新一批名单
+     一一配对进配对队列，tick 每约 300ms 放行一波（≤4 对）——同一波里旧泡泡被
+     startPushOut 以加速曲线吹出（上限约 160px/s）、新泡泡同一刻从屏外底部以
+     wind 模式吹入，出几个进几个、同步进行，全程不透明、不原地消失。
+     换场进行中再点直接忽略，防两批叠加；待飘入队列让位给配对队列 */
+  if(W.shuffling || S.view !== 'world') return;
+  W.shuffling = true;
   const cur = W.list.filter(it=>!it.leaving);
-  cur.forEach(it=>{
-    it.leaving = true; it.entering = false; it.rotOut = false; it.el.classList.add('leaving');
-    /* 顺手给一股向上的初速，方向朝远离屏幕中心的一侧，接下来交给漂移与碰撞挤出 */
-    const cx = it.x + it.d/2, { w } = stageSize();
-    it.vx = Math.max(-30, Math.min(30, it.vx + (cx < w/2 ? -7 : 7)));
-    it.vy = Math.min(it.vy, -8);
-  });
-  topUp(); /* 新泡泡立刻从底部出生吹入（topUp 只数非离场泡泡，数量自动守恒） */
+  const list = selectForWorld(visiblePool(), W.target);
+  computeWorldScale(list); /* 与小样一致：按新名单重算容量缩放，新泡泡用新直径 */
+  W.scaleKey = visiblePool().length + '/' + W.target + '/' + S.filter;
+  W.spawnQueue = [];
+  W.pairQueue = [];
+  const np = Math.max(cur.length, list.length);
+  for(let i=0;i<np;i++) W.pairQueue.push({ out: cur[i] || null, b: list[i] || null, mode:'wind', kind:'' });
+  /* 兜底：配对队列正常走空会自己解除 shuffling，这里防它被其他流程提前清掉时锁死 */
+  setTimeout(()=>{ W.shuffling = false; }, 3000 + Math.ceil(np/4)*320 + 3000);
   blipSounds();
 }
 function applyFilter(f){
   S.filter = f;
   document.querySelectorAll('#worldFilter .chip').forEach(c=>c.classList.toggle('on', c.dataset.f===f));
+  /* 筛选换场 = 配对模式（对照小样 v66 renderWorld 配对分支）：
+     1）已在场且在新名单里的泡泡原地保留，位置、速度都不动，不参与出入；
+     2）不在名单里的在场泡泡与「未在场的新名单泡泡」一一配对——同一波里旧的走
+        filterOut 快速飘出（250–330px/s）、新的走 filterIn 同一刻从屏外底部飘入，
+        节奏是筛选快档（140ms 一波、波量按总对数放大），整场 3 秒内换完；
+     3）池子不够时名单就是全池：有多少进多少，多出的旧泡泡单独成半对飘出，
+        场上最后只剩符合类型，且它们转入只原地飘、不轮换（rotationAllowed 拦截）。
+     待飘入队列与上一轮没走完的配对整体作废让位，异类绝不混入本轮 */
   const pool = visiblePool();
-  const keep = W.list.filter(it=>it.b.type===f || f==='all');
-  if(f!=='all' && pool.length < W.target){
-    /* 池子不够：同类型能留尽留——非同类型飘出屏幕，池子里还没上场的同类型从底部飘入补齐 */
-    W.list.filter(it=>it.b.type!==f).forEach(it=>{ it.leaving=true; it.entering=false; it.rotOut=false; it.el.classList.add('leaving'); });
-    topUp();
-    return;
+  const list = selectForWorld(pool, W.target);
+  computeWorldScale(list);
+  W.scaleKey = pool.length + '/' + W.target + '/' + S.filter;
+  W.spawnQueue = [];
+  W.pairQueue = [];
+  const inIds = new Set(list.map(b=>b.id));
+  const kept = new Set();
+  const outs = [];
+  for(const it of W.list){
+    if(it.leaving) continue; /* 已在离场途中的不重复配对，它自己会飘出去 */
+    if(inIds.has(it.b.id)) kept.add(it.b.id);
+    else outs.push(it);
   }
-  W.list.filter(it=>!keep.includes(it)).forEach(it=>{ it.leaving=true; it.entering=false; it.rotOut=false; it.el.classList.add('leaving'); });
-  setTimeout(()=>topUp(), 350);
+  const ins = list.filter(b=> !kept.has(b.id));
+  const np = Math.max(outs.length, ins.length);
+  for(let k=0;k<np;k++) W.pairQueue.push({ out: outs[k] || null, b: ins[k] || null, mode:'wind', kind:'filter' });
 }
 async function loadPool(){
   const { data, error } = await sb.from('bubbles').select('*').is('deleted_at', null).eq('status','visible').is('archived_at', null).order('created_at',{ascending:false}).limit(600);
@@ -1559,7 +1877,7 @@ function confirmDeleteBubble(b, inExpand){
     /* 飘出飘入铁律：世界里的这颗不许原地消失——标记离场，整颗飘出屏幕外才由引擎移除；
        下面的 topUp() 同时从底部补一颗进来，出与入同步 */
     const item = W.list.find(it=>it.b.id===b.id);
-    if(item && !item.leaving){ item.leaving=true; item.entering=false; item.rotOut=false; item.el.classList.add('leaving'); }
+    if(item && !item.leaving) startRotOut(item); /* 沿当前方向飘出，整颗越界才移除（tick 移除分支 kind=drift 会自动补位） */
     toast('已删除');
     if(inExpand) closeExpand(false);
     if(S.view==='mine') renderMyBubbles();
@@ -1857,8 +2175,8 @@ async function submitPublish(codeIn){
   await Promise.all([loadProfile(), loadPool()]);
   const nb = data && (data.id ? S.poolById.get(data.id) : (typeof data==='string' ? S.poolById.get(data) : null));
   setWorldTarget(); showWorld();
-  if(nb){ const it = spawnBubble(nb, 0); if(it) it.el.classList.add('fresh'); /* 只从屏幕底部飘入，不瞬移到屏中间 */ }
-  else topUp();
+  if(nb){ W.freshId = nb.id; enqueueSpawn(nb, 'drift', false); /* 只从屏幕底部飘入，不瞬移到屏中间；飘入时带 fresh 高亮（见 spawnBubble） */ }
+  topUp();
 }
 </script>
 <script>
@@ -3343,7 +3661,7 @@ async function init(){
     if(evt==='SIGNED_IN'){ await Promise.all([loadProfile(), loadMyMarks()]); }
     if(evt==='SIGNED_OUT'){ S.profile=null; S.myReactions.clear(); S.myFavorites.clear(); updatePointsCap(); }
   });
-  addEventListener('resize', ()=>{ setWorldTarget(); });
+  addEventListener('resize', ()=>{ setWorldTarget(); topUp(); }); /* 尺寸变化不硬拽泡泡：目标数变了就走队列补/换，位置交给水流与软推力渐进回场（见 tick 边缘处理） */
 }
 init().catch(e=>{ toast(errText(e)); hideBoot(); });
 </script>
