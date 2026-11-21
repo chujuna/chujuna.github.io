@@ -979,6 +979,10 @@ function authorOf(b){ return S.authors.get(b.user_id) || { nickname:'用户', us
 /* ================= 世界泡泡引擎 ================= */
 const stage = $('stage');
 const COST_SIZE = {5:90, 10:118, 20:156, 50:208, 100:262};
+/* 中心弱吸力（px/s²）：自由漂浮泡泡朝舞台中心的最大拉力（在边缘处取满、中心处
+   为零，按归一化距离线性增减）。只为让分布微微向中间聚拢，量级刻意压得很弱，
+   用户反馈再调只改这一个数（见 tick normal 分支的施加处） */
+const CENTER_PULL = 10;
 const TYPE_META = {
   text:{ name:'文字', color:['rgba(125,211,252,.72)','rgba(56,189,248,.62)'], ico:'type' },
   image:{ name:'图片', color:['rgba(167,243,208,.72)','rgba(52,211,153,.60)'], ico:'image' },
@@ -1434,6 +1438,19 @@ function tick(ts){
        位置始终逐帧连续 */
     it.vx += Math.sin(ts/2400 + it.idlePhase) * 38 * dt;
     it.vy += Math.cos(ts/2900 + it.idlePhase*1.7) * 38 * dt;
+    /* 中心弱吸力（用户微调，配合边缘放开）：朝舞台几何中心的加速度式弱力，按距
+       中心的归一化距离线性增减——中心处为零、到边缘最大 CENTER_PULL（10px/s²，
+       归一化钳在 ±1，探出边缘后不再变大）。量级只有水流转向（38px/s²）的约
+       四分之一、速度下限补速（153px/s²）的约十五分之一：只让分布微微向中间
+       聚拢、边缘不再长期空荡，泡泡靠惯性仍能穿过中心继续游走，不会被钉住；
+       向外飘的泡泡（25–70px/s）动量远大于这点拉力，整颗飘出消失照常发生。
+       本分支只处理 normal 自由泡泡：入场（mode 非 normal）、离场（leaving，
+       含年龄轮换 rotOut 的 drift 离场）、被拖拽（循环开头已跳过）的泡泡都到不
+       了这里，吸力绝不会把到龄往外飘的泡泡拽回来 */
+    const pullX = Math.max(-1, Math.min(1, (w/2 - (it.x + it.d/2)) / (w/2 || 1)));
+    const pullY = Math.max(-1, Math.min(1, (h/2 - (it.y + it.d/2)) / (h/2 || 1)));
+    it.vx += pullX * CENTER_PULL * dt;
+    it.vy += pullY * CENTER_PULL * dt;
     const spd = Math.hypot(it.vx, it.vy);
     if(spd > 72){ it.vx *= 72/spd; it.vy *= 72/spd; }
     else if(spd < 25){
@@ -1513,13 +1530,16 @@ function attachBubblePointer(item){
     item.x = Math.max(-item.d*0.25, Math.min(ss.w - item.d*0.75, e.clientX-sx));
     item.y = Math.max(-item.d*0.25, Math.min(ss.h - item.d*0.75, e.clientY-sy));
     el.style.transform = 'translate('+item.x+'px,'+item.y+'px)';
-    /* 拖动挤压周围（对照小样 v66 onDragMove 原公式与参数）：拖动方向上、范围内的
+    /* 拖动挤压周围（对照小样 v66 onDragMove 公式）：拖动方向上、范围内的
        泡泡被逐帧推向同方向——位置推开（跟随拖动位移 + 径向挤出 + 按重叠深度让位）
        加一股速度，越近推得越狠；被挤泡泡还会经 tick 两两挤压把推力连锁传给外圈。
-       所有位移都是每个 pointermove 事件的增量，逐帧连续，不存在瞬移 */
+       所有位移都是每个 pointermove 事件的增量，逐帧连续，不存在瞬移。
+       作用范围 reach 按用户反馈在小样系数 0.95 的基础上减半为 0.48：约等于两泡
+       刚接触（中心距 = 两半径之和 = 0.5×直径和）才开始推，隔着空隙不再提前
+       受影响；推开量、速度踢、钳制等公式其余部分与小样保持不变 */
     for(const o of W.list){ if(o===item||o.drag) continue;
       const cx=(o.x+o.d/2)-(item.x+item.d/2), cy=(o.y+o.d/2)-(item.y+item.d/2);
-      const dist=Math.hypot(cx,cy), reach=(item.d+o.d)*0.95;
+      const dist=Math.hypot(cx,cy), reach=(item.d+o.d)*0.48;
       if(dist>0.01 && dist<reach){
         const f=(1-dist/reach)*0.55, ux=cx/dist, uy=cy/dist;
         o.x += (dx*0.9 + ux*3.2)*f + ux*(reach-dist)*0.16;
