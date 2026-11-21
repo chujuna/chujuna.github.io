@@ -1250,10 +1250,23 @@ async function renderAccount(){
     toast('已保存'); renderAccount();
   };
   edit.appendChild(btn); wrap.appendChild(edit);
+  const pw = h('div','card');
+  pw.appendChild(h('h3',null,'修改密码'));
+  const pf = h('div','field'); const pin = h('input'); pin.type='password'; pin.placeholder='输入新密码（至少 6 位）'; pin.autocomplete='new-password'; pf.appendChild(pin); pw.appendChild(pf);
+  const pbtn = h('button','big-btn','保存新密码');
+  pbtn.onclick = async ()=>{
+    const v = pin.value;
+    if(!v || v.length<6){ toast('密码至少 6 位'); return; }
+    const { error } = await sb.auth.updateUser({ password: v });
+    if(error){ toast(errText(error)); return; }
+    pin.value=''; toast('密码已修改');
+  };
+  pw.appendChild(pbtn); wrap.appendChild(pw);
   wrap.appendChild(copyrightEl());
 }
 /* ---------- 签到与积分 ---------- */
 async function renderCheckin(){
+  
   S.view='checkin'; showPage('checkin');
   const wrap = $('pageWrap'); wrap.innerHTML='';
   wrap.appendChild(backLink('返回我的', renderMine));
