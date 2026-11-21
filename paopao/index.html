@@ -201,7 +201,9 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
   50%{filter:brightness(1.10) saturate(1.14)}
 }
 .bubble.is-admin.dragging,.bubble.is-perm.dragging{animation-play-state:paused}
-.bubble.leaving{opacity:0}
+/* 离场全程不透明：泡泡必须完整飘出屏幕外才移除，禁止在屏内淡出消失（飘出飘入铁律）。
+   旧版这里是 opacity:0，配合 .bubble 的 transition:opacity .6s，离场泡泡会在原地淡没——已废除 */
+.bubble.leaving{opacity:1}
 /* 查看后关闭的爆点：原泡泡快速胀大变淡消失，同时在原位置炸开一圈水滴与扩散光圈（见脚本 burstBubble） */
 .bubble.popping{pointer-events:none}
 .burst-fx{position:absolute; width:0; height:0; z-index:96; pointer-events:none}
@@ -627,10 +629,22 @@ body.in-page .filter-drawer{display:none !important}
 .page-loading i:nth-child(2){width:28px; height:28px; animation-delay:.18s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(167,139,250,.88) 55%, rgba(124,58,237,.90))}
 .page-loading i:nth-child(3){width:16px; height:16px; animation-delay:.36s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(52,211,153,.88) 55%, rgba(5,150,105,.90))}
 /* 第 8/9 条：设置组弹窗（参数全进弹窗，整页只剩分组行） */
-.set-modal{width:min(92vw,440px); text-align:left; max-height:86vh; overflow-y:auto}
-.set-modal h4{margin-bottom:14px}
-.set-modal .row{display:flex; gap:10px; margin-top:16px}
-.set-modal .row .btn{flex:1}
+/* 本轮第 1 条：弹窗改三段式——标题栏固定、只有内容区滚动、按钮栏固定，
+   杜绝标题随内容滚走被裁一半；高度用 dvh 兜底 iOS 地址栏伸缩 */
+.set-modal{width:min(92vw,440px); text-align:left; max-height:min(88vh, calc(100dvh - 36px)); overflow:hidden; display:flex; flex-direction:column; padding:0}
+.set-modal .sm-head{flex:none; padding:20px 24px 8px}
+.set-modal .sm-head h4{margin:0}
+.set-modal .sm-body{flex:1 1 auto; min-height:0; overflow-y:auto; padding:8px 24px 12px}
+.set-modal .sm-foot{flex:none; padding:12px 24px 20px}
+.set-modal .sm-foot .row{display:flex; gap:10px}
+.set-modal .sm-foot .row .btn{flex:1}
+/* 本轮第 1 条：弹窗内并排表单行（输入框 + select / 输入框 + 按钮）——
+   输入框 flex:1 且 min-width:0 可收缩，select / 按钮固定合理宽度，
+   修掉旧版 .field select{width:100%} 在 flex 行里把数字输入框挤成窄缝的问题 */
+.set-modal .fld-row{display:flex; gap:8px; align-items:stretch}
+.set-modal .fld-row input[type=text],.set-modal .fld-row input[type=number]{flex:1 1 auto; min-width:0; width:auto}
+.set-modal .fld-row select{flex:none; width:104px}
+.set-modal .fld-row .mini-btn{flex:none; white-space:nowrap}
 .set-modal .switch-row{display:flex; align-items:center; gap:12px; padding:4px 0 10px}
 .set-modal .switch-row .tx{flex:1}
 .set-modal .switch-row .tx b{display:block; font-size:14px}
@@ -957,7 +971,8 @@ function bubbleSize(b){
 }
 function weightOf(b){
   const a = authorOf(b);
-  if(a.role==='admin') return 10;
+  /* DEMO 泡泡按普通泡泡计权重：虽然出自管理员账号，也不套管理员权重 */
+  if(!b.is_demo && a.role==='admin') return 10;
   if(b.is_permanent) return 5;
   if((b.report_count||0) >= 2) return 0.2;
   const net = (b.like_count||0) - (b.dislike_count||0);
@@ -979,16 +994,19 @@ function makeBubbleEl(b){
   el.style.width = d+'px'; el.style.height = d+'px';
   el.style.zIndex = String(Math.max(1, 60 - Math.round(d/5)));
   const a = authorOf(b);
-  if(a.role==='admin') el.classList.add('is-admin');
+  /* DEMO 泡泡按普通泡泡渲染：不用管理员金色/呼吸、不带管理员角标，
+     颜色就是类型 tint 本身（各颗按类型正常着色）；只保留 DEMO 署名 */
+  const isAdminB = !b.is_demo && a.role==='admin';
+  if(isAdminB) el.classList.add('is-admin');
   else if(b.is_permanent) el.classList.add('is-perm');
   if(S.user && b.user_id===S.user.id) el.classList.add('mine');
-  if(a.role==='admin' || b.is_permanent) el.style.animationDelay = (-(Math.random()*3)).toFixed(2)+'s';
+  if(isAdminB || b.is_permanent) el.style.animationDelay = (-(Math.random()*3)).toFixed(2)+'s';
   const ico = h('span','b-ico'); ico.innerHTML = typeIcon(b.type, 20);
   const nm = h('span','b-name', b.is_demo ? 'DEMO' : String(a.nickname || '用户').slice(0,6));
   el.append(ico, nm);
-  if(a.role==='admin' || b.is_permanent || b.is_demo){
+  if(isAdminB || b.is_permanent || b.is_demo){
     const flags = h('span','b-flags');
-    if(a.role==='admin') flags.appendChild(h('span','b-admin','管理员'));
+    if(isAdminB) flags.appendChild(h('span','b-admin','管理员'));
     if(b.is_permanent) flags.appendChild(h('span','b-perm','∞ 永久'));
     if(b.is_demo) flags.appendChild(h('span','b-demo','DEMO'));
     el.appendChild(flags);
@@ -1047,7 +1065,8 @@ function tick(ts){
     if(it.drag) continue;
     if(it.entering){
       it.y += it.vy*dt*2.2; it.x += Math.sin(ts/700 + it.idlePhase)*7*dt + it.vx*dt;
-      if(it.y < h - it.d - 130){ it.entering=false; it.vy = (Math.random()-0.5)*7; }
+      /* 整颗飘进视口才转入自由漂浮（与小样一致：没整颗进来前不切状态、不钳位置） */
+      if(it.y < h - it.d - 2){ it.entering=false; it.vy = (Math.random()-0.5)*7; }
     } else if(it.leaving){
       it.y -= 52*dt; it.x += it.vx*dt;
     } else {
@@ -1057,10 +1076,12 @@ function tick(ts){
       /* 速度软上限：被挤压/被拖动推开攒下的速度逐帧缓降回漂移速度，位置始终逐帧连续 */
       const sp = Math.hypot(it.vx, it.vy);
       if(sp > 34){ const ns = 34 + (sp-34)*Math.max(0, 1-3*dt); it.vx *= ns/sp; it.vy *= ns/sp; }
+      /* 活动范围 = 整个视口（与小样一致）：泡泡可以飘到顶栏/底部胶囊的下方、贴近四边，
+         不再被限制在上下悬浮层之间的中间带；边界就是视口四边（留 2px） */
       if(it.x < 2){ it.x=2; it.vx=Math.abs(it.vx); }
       if(it.x > w-it.d-2){ it.x=w-it.d-2; it.vx=-Math.abs(it.vx); }
-      if(it.y < 66){ it.y=66; it.vy=Math.abs(it.vy); }
-      if(it.y > h-it.d-108){ it.y=h-it.d-108; it.vy=-Math.abs(it.vy); }
+      if(it.y < 2){ it.y=2; it.vy=Math.abs(it.vy); }
+      if(it.y > h-it.d-2){ it.y=h-it.d-2; it.vy=-Math.abs(it.vy); }
     }
   }
   /* 两两挤压：禁止按重叠量整段平移位置（旧版那样会让泡泡碰撞后瞬间闪现到别处）。
@@ -1082,10 +1103,11 @@ function tick(ts){
     }
   }
   for(const it of [...items]){
-    if(it.leaving && it.y + it.d < -16){ removeItem(it); topUp(); continue; }
+    /* 离场泡泡：任何一边整颗越出视口才移除（不许未飘出就删 DOM） */
+    if(it.leaving && (it.y + it.d < -16 || it.y > h + 16 || it.x + it.d < -16 || it.x > w + 16)){ removeItem(it); topUp(); continue; }
     if(!it.entering && !it.leaving){
       if(it.x < 2) it.x=2; if(it.x > w-it.d-2) it.x=w-it.d-2;
-      if(it.y < 60) it.y=60; if(it.y > h-it.d-100) it.y=h-it.d-100;
+      if(it.y < 2) it.y=2; if(it.y > h-it.d-2) it.y=h-it.d-2;
     }
     it.el.style.transform = 'translate('+it.x+'px,'+it.y+'px)';
   }
@@ -1105,7 +1127,10 @@ function attachBubblePointer(item){
   });
   el.addEventListener('pointermove', e=>{
     if(!item.drag) return;
-    const nx = e.clientX-sx, ny = e.clientY-sy;
+    /* 拖动范围同样是全屏：钳在视口四边内（留 2px），泡泡不会被拖出屏幕丢失 */
+    const ss = stageSize();
+    const nx = Math.max(2, Math.min(ss.w-item.d-2, e.clientX-sx));
+    const ny = Math.max(2, Math.min(ss.h-item.d-2, e.clientY-sy));
     moved += Math.abs(e.movementX||0)+Math.abs(e.movementY||0);
     const now = performance.now(), dtm = Math.max(1, now-lastT);
     item.vx = (e.clientX-lastX)/dtm*1000*0.35; lastX=e.clientX; lastT=now;
@@ -1167,10 +1192,19 @@ function popBubble(item){
   setTimeout(()=>{ topUp(); }, 430);
 }
 function swapBatch(){
+  /* 换一批 = 同步换场（飘出飘入铁律）：旧泡泡此刻开始离场、新泡泡同一刻从屏幕底部吹入，
+     两边同场交错——新泡泡上升时靠飘动与碰撞把旧泡泡继续往上、往外挤，旧泡泡整颗飘出
+     屏幕外才移除，全程不透明、不原地消失。旧版是旧泡泡先延时离场、500ms 后才补新泡泡，
+     且离场带 CSS 淡出，等于旧的在屏内淡没、新的凭空冒出——已废除 */
   const cur = W.list.filter(it=>!it.leaving);
-  cur.forEach((it,i)=>{ setTimeout(()=>{ it.leaving=true; it.entering=false; it.el.classList.add('leaving'); }, i*60); });
-  const need = Math.max(0, W.target - 0);
-  setTimeout(()=>{ topUp(); }, 500);
+  cur.forEach(it=>{
+    it.leaving = true; it.entering = false; it.el.classList.add('leaving');
+    /* 顺手给一股向上的初速，方向朝远离屏幕中心的一侧，接下来交给漂移与碰撞挤出 */
+    const cx = it.x + it.d/2, { w } = stageSize();
+    it.vx = Math.max(-30, Math.min(30, it.vx + (cx < w/2 ? -7 : 7)));
+    it.vy = Math.min(it.vy, -8);
+  });
+  topUp(); /* 新泡泡立刻从底部出生吹入（topUp 只数非离场泡泡，数量自动守恒） */
   blipSounds();
 }
 function applyFilter(f){
@@ -1179,8 +1213,9 @@ function applyFilter(f){
   const pool = visiblePool();
   const keep = W.list.filter(it=>it.b.type===f || f==='all');
   if(f!=='all' && pool.length < W.target){
-    /* 池子不够：只保留同类型在场，不换场 */
+    /* 池子不够：同类型能留尽留——非同类型飘出屏幕，池子里还没上场的同类型从底部飘入补齐 */
     W.list.filter(it=>it.b.type!==f).forEach(it=>{ it.leaving=true; it.entering=false; it.el.classList.add('leaving'); });
+    topUp();
     return;
   }
   W.list.filter(it=>!keep.includes(it)).forEach(it=>{ it.leaving=true; it.entering=false; it.el.classList.add('leaving'); });
@@ -1256,11 +1291,11 @@ async function openExpand(b, source){
   who.append(wb, wid);
   const mr = h('span','meta-right');
   let prio;
-  if(a.role==='admin') prio = tagEl('admin-tag','管理员泡泡');
+  if(b.is_demo) prio = tagEl('demo-tag','DEMO'); /* DEMO 优先判定：不显示管理员泡泡标签 */
+  else if(a.role==='admin') prio = tagEl('admin-tag','管理员泡泡');
   else if(b.is_permanent) prio = tagEl('perm-tag','∞ 永久泡泡');
   else if((b.like_count||0) >= 8) prio = tagEl('like-tag','高赞泡泡');
   else if((b.report_count||0) > 0) prio = tagEl('report-tag','被举报 '+(b.report_count||0)+' 次 · 低优先');
-  else if(b.is_demo) prio = tagEl('demo-tag','DEMO');
   else { prio = tagEl('',''); prio.style.cssText='background:rgba(255,159,10,.16);color:var(--orange)'; prio.textContent = b.cost+' 积分 · '+TYPE_META[b.type].name; }
   mr.append(prio, h('small','who-time', fmtTimeShort(b.created_at)+' 发布'));
   meta.append(av, who, mr); card.appendChild(meta);
@@ -1412,7 +1447,7 @@ async function deleteMediaFile(path, bubbleId){
   }catch(e){}
 }
 function confirmDeleteBubble(b, inExpand){
-  confirmBox('删除这个泡泡？','删除后不退还积分，泡泡会立即从世界消失。','删除',true, async ()=>{
+  confirmBox('删除这个泡泡？','删除后不退还积分，泡泡会飘离世界。','删除',true, async ()=>{
     let err = null;
     try{
       const r = isAdmin()
@@ -1423,8 +1458,12 @@ function confirmDeleteBubble(b, inExpand){
     if(err){ toast(errText(err)); return; }
     if(b.media_path) deleteMediaFile(b.media_path, b.id);
     CACHE.myBubbles = null; CACHE.favorites = null; CACHE.footprints = null; CACHE.counts = null;
+    ACACHE.bubbles = {}; ACACHE.home = null;
     S.pool = S.pool.filter(x=>x.id!==b.id); S.poolById.delete(b.id);
-    const item = W.list.find(it=>it.b.id===b.id); if(item) removeItem(item);
+    /* 飘出飘入铁律：世界里的这颗不许原地消失——标记离场，整颗飘出屏幕外才由引擎移除；
+       下面的 topUp() 同时从底部补一颗进来，出与入同步 */
+    const item = W.list.find(it=>it.b.id===b.id);
+    if(item && !item.leaving){ item.leaving=true; item.entering=false; item.el.classList.add('leaving'); }
     toast('已删除');
     if(inExpand) closeExpand(false);
     if(S.view==='mine') renderMyBubbles();
@@ -1749,7 +1788,8 @@ function backLink(text, fn){
   const b = h('button','back-link');
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>';
   b.appendChild(document.createTextNode(text));
-  b.onclick = fn; return b;
+  b.onclick = ()=>fn(); /* 包一层：禁止把 PointerEvent 当参数传进目标函数（曾导致 renderAdminUsers 收到事件对象、搜索框出现 [object PointerEvent]） */
+  return b;
 }
 function copyrightEl(){
   const d = h('div','copyright');
@@ -1779,7 +1819,8 @@ function menuRow(iconSvg, title, sub, valText, fn){
   if(valText) b.appendChild(h('span','m-val', valText));
   const ar = h('span'); ar.innerHTML = '<svg class="m-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>';
   b.appendChild(ar.firstChild);
-  b.onclick = fn; return b;
+  b.onclick = ()=>fn(); /* 同 backLink：包一层，禁止事件对象漏进目标函数当参数 */
+  return b;
 }
 function secTitle(text, small){
   const t = h('div','sec-title'); t.appendChild(document.createTextNode(text));
@@ -1789,8 +1830,13 @@ function secTitle(text, small){
 
 /* ================= 「我的」数据缓存（第 12 条：先渲染后刷新，不白屏） ================= */
 const CACHE = { counts:null, myBubbles:null, favorites:null, footprints:null, checkinSigned:null, pointsLog:null, notifications:null };
+/* 管理员页缓存（与「我的」同一标准：有缓存先渲染、后台静默刷新；按管理员维度存，退出/换号时随 resetCache 一起清） */
+const ACACHE = { home:null, reviews:null, bubbles:{}, users:{}, codes:{} };
 let viewSeq = 0;
-function resetCache(){ Object.keys(CACHE).forEach(k=>{ CACHE[k]=null; }); }
+function resetCache(){
+  Object.keys(CACHE).forEach(k=>{ CACHE[k]=null; });
+  ACACHE.home = null; ACACHE.reviews = null; ACACHE.bubbles = {}; ACACHE.users = {}; ACACHE.codes = {};
+}
 
 /* ================= 我的 ================= */
 async function renderMine(){
@@ -2151,7 +2197,7 @@ function listRow(b, subLines, opts){
 function bubbleTags(b, extra){
   const tags = [];
   const a = S.authors.get(b.user_id);
-  if(a && a.role==='admin') tags.push(tagEl('admin-tag','管理员'));
+  if(a && a.role==='admin' && !b.is_demo) tags.push(tagEl('admin-tag','管理员'));
   if(b.is_demo) tags.push(tagEl('demo-tag','DEMO'));
   if(b.is_permanent) tags.push(tagEl('perm-tag','∞ 永久'));
   if(b.status==='hidden') tags.push(tagEl('hidden-tag','已下架'));
@@ -2330,7 +2376,7 @@ function trowEl(lead, title, tags, smallNodes, onClick, hot){
   main.appendChild(sm);
   row.appendChild(main);
   const cv = h('span'); cv.innerHTML = chevSvg(); row.appendChild(cv.firstChild);
-  if(onClick) row.onclick = onClick;
+  if(onClick) row.onclick = ()=>onClick(); /* 同样包一层，防事件对象漏参 */
   return row;
 }
 function miniB(b, px, icoSize){
@@ -2344,6 +2390,7 @@ function statusTagFor(u){
 async function renderAdminHome(){
   if(!isAdmin()){ toast('无权限'); renderMine(); return; }
   S.view='admin'; showPage('admin');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const bl = backLink('返回我的', renderMine); bl.classList.add('admin-home-back');
   wrap.appendChild(bl);
@@ -2354,28 +2401,39 @@ async function renderAdminHome(){
   const grid = h('div','stat-grid'); wrap.appendChild(grid);
   const card = h('div','card menu-card'); card.style.marginTop='14px';
   wrap.appendChild(card); wrap.appendChild(copyrightEl());
+  /* 与「我的」同一标准：有缓存先整页渲染、后台回来静默重绘；无缓存显示小泡泡加载动画 */
+  const paint = (st, codesN)=>{
+    grid.innerHTML=''; card.innerHTML='';
+    const items = [
+      ['总用户数', st.total_users], ['总泡泡数', st.total_bubbles], ['今日新增泡泡', st.today_bubbles],
+      ['今日签到人数', st.today_checkins], ['今日发放积分', st.today_issued==null?null:'+'+st.today_issued], ['今日消耗积分', st.today_spent==null?null:'-'+st.today_spent],
+      ['被封禁用户', st.banned_users], ['待审举报', st.pending_reviews]
+    ];
+    items.forEach(([t,n])=>{ const b=h('div','stat'); b.append(h('div','n', String(n==null?0:n)), h('div','t', t)); grid.appendChild(b); });
+    card.append(
+      menuRow(ICO19.bubbles,'泡泡管理','筛选、预览、下架与删除',(st.total_bubbles||0)+' 个',renderAdminBubbles),
+      menuRow(ICO19.flag,'待审核','被举报的泡泡 · 按举报次数排，处理完记入操作日志',(st.pending_reviews||0)+' 条待审',renderAdminReviews),
+      menuRow(ICO19.user,'用户管理','搜索、赠送积分、封禁与删除',(st.total_users||0)+' 人',renderAdminUsers),
+      menuRow(ICO19.key,'永久泡泡授权码','批量生成、导入与导出授权码',codesN+' 个可用',renderAdminCodes),
+      menuRow(ICO19.sliders,'系统设置','签到、注册、世界泡泡数量、举报阈值与公告弹窗','',renderAdminSettings)
+    );
+  };
+  if(ACACHE.home) paint(ACACHE.home.st, ACACHE.home.codes);
+  else { grid.appendChild(pageLoadingEl()); card.appendChild(pageLoadingEl()); }
   const { data, error } = await sb.rpc('admin_stats');
+  if(seq!==viewSeq) return;
   const st = data || {};
-  if(error){ grid.appendChild(emptyNoteEl(errText(error))); }
-  const items = [
-    ['总用户数', st.total_users], ['总泡泡数', st.total_bubbles], ['今日新增泡泡', st.today_bubbles],
-    ['今日签到人数', st.today_checkins], ['今日发放积分', st.today_issued==null?null:'+'+st.today_issued], ['今日消耗积分', st.today_spent==null?null:'-'+st.today_spent],
-    ['被封禁用户', st.banned_users], ['待审举报', st.pending_reviews]
-  ];
-  items.forEach(([t,n])=>{ const b=h('div','stat'); b.append(h('div','n', String(n==null?0:n)), h('div','t', t)); grid.appendChild(b); });
+  if(error){ if(!ACACHE.home){ grid.innerHTML=''; grid.appendChild(emptyNoteEl(errText(error))); } return; }
   const { data: codes } = await sb.from('auth_codes').select('id').eq('status','unused');
-  card.append(
-    menuRow(ICO19.bubbles,'泡泡管理','筛选、预览、下架与删除',(st.total_bubbles||0)+' 个',renderAdminBubbles),
-    menuRow(ICO19.flag,'待审核','被举报的泡泡 · 按举报次数排，处理完记入操作日志',(st.pending_reviews||0)+' 条待审',renderAdminReviews),
-    menuRow(ICO19.user,'用户管理','搜索、赠送积分、封禁与删除',(st.total_users||0)+' 人',renderAdminUsers),
-    menuRow(ICO19.key,'永久泡泡授权码','批量生成、导入与导出授权码',(codes||[]).length+' 个可用',renderAdminCodes),
-    menuRow(ICO19.sliders,'系统设置','签到、注册、世界泡泡数量、举报阈值与公告弹窗','',renderAdminSettings)
-  );
+  if(seq!==viewSeq) return;
+  ACACHE.home = { st, codes:(codes||[]).length };
+  paint(st, (codes||[]).length);
 }
 async function renderAdminStats(){ renderAdminHome(); }
 /* ---------- 待审核 ---------- */
 async function renderAdminReviews(){
   S.view='admin'; showPage('admin');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
@@ -2384,28 +2442,39 @@ async function renderAdminReviews(){
   panel.appendChild(secTitle('处理记录','每次审核处理都记入操作日志'));
   const logsBox = h('div','log-list'); panel.appendChild(logsBox);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  /* 缓存先行：有缓存立即渲染，后台数据回来静默重绘；无缓存显示小泡泡加载动画 */
+  const paint = (rows, logs)=>{
+    table.innerHTML=''; logsBox.innerHTML='';
+    if(!rows.length) table.appendChild(emptyNoteEl('没有待审核的泡泡 — 被举报的泡泡会出现在这里'));
+    rows.forEach(b=>{
+      const hot = (b.report_count||0) >= Number(setGet('report_hide_threshold',3));
+      const a = authorOf(b);
+      const repSpan = h('span','review-reports','被举报 '+(b.report_count||0)+' 次');
+      table.appendChild(trowEl(miniB(b,38,16), bubbleTitle(b),
+        hot ? [tagEl('auto-hidden-tag','已自动隐藏')] : [],
+        [document.createTextNode((a.nickname||'用户')+' · '+TYPE_META[b.type].name+' · '+fmtTimeShort(b.created_at)+' · '), repSpan],
+        ()=>renderReviewDetail(b), hot));
+    });
+    if(!logs || !logs.length) logsBox.appendChild(emptyNoteEl('暂无记录'));
+    (logs||[]).forEach(l=>{
+      const r = h('div','log-row');
+      const left = h('span'); const bt = h('b',null, actionText(l)); bt.style.fontWeight='600';
+      left.append(bt, h('small',null, fmtDate(l.created_at)));
+      r.appendChild(left); logsBox.appendChild(r);
+    });
+  };
+  if(ACACHE.reviews) paint(ACACHE.reviews.rows, ACACHE.reviews.logs);
+  else { table.appendChild(pageLoadingEl()); logsBox.appendChild(pageLoadingEl()); }
   const { data, error } = await sb.rpc('admin_pending_reviews');
-  if(error) table.appendChild(emptyNoteEl(errText(error)));
+  if(seq!==viewSeq) return;
+  if(error){ if(!ACACHE.reviews){ table.innerHTML=''; table.appendChild(emptyNoteEl(errText(error))); } return; }
   const rows = data||[];
-  if(!rows.length) table.appendChild(emptyNoteEl('没有待审核的泡泡 — 被举报的泡泡会出现在这里'));
   await authorsFor(rows);
-  rows.forEach(b=>{
-    const hot = (b.report_count||0) >= Number(setGet('report_hide_threshold',3));
-    const a = authorOf(b);
-    const repSpan = h('span','review-reports','被举报 '+(b.report_count||0)+' 次');
-    table.appendChild(trowEl(miniB(b,38,16), bubbleTitle(b),
-      hot ? [tagEl('auto-hidden-tag','已自动隐藏')] : [],
-      [document.createTextNode((a.nickname||'用户')+' · '+TYPE_META[b.type].name+' · '+fmtTimeShort(b.created_at)+' · '), repSpan],
-      ()=>renderReviewDetail(b), hot));
-  });
+  if(seq!==viewSeq) return;
   const { data: logs } = await sb.from('admin_logs').select('*').order('created_at',{ascending:false}).limit(20);
-  if(!logs || !logs.length) logsBox.appendChild(emptyNoteEl('暂无记录'));
-  (logs||[]).forEach(l=>{
-    const r = h('div','log-row');
-    const left = h('span'); const bt = h('b',null, actionText(l)); bt.style.fontWeight='600';
-    left.append(bt, h('small',null, fmtDate(l.created_at)));
-    r.appendChild(left); logsBox.appendChild(r);
-  });
+  if(seq!==viewSeq) return;
+  ACACHE.reviews = { rows, logs: logs||[] };
+  paint(rows, logs||[]);
 }
 function renderReviewDetail(b){
   S.view='admin'; showPage('admin');
@@ -2435,9 +2504,10 @@ function renderReviewDetail(b){
   card.appendChild(kvBox);
   const acts = h('div','detail-actions');
   const act = async (action, label)=>{
-    if(action==='delete'){ confirmBox('删除这个泡泡？','删除后不退还积分，此操作会记入操作日志。','删除',true, async ()=>{ const { error } = await sb.rpc('admin_review',{ p_bubble:b.id, p_action:'delete' }); if(error){ toast(errText(error)); return; } toast('已删除'); renderAdminReviews(); }); return; }
+    if(action==='delete'){ confirmBox('删除这个泡泡？','删除后不退还积分，此操作会记入操作日志。','删除',true, async ()=>{ const { error } = await sb.rpc('admin_review',{ p_bubble:b.id, p_action:'delete' }); if(error){ toast(errText(error)); return; } ACACHE.reviews = null; ACACHE.home = null; toast('已删除'); renderAdminReviews(); }); return; }
     const { error } = await sb.rpc('admin_review',{ p_bubble:b.id, p_action:action });
     if(error){ toast(errText(error)); return; }
+    ACACHE.reviews = null; ACACHE.home = null;
     toast(label+'完成'); renderAdminReviews();
   };
   const b1 = h('button','btn btn-blue','恢复显示'); b1.onclick=()=>act('restore','恢复显示');
@@ -2451,6 +2521,7 @@ function renderReviewDetail(b){
 let ABF = { date:'all', type:'all', cost:'all', status:'all', kw:'' };
 async function renderAdminBubbles(){
   S.view='adminBubbles'; showPage('admin');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
@@ -2464,7 +2535,7 @@ async function renderAdminBubbles(){
     seedBtn.disabled = false;
     if(error){ toast(errText(error)); return; }
     toast('已添加 '+(data==null?20:data)+' 个 DEMO 泡泡');
-    CACHE.myBubbles = null;
+    CACHE.myBubbles = null; ACACHE.bubbles = {}; ACACHE.home = null;
     await loadPool(); renderAdminBubbles();
   };
   const clearDemoBtn = h('button','mini-btn red','清空 DEMO'); clearDemoBtn.type='button';
@@ -2472,7 +2543,7 @@ async function renderAdminBubbles(){
     const { data, error } = await sb.rpc('admin_clear_demo');
     if(error){ toast(errText(error)); return; }
     toast('已清空 '+(data||0)+' 个 DEMO 泡泡');
-    CACHE.myBubbles = null;
+    CACHE.myBubbles = null; ACACHE.bubbles = {}; ACACHE.home = null;
     await loadPool(); renderAdminBubbles();
   });
   demoBar.append(seedBtn, clearDemoBtn); panel.appendChild(demoBar);
@@ -2494,6 +2565,28 @@ async function renderAdminBubbles(){
   panel.appendChild(bar);
   const table = h('div','table-card'); panel.appendChild(table);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  /* 缓存先行（按筛选组合分键）：有缓存立即渲染，后台回来静默重绘；无缓存显示加载动画 */
+  const cacheKey = JSON.stringify(ABF);
+  const paint = (data)=>{
+    table.innerHTML='';
+    if(!data || !data.length){ table.appendChild(emptyNoteEl('没有符合条件的泡泡，试试重置筛选')); return; }
+    const thr = Number(setGet('report_hide_threshold',3));
+    data.forEach(b=>{
+      const a = authorOf(b);
+      const tags = [];
+      if(a.role==='admin' && !b.is_demo) tags.push(tagEl('admin-tag','管理员'));
+      if(b.is_demo) tags.push(tagEl('demo-tag','DEMO'));
+      if(b.is_permanent) tags.push(tagEl('perm-tag','∞ 永久'));
+      if((b.like_count||0)>=8 && a.role!=='admin' && !b.is_permanent) tags.push(tagEl('like-tag','高赞'));
+      if((b.report_count||0) >= thr) tags.push(tagEl('hidden-tag','已隐藏'));
+      else if((b.report_count||0) > 0) tags.push(tagEl('report-tag','举报 '+b.report_count));
+      const status = b.deleted_at ? '已删除' : (b.report_count||0) >= thr ? '已隐藏' : b.status==='hidden' ? '已下架' : '展示中';
+      table.appendChild(trowEl(miniB(b,38,16), bubbleTitle(b), tags,
+        [document.createTextNode((a.nickname||'用户')+' · '+TYPE_META[b.type].name+' · '+b.cost+' 积分 · '+fmtTimeShort(b.created_at)+' · '+status)],
+        ()=>renderAdminBubbleDetail(b), false));
+    });
+  };
+  if(ACACHE.bubbles[cacheKey]) paint(ACACHE.bubbles[cacheKey]); else table.appendChild(pageLoadingEl());
   let q = sb.from('bubbles').select('*').order('created_at',{ascending:false}).limit(100);
   if(ABF.status==='deleted') q = q.not('deleted_at','is',null);
   else if(ABF.status==='visible'||ABF.status==='hidden'){ q = q.is('deleted_at',null).eq('status', ABF.status); }
@@ -2506,24 +2599,12 @@ async function renderAdminBubbles(){
     q = q.gte('created_at', since.toISOString());
   }
   const { data, error } = await q;
-  if(error){ table.appendChild(emptyNoteEl(errText(error))); return; }
+  if(seq!==viewSeq) return;
+  if(error){ if(!ACACHE.bubbles[cacheKey]){ table.innerHTML=''; table.appendChild(emptyNoteEl(errText(error))); } return; }
   await authorsFor(data||[]);
-  if(!data || !data.length) table.appendChild(emptyNoteEl('没有符合条件的泡泡，试试重置筛选'));
-  const thr = Number(setGet('report_hide_threshold',3));
-  (data||[]).forEach(b=>{
-    const a = authorOf(b);
-    const tags = [];
-    if(a.role==='admin') tags.push(tagEl('admin-tag','管理员'));
-    if(b.is_demo) tags.push(tagEl('demo-tag','DEMO'));
-    if(b.is_permanent) tags.push(tagEl('perm-tag','∞ 永久'));
-    if((b.like_count||0)>=8 && a.role!=='admin' && !b.is_permanent) tags.push(tagEl('like-tag','高赞'));
-    if((b.report_count||0) >= thr) tags.push(tagEl('hidden-tag','已隐藏'));
-    else if((b.report_count||0) > 0) tags.push(tagEl('report-tag','举报 '+b.report_count));
-    const status = b.deleted_at ? '已删除' : (b.report_count||0) >= thr ? '已隐藏' : b.status==='hidden' ? '已下架' : '展示中';
-    table.appendChild(trowEl(miniB(b,38,16), bubbleTitle(b), tags,
-      [document.createTextNode((a.nickname||'用户')+' · '+TYPE_META[b.type].name+' · '+b.cost+' 积分 · '+fmtTimeShort(b.created_at)+' · '+status)],
-      ()=>renderAdminBubbleDetail(b), false));
-  });
+  if(seq!==viewSeq) return;
+  ACACHE.bubbles[cacheKey] = data||[];
+  paint(ACACHE.bubbles[cacheKey]);
 }
 function renderAdminBubbleDetail(b){
   S.view='adminBubbles'; showPage('admin');
@@ -2538,7 +2619,7 @@ function renderAdminBubbleDetail(b){
   const info = h('span','info');
   info.append(h('b',null, bubbleTitle(b)), h('small',null, (a.nickname||'用户')+' · '+fmtTimeShort(b.created_at)));
   const tags = [];
-  if(a.role==='admin') tags.push(tagEl('admin-tag','管理员'));
+  if(a.role==='admin' && !b.is_demo) tags.push(tagEl('admin-tag','管理员'));
   if(b.is_demo) tags.push(tagEl('demo-tag','DEMO'));
   if(b.is_permanent) tags.push(tagEl('perm-tag','∞ 永久'));
   if((b.like_count||0)>=8 && a.role!=='admin' && !b.is_permanent) tags.push(tagEl('like-tag','高赞'));
@@ -2561,11 +2642,11 @@ function renderAdminBubbleDetail(b){
   if(!b.deleted_at){
     if(b.status==='hidden'){
       const rs = h('button','btn btn-ghost','恢复展示');
-      rs.onclick=async()=>{ const { error } = await sb.rpc('admin_bubble_action',{ p_bubble:b.id, p_action:'restore' }); if(error) toast(errText(error)); else { toast('已恢复'); b.status='visible'; renderAdminBubbleDetail(b); } };
+      rs.onclick=async()=>{ const { error } = await sb.rpc('admin_bubble_action',{ p_bubble:b.id, p_action:'restore' }); if(error) toast(errText(error)); else { ACACHE.bubbles = {}; toast('已恢复'); b.status='visible'; renderAdminBubbleDetail(b); } };
       acts.appendChild(rs);
     } else {
       const hd = h('button','btn btn-ghost','下架');
-      hd.onclick=async()=>{ const { error } = await sb.rpc('admin_bubble_action',{ p_bubble:b.id, p_action:'hide' }); if(error) toast(errText(error)); else { toast('已下架'); S.pool=S.pool.filter(x=>x.id!==b.id); b.status='hidden'; renderAdminBubbleDetail(b); } };
+      hd.onclick=async()=>{ const { error } = await sb.rpc('admin_bubble_action',{ p_bubble:b.id, p_action:'hide' }); if(error) toast(errText(error)); else { ACACHE.bubbles = {}; toast('已下架'); S.pool=S.pool.filter(x=>x.id!==b.id); b.status='hidden'; renderAdminBubbleDetail(b); } };
       acts.appendChild(hd);
     }
     const del = h('button','btn btn-danger','删除'); del.onclick=()=>confirmDeleteBubble(b,false);
@@ -2577,34 +2658,45 @@ function renderAdminBubbleDetail(b){
 }
 /* ---------- 用户管理 ---------- */
 async function renderAdminUsers(kwVal){
+  /* 类型防御：历史上这里被 menuRow 的 onclick 直接调用、收到过 PointerEvent，
+     非字符串一律当空搜索（搜索框绝不许再出现 [object PointerEvent]） */
+  if(typeof kwVal !== 'string') kwVal = '';
   S.view='admin'; showPage('admin');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
   panel.appendChild(secTitle('用户管理','按昵称 / 邮箱 / ID 搜索 · 点一条看详情'));
   const bar = h('div','filter-bar');
-  const inp = h('input'); inp.type='text'; inp.placeholder='搜用户：昵称、邮箱或 ID…'; inp.value=kwVal||'';
+  const inp = h('input'); inp.type='text'; inp.placeholder='搜用户：昵称、邮箱或 ID…'; inp.value=kwVal;
   inp.onchange=()=>renderAdminUsers(inp.value.trim());
   bar.appendChild(inp); panel.appendChild(bar);
   const table = h('div','table-card'); panel.appendChild(table);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  const kwv = kwVal.trim();
+  const paint = (data)=>{
+    table.innerHTML='';
+    if(!data || !data.length){ table.appendChild(emptyNoteEl('没有找到这个用户')); return; }
+    data.forEach(u=>{
+      const av = h('span','avatar');
+      av.style.cssText='width:38px;height:38px;font-size:15px';
+      fillAvatar(av, u.nickname||'用', u.avatar_url);
+      table.appendChild(trowEl(av, u.nickname||'用户', [statusTagFor(u)],
+        [document.createTextNode((u.email||'')+' · ID '+u.user_no)],
+        ()=>renderAdminUserDetail(u), false));
+    });
+  };
+  if(ACACHE.users[kwv]) paint(ACACHE.users[kwv]); else table.appendChild(pageLoadingEl());
   let q = sb.from('profiles').select('*').order('created_at',{ascending:false}).limit(100);
-  const kwv = (kwVal||'').trim();
   if(kwv){
     if(/^\d+$/.test(kwv)) q = q.eq('user_no', Number(kwv));
     else q = q.or('nickname.ilike.%'+kwv.replace(/[%_,()]/g,'')+'%,email.ilike.%'+kwv.replace(/[%_,()]/g,'')+'%');
   }
   const { data, error } = await q;
-  if(error){ table.appendChild(emptyNoteEl(errText(error))); return; }
-  if(!data || !data.length) table.appendChild(emptyNoteEl('没有找到这个用户'));
-  (data||[]).forEach(u=>{
-    const av = h('span','avatar');
-    av.style.cssText='width:38px;height:38px;font-size:15px';
-    fillAvatar(av, u.nickname||'用', u.avatar_url);
-    table.appendChild(trowEl(av, u.nickname||'用户', [statusTagFor(u)],
-      [document.createTextNode((u.email||'')+' · ID '+u.user_no)],
-      ()=>renderAdminUserDetail(u), false));
-  });
+  if(seq!==viewSeq) return;
+  if(error){ if(!ACACHE.users[kwv]){ table.innerHTML=''; table.appendChild(emptyNoteEl(errText(error))); } return; }
+  ACACHE.users[kwv] = data||[];
+  paint(ACACHE.users[kwv]);
 }
 function renderAdminUserDetail(u){
   S.view='admin'; showPage('admin');
@@ -2633,7 +2725,7 @@ function renderAdminUserDetail(u){
   acts.appendChild(gift);
   if(u.is_banned){
     const un = h('button','btn btn-ghost','解封');
-    un.onclick=async()=>{ const { error } = await sb.rpc('admin_set_ban',{ p_user:u.id, p_ban:false, p_reason:'' }); if(error) toast(errText(error)); else { toast('已解封'); renderAdminUsers(''); } };
+    un.onclick=async()=>{ const { error } = await sb.rpc('admin_set_ban',{ p_user:u.id, p_ban:false, p_reason:'' }); if(error) toast(errText(error)); else { ACACHE.users = {}; ACACHE.home = null; toast('已解封'); renderAdminUsers(''); } };
     acts.appendChild(un);
   } else {
     const bn = h('button','btn btn-ghost','封禁');
@@ -2642,7 +2734,7 @@ function renderAdminUserDetail(u){
       c.appendChild(h('p',null,'封禁后能登录浏览，但不能发布、不能签到；已发布泡泡保留展示。'));
       const f = h('div','field'); f.style.marginTop='10px'; const inp=h('input'); inp.type='text'; inp.placeholder='封禁原因（必填）'; f.appendChild(inp); c.appendChild(f);
       const btns=h('div','row'); const ca=h('button','btn btn-ghost','取消'); ca.onclick=closeModal;
-      const ok=h('button','btn btn-danger','封禁'); ok.onclick=async()=>{ const reason=inp.value.trim(); if(!reason){ toast('请填写封禁原因'); return; } closeModal(); const { error } = await sb.rpc('admin_set_ban',{ p_user:u.id, p_ban:true, p_reason:reason }); if(error) toast(errText(error)); else { toast('已封禁'); renderAdminUsers(''); } };
+      const ok=h('button','btn btn-danger','封禁'); ok.onclick=async()=>{ const reason=inp.value.trim(); if(!reason){ toast('请填写封禁原因'); return; } closeModal(); const { error } = await sb.rpc('admin_set_ban',{ p_user:u.id, p_ban:true, p_reason:reason }); if(error) toast(errText(error)); else { ACACHE.users = {}; ACACHE.home = null; toast('已封禁'); renderAdminUsers(''); } };
       btns.append(ca,ok); c.appendChild(btns); openModal(c);
     };
     acts.appendChild(bn);
@@ -2651,6 +2743,7 @@ function renderAdminUserDetail(u){
   del.onclick=()=>confirmBox('删除该账号？','该用户将无法登录，其泡泡一并删除。此操作请谨慎。','删除账号',true, async ()=>{
     const { error } = await sb.rpc('admin_delete_user',{ p_user:u.id });
     if(error){ toast(errText(error)); return; }
+    ACACHE.users = {}; ACACHE.home = null; ACACHE.bubbles = {};
     toast('账号已删除'); renderAdminUsers('');
   });
   acts.appendChild(del);
@@ -2683,6 +2776,7 @@ function openGift(u){
     closeModal();
     const { error } = await sb.rpc('admin_gift_points',{ p_user_no:u.user_no, p_amount:Math.floor(finalAmt), p_note:note.value.trim()||null });
     if(error){ toast(errText(error)); return; }
+    ACACHE.users = {}; ACACHE.home = null;
     toast('已赠送 '+Math.floor(finalAmt)+' 积分'); renderAdminUsers('');
   };
   btns.append(ca, ok); card.appendChild(btns); openModal(card);
@@ -2691,6 +2785,7 @@ function openGift(u){
 let CODEF = 'all', CODESEL = new Set();
 async function renderAdminCodes(){
   S.view='admin'; showPage('admin');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
@@ -2702,7 +2797,7 @@ async function renderAdminCodes(){
   const clearAll = h('button','mini-btn red','一键清空'); clearAll.onclick=()=>confirmBox('清空所有授权码？','全部授权码都会被删除，不可恢复。','清空',true, async ()=>{
     const { error } = await sb.rpc('admin_clear_codes');
     if(error){ toast(errText(error)); return; }
-    CODESEL.clear(); toast('已清空'); renderAdminCodes();
+    CODESEL.clear(); ACACHE.codes = {}; ACACHE.home = null; toast('已清空'); renderAdminCodes();
   });
   tools.append(gen, imp, exp, clearAll); panel.appendChild(tools);
   const chips = h('div','filter-bar'); chips.style.marginBottom='10px';
@@ -2723,59 +2818,66 @@ async function renderAdminCodes(){
   const listCard = h('div','card'); listCard.style.cssText='overflow:hidden; margin-bottom:12px';
   panel.appendChild(listCard);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
+  /* 缓存先行（按状态筛选分键）：有缓存立即渲染，后台回来静默重绘；无缓存显示加载动画 */
+  const paint = (rows)=>{
+    listCard.innerHTML='';
+    const syncSel = ()=>{
+      selInfo.textContent = '已选 '+CODESEL.size+' 条';
+      selAll.checked = rows.length>0 && rows.every(c=>CODESEL.has(c.id));
+    };
+    selAll.onchange=()=>{
+      if(selAll.checked) rows.forEach(c=>CODESEL.add(c.id)); else rows.forEach(c=>CODESEL.delete(c.id));
+      listCard.querySelectorAll('.code-check.sel').forEach((el,i)=>{ el.checked = CODESEL.has(rows[i].id); });
+      syncSel();
+    };
+    delSel.onclick=()=>{
+      if(!CODESEL.size){ toast('先勾选要删除的授权码'); return; }
+      confirmBox('批量删除？','将删除勾选的 '+CODESEL.size+' 条授权码。','删除',true, async ()=>{
+        const { error } = await sb.rpc('admin_delete_codes',{ p_ids:[...CODESEL] });
+        if(error){ toast(errText(error)); return; }
+        CODESEL.clear(); ACACHE.codes = {}; ACACHE.home = null; toast('已删除'); renderAdminCodes();
+      });
+    };
+    if(!rows.length) listCard.appendChild(h('div','code-empty', CODEF==='all' ? '还没有任何授权码，点「批量生成」或「批量导入」添加' : '这个状态下没有授权码'));
+    rows.forEach(c=>{
+      const r = h('div','code-row');
+      const chk = h('input','code-check sel'); chk.type='checkbox'; chk.checked = CODESEL.has(c.id);
+      chk.setAttribute('aria-label','勾选授权码 '+c.code);
+      chk.onchange=()=>{ chk.checked ? CODESEL.add(c.id) : CODESEL.delete(c.id); syncSel(); };
+      const code = document.createElement('code'); code.textContent = c.code;
+      const tag = c.status==='used' ? tagEl('','已使用','background:rgba(120,120,128,.16); color:var(--ink2)')
+        : c.status==='void' ? tagEl('','已作废','background:rgba(250,36,60,.12); color:var(--accent)')
+        : tagEl('','未使用','background:rgba(52,199,89,.14); color:var(--green)');
+      const info = c.status==='used' ? ('使用者 ID '+(c.used_by_user_no==null?'—':c.used_by_user_no)+' · '+(c.used_at?fmtDate(c.used_at):''))
+        : c.status==='void' ? ('生成于 '+fmtDate(c.created_at)+' · 已作废')
+        : ('生成于 '+fmtDate(c.created_at));
+      const sm = h('small',null, info); sm.style.cssText='flex:1; min-width:140px';
+      r.append(chk, code, tag, sm);
+      if(c.status==='unused'){
+        const cp = h('button','mini-btn','复制');
+        cp.onclick=()=>{ if(navigator.clipboard) navigator.clipboard.writeText(c.code).then(()=>toast('授权码已复制：'+c.code)); };
+        r.appendChild(cp);
+      }
+      const del = h('button','mini-btn red','删除');
+      del.onclick=()=>confirmBox('删除这个授权码？','授权码 '+c.code+' 将被删除。','删除',true, async ()=>{
+        const { error } = await sb.rpc('admin_delete_codes',{ p_ids:[c.id] });
+        if(error){ toast(errText(error)); return; }
+        CODESEL.delete(c.id); ACACHE.codes = {}; ACACHE.home = null; toast('授权码已删除：'+c.code); renderAdminCodes();
+      });
+      r.appendChild(del);
+      listCard.appendChild(r);
+    });
+    CODESEL.forEach(id=>{ if(!rows.some(c=>c.id===id) && CODEF==='all') CODESEL.delete(id); });
+    syncSel();
+  };
+  if(ACACHE.codes[CODEF]) paint(ACACHE.codes[CODEF]); else listCard.appendChild(pageLoadingEl());
   let q = sb.from('auth_codes').select('*').order('created_at',{ascending:false}).limit(500);
   if(CODEF!=='all') q = q.eq('status', CODEF);
   const { data, error } = await q;
-  if(error){ listCard.appendChild(emptyNoteEl(errText(error))); return; }
-  const rows = data||[];
-  const syncSel = ()=>{
-    selInfo.textContent = '已选 '+CODESEL.size+' 条';
-    selAll.checked = rows.length>0 && rows.every(c=>CODESEL.has(c.id));
-  };
-  selAll.onchange=()=>{
-    if(selAll.checked) rows.forEach(c=>CODESEL.add(c.id)); else rows.forEach(c=>CODESEL.delete(c.id));
-    listCard.querySelectorAll('.code-check.sel').forEach((el,i)=>{ el.checked = CODESEL.has(rows[i].id); });
-    syncSel();
-  };
-  delSel.onclick=()=>{
-    if(!CODESEL.size){ toast('先勾选要删除的授权码'); return; }
-    confirmBox('批量删除？','将删除勾选的 '+CODESEL.size+' 条授权码。','删除',true, async ()=>{
-      const { error } = await sb.rpc('admin_delete_codes',{ p_ids:[...CODESEL] });
-      if(error){ toast(errText(error)); return; }
-      CODESEL.clear(); toast('已删除'); renderAdminCodes();
-    });
-  };
-  if(!rows.length) listCard.appendChild(h('div','code-empty', CODEF==='all' ? '还没有任何授权码，点「批量生成」或「批量导入」添加' : '这个状态下没有授权码'));
-  rows.forEach(c=>{
-    const r = h('div','code-row');
-    const chk = h('input','code-check sel'); chk.type='checkbox'; chk.checked = CODESEL.has(c.id);
-    chk.setAttribute('aria-label','勾选授权码 '+c.code);
-    chk.onchange=()=>{ chk.checked ? CODESEL.add(c.id) : CODESEL.delete(c.id); syncSel(); };
-    const code = document.createElement('code'); code.textContent = c.code;
-    const tag = c.status==='used' ? tagEl('','已使用','background:rgba(120,120,128,.16); color:var(--ink2)')
-      : c.status==='void' ? tagEl('','已作废','background:rgba(250,36,60,.12); color:var(--accent)')
-      : tagEl('','未使用','background:rgba(52,199,89,.14); color:var(--green)');
-    const info = c.status==='used' ? ('使用者 ID '+(c.used_by_user_no==null?'—':c.used_by_user_no)+' · '+(c.used_at?fmtDate(c.used_at):''))
-      : c.status==='void' ? ('生成于 '+fmtDate(c.created_at)+' · 已作废')
-      : ('生成于 '+fmtDate(c.created_at));
-    const sm = h('small',null, info); sm.style.cssText='flex:1; min-width:140px';
-    r.append(chk, code, tag, sm);
-    if(c.status==='unused'){
-      const cp = h('button','mini-btn','复制');
-      cp.onclick=()=>{ if(navigator.clipboard) navigator.clipboard.writeText(c.code).then(()=>toast('授权码已复制：'+c.code)); };
-      r.appendChild(cp);
-    }
-    const del = h('button','mini-btn red','删除');
-    del.onclick=()=>confirmBox('删除这个授权码？','授权码 '+c.code+' 将被删除。','删除',true, async ()=>{
-      const { error } = await sb.rpc('admin_delete_codes',{ p_ids:[c.id] });
-      if(error){ toast(errText(error)); return; }
-      CODESEL.delete(c.id); toast('授权码已删除：'+c.code); renderAdminCodes();
-    });
-    r.appendChild(del);
-    listCard.appendChild(r);
-  });
-  CODESEL.forEach(id=>{ if(!rows.some(c=>c.id===id) && CODEF==='all') CODESEL.delete(id); });
-  syncSel();
+  if(seq!==viewSeq) return;
+  if(error){ if(!ACACHE.codes[CODEF]){ listCard.innerHTML=''; listCard.appendChild(emptyNoteEl(errText(error))); } return; }
+  ACACHE.codes[CODEF] = data||[];
+  paint(ACACHE.codes[CODEF]);
 }
 function openGenCodes(){
   const card = h('div','confirm-card');
@@ -2800,6 +2902,7 @@ function openGenCodes(){
     closeModal();
     const { error } = await sb.rpc('admin_gen_codes',{ p_count: Math.floor(n) });
     if(error){ toast(errText(error)); return; }
+    ACACHE.codes = {}; ACACHE.home = null;
     toast('已生成 '+Math.floor(n)+' 条'); renderAdminCodes();
   };
   btns.append(ca, ok); card.appendChild(btns); openModal(card);
@@ -2819,6 +2922,7 @@ function openImportCodes(){
     closeModal();
     const { data, error } = await sb.rpc('admin_import_codes',{ p_codes: codes });
     if(error){ toast(errText(error)); return; }
+    ACACHE.codes = {}; ACACHE.home = null;
     toast('导入完成'+(data!=null ? '：'+JSON.stringify(data) : '')); renderAdminCodes();
   };
   btns.append(ca, ok); card.appendChild(btns); openModal(card);
@@ -2843,6 +2947,7 @@ async function exportCodes(){
 function switchEl(checked){ const sw=h('label','switch'); const i=h('input'); i.type='checkbox'; i.checked=!!checked; sw.append(i, h('i')); return { sw, input:i }; }
 async function renderAdminSettings(){
   S.view='admin'; showPage('admin');
+  const seq = ++viewSeq;
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
@@ -2850,7 +2955,16 @@ async function renderAdminSettings(){
   const card = h('div','card'); card.style.overflow='hidden';
   panel.appendChild(card);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
-  await loadSettings(); const s = S.settings||{};
+  /* 与其他页同一标准：已有设置先立即渲染、后台静默刷新；实在没有才显示加载动画等一轮 */
+  if(!S.settings){
+    const ld = pageLoadingEl(); panel.appendChild(ld);
+    await loadSettings();
+    if(seq!==viewSeq) return;
+    ld.remove();
+  } else {
+    loadSettings();
+  }
+  const s = S.settings||{};
   const savePatch = async (patch)=>{
     const { error } = await sb.rpc('admin_save_settings',{ p_patch: patch });
     if(error){ toast(errText(error)); return false; }
@@ -2872,9 +2986,11 @@ async function renderAdminSettings(){
     r.append(tx, sw.sw); return { row:r, input:sw.input };
   };
   const openGroup = (title, build)=>{
+    /* 三段式：标题栏固定（sm-head）、只有内容区滚动（sm-body）、按钮栏固定（sm-foot） */
     const mc = h('div','confirm-card set-modal');
-    mc.appendChild(h('h4',null,title));
-    const body = h('div'); const saveFn = build(body); mc.appendChild(body);
+    const head = h('div','sm-head'); head.appendChild(h('h4',null,title)); mc.appendChild(head);
+    const body = h('div','sm-body'); const saveFn = build(body); mc.appendChild(body);
+    const foot = h('div','sm-foot');
     const btns = h('div','row');
     const ca = h('button','btn btn-ghost','取消'); ca.onclick=closeModal;
     const ok = h('button','btn btn-blue','保存');
@@ -2884,7 +3000,7 @@ async function renderAdminSettings(){
       ok.disabled = false;
       if(done!==false){ closeModal(); toast('设置已保存'); renderAdminSettings(); }
     };
-    btns.append(ca, ok); mc.appendChild(btns);
+    btns.append(ca, ok); foot.appendChild(btns); mc.appendChild(foot);
     openModal(mc);
   };
   const rowFor = (title, small, controls)=>{
@@ -2894,7 +3010,7 @@ async function renderAdminSettings(){
     (controls||[]).forEach(c=>r.appendChild(c));
     card.appendChild(r); return r;
   };
-  const setBtn = (fn)=>{ const b=h('button','mini-btn blue','设置'); b.type='button'; b.onclick=fn; return b; };
+  const setBtn = (fn)=>{ const b=h('button','mini-btn blue','设置'); b.type='button'; b.onclick=()=>fn(); return b; };
 
   /* 积分规则 */
   rowFor('积分规则','签到、注册赠送、每日发布上限', [ setBtn(()=>openGroup('积分规则', body=>{
@@ -2979,7 +3095,7 @@ async function renderAdminSettings(){
     const asDays = hours0 % 24 === 0;
     const gapNum = nIn(asDays ? hours0/24 : hours0);
     const gapUnit = h('select'); [['h','小时'],['d','天']].forEach(([v,t])=>{ const o=h('option',null,t); o.value=v; if((asDays?'d':'h')===v) o.selected=true; gapUnit.appendChild(o); });
-    const gapWrap = h('div'); gapWrap.style.cssText='display:flex; gap:8px'; gapNum.style.flex='1'; gapNum.style.minWidth='0'; gapWrap.append(gapNum, gapUnit);
+    const gapWrap = h('div','fld-row'); gapWrap.append(gapNum, gapUnit);
     const prevBtn = h('button','mini-btn blue','预览弹窗'); prevBtn.type='button';
     prevBtn.onclick = ()=>showNotice({ title:nTitle.value, body:nBody.value }, true);
     body.append(nsw.row, fld('弹窗标题', nTitle), fld('弹窗内容', nBody), fld('弹窗间隔', gapWrap, '用户关掉后，隔多久再弹一次（记录存在用户本地浏览器）'), fld('预览', prevBtn, '预览会替换当前弹窗，关闭后重新点「设置」继续编辑'));
@@ -2989,9 +3105,8 @@ async function renderAdminSettings(){
   rowFor('网站与 SEO','网站名称、Logo 与搜索引擎信息', [ setBtn(()=>openGroup('网站与 SEO', body=>{
     const nameIn = tIn(setGet('site_name','泡泡世界'));
     const logoIn = tIn(s.site_logo_url,'粘贴 https:// 图片地址，或点右侧上传');
-    const logoRow = h('div'); logoRow.style.cssText='display:flex; gap:8px';
-    logoIn.style.flex='1'; logoIn.style.minWidth='0';
-    const upBtn = h('button','mini-btn','上传'); upBtn.type='button'; upBtn.style.flex='none';
+    const logoRow = h('div','fld-row');
+    const upBtn = h('button','mini-btn','上传'); upBtn.type='button';
     const logoFile = h('input'); logoFile.type='file'; logoFile.accept='image/*'; logoFile.hidden=true;
     upBtn.onclick = ()=>logoFile.click();
     logoFile.onchange = async ()=>{
