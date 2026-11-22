@@ -69,6 +69,15 @@ svg{display:block}
 
 /* ---------- 通用 ---------- */
 .wrap{max-width:1080px; margin:0 auto; padding:10px 20px 0}
+/* 本轮第 3 条：页面转场（iOS 式推挤）与跟手返回的舞台层——
+   #page 作定位父级；#pageWrap 是内容层（转场时整体横移）；.nav-ghost 是旧页
+   快照层（前进时在下层左移变暗、返回时在上层向右滑出）；#pageUnder 是手势
+   返回时垫在当前页下面的上一页。touch-action:pan-y 让横向拖动归指针事件、
+   纵向滚动仍归浏览器，两边不打架 */
+#page{position:relative; touch-action:pan-y}
+#pageWrap{position:relative; z-index:2; will-change:transform,opacity}
+.nav-ghost{position:absolute; z-index:60; overflow:hidden; background:var(--bg); pointer-events:none; will-change:transform,opacity; box-shadow:-16px 0 32px rgba(0,0,0,.14)}
+#pageUnder{position:absolute; z-index:1; overflow:hidden; background:var(--bg); pointer-events:none; will-change:transform,opacity}
 .view{display:none}
 .view.active{display:block}
 .card{background:var(--card); border-radius:var(--r-lg); box-shadow:var(--shadow); border:1px solid var(--line2)}
@@ -157,6 +166,12 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
   border:1px solid var(--glass-brd); box-shadow:var(--shadow)}
 .shuffle-fab:active{transform:translateX(-50%) scale(.93)}
 .shuffle-fab svg{transform:rotate(-90deg)}
+/* 本轮第 2 条：世界空状态——池子确认一个泡泡都没有时居中显示（图标与底部胶囊
+   「泡泡」入口同款的自绘双泡泡 SVG，大尺寸浅色；文字为用户定版原文） */
+.world-empty{position:absolute; inset:0; z-index:5; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; pointer-events:none; padding:0 32px; text-align:center}
+.world-empty.show{display:flex}
+.world-empty .we-ico{color:var(--ink3); opacity:.5}
+.world-empty .we-tx{font-size:15px; color:var(--ink3); line-height:1.6}
 .world-stage{position:fixed; inset:0; z-index:0; isolation:isolate; overflow:hidden; touch-action:none;
   background:
     radial-gradient(560px 300px at 12% 8%, rgba(125,211,252,.20), transparent 65%),
@@ -316,14 +331,19 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .video-box .v-play{width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.22); backdrop-filter:blur(6px); display:grid; place-items:center}
 .video-box small{position:absolute; bottom:10px; left:12px; font-size:11px; background:rgba(0,0,0,.45); padding:3px 9px; border-radius:999px}
 /* fix7-3：动作区固定卡底（flex:none）+ 毛玻璃底；上沿 ::before 是 36px 渐变 veil——
-   从透明渐入与动作区同色的雾面，mask 让模糊本身也渐入，正文从下方滚过时渐渐没入雾里 */
-.expand-actions{display:flex; gap:10px; flex:none; position:relative; z-index:3; padding:14px 24px 20px;
+   从透明渐入与动作区同色的雾面，mask 让模糊本身也渐入，正文从下方滚过时渐渐没入雾里。
+   本轮第 7 条：固定区扩为 .expand-foot（统计行 + 动作行），毛玻璃与 veil 改挂 foot，
+   统计行 .expand-statbar 在动作行上方单独一行、不随正文滚动 */
+.expand-foot{flex:none; position:relative; z-index:3;
   background:color-mix(in srgb, var(--card) 86%, transparent);
   backdrop-filter:blur(16px) saturate(160%); -webkit-backdrop-filter:blur(16px) saturate(160%)}
-.expand-actions::before{content:''; position:absolute; left:0; right:0; top:-36px; height:36px; pointer-events:none;
+.expand-foot::before{content:''; position:absolute; left:0; right:0; top:-36px; height:36px; pointer-events:none;
   background:linear-gradient(to bottom, transparent, color-mix(in srgb, var(--card) 86%, transparent));
   backdrop-filter:blur(16px) saturate(160%); -webkit-backdrop-filter:blur(16px) saturate(160%);
   -webkit-mask-image:linear-gradient(to bottom, transparent, #000 85%); mask-image:linear-gradient(to bottom, transparent, #000 85%)}
+.expand-statbar{display:flex; gap:14px; flex-wrap:wrap; padding:12px 24px 0; font-size:12px; color:var(--ink2)}
+.expand-statbar b{color:var(--ink); font-weight:700}
+.expand-actions{display:flex; gap:10px; padding:12px 24px 20px}
 .expand-actions .btn{flex:1}
 .btn-fav{border:1px solid var(--line); background:var(--card2); color:var(--ink2)}
 .btn-fav.on{background:rgba(255,159,10,.14); border-color:rgba(255,159,10,.45); color:var(--orange)}
@@ -640,6 +660,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
   .vote-btn{font-size:11px; gap:3px; padding:5px 3px}
   .expand-scroll{padding:22px 16px 44px}
   .expand-actions{padding-left:16px; padding-right:16px}
+  .expand-statbar{padding-left:16px; padding-right:16px}
 }
 /* 第 3 条：筛选按钮只在世界显示——离开世界时按钮收缩消失，积分胶囊随 flex 布局动画滑到它的位置 */
 .filter-toggle{transition:background .2s, color .2s, opacity .3s ease, transform .3s ease, width .3s ease, margin-left .3s ease, padding .3s ease, border-color .3s ease; overflow:hidden}
@@ -717,6 +738,10 @@ img.lz.lz-in{opacity:1}
 @media (prefers-reduced-motion: reduce){ .photo-ph{animation:none} img.lz{transition:none} }
 /* ---------- fix6-4：管理员后台分组折叠（窄屏默认收起，点标题行展开/收起） ---------- */
 .fold-sec{margin-top:16px}
+/* 本轮第 6 条：板块 wrapper 显式无底色——「数据概览」「全部功能」两大板块背后
+   不许再有任何淡灰直角层，背景与页面底色融为一体，只保留内部卡片自身的
+   圆角与底色（.stat / .card 不动） */
+.fold-sec,.fold-body,.fold-inner{background:transparent; box-shadow:none; border:none; border-radius:0}
 .fold-head{display:flex; align-items:center; gap:8px; width:100%; padding:2px; font-size:15px; font-weight:700; color:var(--ink); background:none; border:none; text-align:left; cursor:pointer; font-family:inherit}
 .fold-head .f-chev{margin-left:auto; color:var(--ink3); display:grid; place-items:center; transition:transform .3s ease}
 .fold-sec.closed .fold-head .f-chev{transform:rotate(-90deg)}
@@ -965,7 +990,7 @@ function h(tag, cls, text){ const el=document.createElement(tag); if(cls) el.cla
 function $(id){ return document.getElementById(id); }
 let toastTimer=null;
 function toast(msg){ const t=$('toast'); t.textContent=String(msg||''); t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
-function errText(e){ return (e && e.message) ? e.message : String(e||'操作失败'); }
+function errText(e){ const m = (e && e.message) ? e.message : String(e||'操作失败'); if(/permission denied/i.test(m)) return '没有权限执行这个操作'; return m; }
 function fmtDate(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 function shanghaiToday(){ return new Date(Date.now()+8*3600*1000).toISOString().slice(0,10); }
 function isHttps(u){ return typeof u==='string' && /^https:\/\//i.test(u.trim()); }
@@ -1435,6 +1460,7 @@ function topUp(){
     for(const b of list) enqueueSpawn(b, S.filter !== 'all' ? 'filter' : 'drift', true);
   }
   if(!W.firstRendered && W.list.length){ W.firstRendered = true; hideBoot(); }
+  updateWorldEmpty();
 }
 function tick(ts){
   if(!W.running) return;
@@ -1742,6 +1768,7 @@ function swapBatch(){
   /* 兜底：配对队列正常走空会自己解除 shuffling，这里防它被其他流程提前清掉时锁死 */
   setTimeout(()=>{ W.shuffling = false; }, 3000 + Math.ceil(np/4)*320 + 3000);
   blipSounds();
+  updateWorldEmpty();
 }
 function applyFilter(f){
   S.filter = f;
@@ -1771,12 +1798,32 @@ function applyFilter(f){
   const ins = list.filter(b=> !kept.has(b.id));
   const np = Math.max(outs.length, ins.length);
   for(let k=0;k<np;k++) W.pairQueue.push({ out: outs[k] || null, b: ins[k] || null, mode:'wind', kind:'filter' });
+  updateWorldEmpty();
+}
+/* 本轮第 2 条：世界空状态。poolLoadedOk 只在 loadPool 成功回来后置真——加载中
+   （数据还没回来）不判断、不闪现；确认池子（含当前筛选）为 0 才显示。
+   显隐统一走 updateWorldEmpty：loadPool / 筛选 / topUp（补位收口，含换一批、
+   爆点、删除、发布后的刷新）都会调它，按实际数量决定 */
+let poolLoadedOk = false;
+let worldEmptyNode = null;
+function updateWorldEmpty(){
+  const stage = $('stage'); if(!stage) return;
+  if(!worldEmptyNode){
+    worldEmptyNode = h('div','world-empty');
+    const ico = h('div','we-ico');
+    ico.innerHTML = '<svg width="92" height="92" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><circle cx="10" cy="13" r="6.5"/><circle cx="17.5" cy="6.5" r="3.2"/><path d="M7.5 10.8a3.4 3.4 0 0 1 2-1.7"/></svg>';
+    worldEmptyNode.append(ico, h('div','we-tx','好气人，都没有泡泡｡°(°¯᷄◠¯᷅°)°｡'));
+    stage.appendChild(worldEmptyNode);
+  }
+  worldEmptyNode.classList.toggle('show', poolLoadedOk && visiblePool().length===0);
 }
 async function loadPool(){
   const { data, error } = await sb.from('bubbles').select('*').is('deleted_at', null).eq('status','visible').is('archived_at', null).order('created_at',{ascending:false}).limit(600);
   if(error){ toast(errText(error)); return; }
   S.pool = data||[]; S.poolById = new Map(S.pool.map(b=>[b.id,b]));
+  poolLoadedOk = true;
   await authorsFor(S.pool);
+  updateWorldEmpty();
 }
 function setWorldTarget(){
   const narrow = innerWidth < 760;
@@ -1945,12 +1992,16 @@ async function openExpand(b, source){
   dis.btn.onclick = ()=>{ doReaction(b,'dislike').then(syncVote); };
   rep.btn.onclick = ()=>doReport(b);
   body.appendChild(votes);
-  /* 出现 / 查看统计 */
-  const stat = h('div','stat-line');
+  /* 底部固定区（本轮第 7 条）：统计行从正文里移出，与动作行一起挂卡底固定不滚——
+     统计行在动作行上方单独一行；归档文案（本轮第 4 条）按发布时冻结的 expires_at
+     显示固定日期，永久泡泡（expires_at 为空）显示「永久保留」，不再相对推算 */
+  const foot = h('div','expand-foot');
+  const stat = h('div','expand-statbar');
   const s1 = h('span'); s1.append(document.createTextNode('在世界出现 '), h('b',null,String(b.show_count||0)), document.createTextNode(' 次'));
   const s2 = h('span'); s2.append(document.createTextNode('被查看 '), h('b',null,String((b.view_count||0)+1)), document.createTextNode(' 次'));
-  stat.append(s1, s2, h('span',null, b.is_permanent ? '永久泡泡不会过期归档' : '30 天后自动归档'));
-  body.appendChild(stat);
+  const expTx = (b.is_permanent || !b.expires_at) ? '永久保留' : (fmtDate(b.expires_at).slice(0,10)+' 自动归档');
+  stat.append(s1, s2, h('span',null, expTx));
+  foot.appendChild(stat);
   /* 动作行 */
   const acts = h('div','expand-actions');
   if(S.user && (b.user_id===S.user.id || isAdmin())){
@@ -1969,7 +2020,8 @@ async function openExpand(b, source){
   acts.appendChild(share);
   const close = h('button','btn btn-primary','关闭'); close.onclick=()=>closeExpand(true);
   acts.appendChild(close);
-  card.appendChild(acts);
+  foot.appendChild(acts);
+  card.appendChild(foot);
   $('expandOverlay').classList.add('show');
   /* 计数 */
   try{
@@ -2477,6 +2529,13 @@ function pagerAttach(listEl, key, items, repaint){
   }
 }
 
+/* 本轮第 8 条：免邮箱注册的内部邮箱（@users.paopao.app 结尾）不对用户露出，
+   统一显示为「未绑定邮箱」；管理员后台看的是 profiles 原值，不走这个函数 */
+function dispEmail(email){
+  const e = String(email||'');
+  return /@users\.paopao\.app$/i.test(e) ? '未绑定邮箱' : e;
+}
+
 /* ================= 我的 ================= */
 async function renderMine(){
   CURRENT_BACK = null; /* 「我的」是父级页：右滑无处可退 */
@@ -2490,7 +2549,7 @@ async function renderMine(){
   const av = h('span','avatar'); fillAvatar(av, p.nickname||'用', p.avatar_url);
   const tx = h('span','pm-tx');
   const nameB = h('b',null,p.nickname||'用户');
-  const subS = h('small',null,(S.user.email||'')+' · '+(p.role==='admin'?'管理员':'普通用户'));
+  const subS = h('small',null,dispEmail(S.user.email)+' · '+(p.role==='admin'?'管理员':'普通用户'));
   tx.append(nameB, subS);
   mini.append(av, tx);
   const ar = h('span'); ar.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--ink3); flex:none"><path d="m9 18 6-6-6-6"/></svg>';
@@ -2500,14 +2559,16 @@ async function renderMine(){
   if(p.is_banned){ const bn = h('div',null,'账号已被封禁：能浏览，不能发布与签到'); bn.style.cssText='color:var(--accent);font-size:13px;margin:-4px 2px 12px'; wrap.appendChild(bn); }
   const c0 = CACHE.counts || {};
   const card = h('div','card menu-card');
+  /* 本轮第 5 条：副标题精简——纯解释性/重复主标题的直接去掉，只留有信息量的
+     （签到积分数、删除不退积分这类规则提示）；数量/状态仍走右侧 valText */
   const rowCheckin = menuRow(ICO19.calendar,'签到与积分','每日签到 +'+setGet('checkin_points',2)+' 积分',(p.points||0)+' 积分',renderCheckin);
-  const rowBubbles = menuRow(ICO19.bubbles,'发布的泡泡','出现 / 被查看次数都在这里，删除不退积分', c0.my!=null ? c0.my+' 个' : '', renderMyBubbles);
-  const rowFavs = menuRow(ICO19.star,'收藏的泡泡','在泡泡展开层点「收藏」就会存到这里', S.myFavorites.size+' 个', renderFavorites);
-  const rowHist = menuRow(ICO19.history,'泡泡足迹','我看过的泡泡，按最近查看排在前面', c0.hist!=null ? c0.hist+' 条' : '', renderFootprints);
-  const rowNoti = menuRow(ICO19.bell,'站内提醒','赠送、审核等消息都在这里', c0.unread ? c0.unread+' 条未读' : '', renderNotifications);
+  const rowBubbles = menuRow(ICO19.bubbles,'发布的泡泡','删除不退积分', c0.my!=null ? c0.my+' 个' : '', renderMyBubbles);
+  const rowFavs = menuRow(ICO19.star,'收藏的泡泡','', S.myFavorites.size+' 个', renderFavorites);
+  const rowHist = menuRow(ICO19.history,'泡泡足迹','', c0.hist!=null ? c0.hist+' 条' : '', renderFootprints);
+  const rowNoti = menuRow(ICO19.bell,'站内提醒','', c0.unread ? c0.unread+' 条未读' : '', renderNotifications);
   card.append(rowCheckin, rowBubbles, rowFavs, rowHist, rowNoti);
   let rowAdmin = null;
-  if(isAdmin()){ rowAdmin = menuRow(ICO19.shield,'管理员后台','数据、审核、用户、授权码与设置', c0.pending ? c0.pending+' 条待审' : '', renderAdminHome); card.appendChild(rowAdmin); }
+  if(isAdmin()){ rowAdmin = menuRow(ICO19.shield,'管理员后台','审核 · 用户 · 设置', c0.pending ? c0.pending+' 条待审' : '', renderAdminHome); card.appendChild(rowAdmin); }
   wrap.appendChild(card);
   wrap.appendChild(copyrightEl());
   const setVal = (row, v)=>{
@@ -2519,7 +2580,7 @@ async function renderMine(){
   loadProfile().then(np=>{
     if(seq!==viewSeq || !np) return;
     nameB.textContent = np.nickname||'用户';
-    subS.textContent = (S.user.email||'')+' · '+(np.role==='admin'?'管理员':'普通用户');
+    subS.textContent = dispEmail(S.user.email)+' · '+(np.role==='admin'?'管理员':'普通用户');
     fillAvatar(av, np.nickname||'用', np.avatar_url);
     setVal(rowCheckin, (np.points||0)+' 积分');
   });
@@ -2554,9 +2615,14 @@ function renderAuth(){
   note.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none; margin-top:2px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
   const noteTx = h('span'); note.appendChild(noteTx); card.appendChild(note);
   let mode = 'in';
+  /* /api/register 不可达（未部署/额度暂停）时置 true：本次页面会话内注册回退邮箱流程 */
+  let regFallback = false;
   const build = ()=>{
     form.innerHTML='';
-    let userIn = null;
+    let userIn = null, em = null;
+    /* 本轮第 8 条：邮箱验证开关与注册联动——开启时注册要填邮箱走验证流程；
+       关闭时注册表单不显示邮箱框，只填用户名+密码，走 /api/register 免邮箱注册 */
+    const mailRequired = !!setGet('email_verify_required', true);
     title.textContent = mode==='in' ? '欢迎回来' : '创建账号';
     desc.textContent = mode==='in' ? '登录后可以签到、发泡泡、管理你的内容。' : '注册后可以签到、发泡泡、管理你的内容。';
     note.style.display = mode==='up' ? '' : 'none';
@@ -2568,14 +2634,61 @@ function renderAuth(){
       userIn = h('input'); userIn.type='text'; userIn.id='authUser'; userIn.maxLength=8; userIn.placeholder='纯字母，1–8 位'; f1.appendChild(userIn);
       form.appendChild(f1);
     }
-    const f2 = h('div','field'); f2.appendChild(h('label',null, mode==='in' ? '用户名 / ID / 邮箱' : '邮箱'));
-    const em = h('input'); em.type='text'; em.id='authEmail'; em.placeholder = mode==='in' ? '用户名、ID 或邮箱' : 'you@example.com'; if(mode==='up') em.setAttribute('inputmode','email'); f2.appendChild(em); form.appendChild(f2);
+    if(mode==='in' || mailRequired || regFallback){
+      const f2 = h('div','field'); f2.appendChild(h('label',null, mode==='in' ? '用户名 / ID / 邮箱' : '邮箱'));
+      em = h('input'); em.type='text'; em.id='authEmail'; em.placeholder = mode==='in' ? '用户名、ID 或邮箱' : 'you@example.com'; if(mode==='up') em.setAttribute('inputmode','email'); f2.appendChild(em); form.appendChild(f2);
+    }
     const f3 = h('div','field'); f3.appendChild(h('label',null,'密码'));
     const pw = h('input'); pw.type='password'; pw.id='authPw'; pw.placeholder='至少 6 位'; f3.appendChild(pw); form.appendChild(f3);
     const btn = h('button','btn btn-blue', mode==='in' ? '登录' : '注册');
     btn.style.cssText='width:100%; min-height:48px; font-size:15px';
     btn.onclick = async ()=>{
-      const acct = em.value.trim(), pass = pw.value;
+      const pass = pw.value;
+      if(mode==='up' && !mailRequired && !regFallback){
+        /* 免邮箱注册：POST /api/register 建号（内部邮箱由服务端生成），成功后
+           立刻用同一用户名+密码走用户名登录路径（/api/login + setSession） */
+        const uname = userIn ? userIn.value.trim() : '';
+        if(!uname || !pass){ toast('用户名和密码都要填'); return; }
+        if(pass.length < 6){ toast('密码至少 6 位'); return; }
+        const ue0 = usernameError(uname); if(ue0){ toast(ue0); return; }
+        btn.disabled = true;
+        if(await usernameTaken(uname)){ toast('用户名「'+uname+'」已被占用，换一个'); btn.disabled=false; return; }
+        let res = null, unreachable = false;
+        try{
+          const r = await fetch(MEDIA_API+'/register', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username: uname, password: pass }) });
+          if(r.status === 404) unreachable = true; /* 函数未上线时 Netlify 回 404 HTML */
+          else res = await r.json(); /* 非 JSON 响应会在这里抛错，一并判不可达 */
+        }catch(e){ unreachable = true; }
+        if(unreachable){
+          /* 函数不可达与业务错误区分：业务错误（JSON 带 error）照旧原样 toast；
+             不可达则本次会话内回退邮箱注册——表单补出邮箱框（插在密码上方），
+             后续提交因 regFallback=true 直接落到下方邮箱 signUp 流程 */
+          regFallback = true;
+          if(!em){
+            const f2b = h('div','field'); f2b.appendChild(h('label',null,'邮箱'));
+            em = h('input'); em.type='text'; em.id='authEmail'; em.placeholder='you@example.com'; em.setAttribute('inputmode','email'); f2b.appendChild(em);
+            form.insertBefore(f2b, f3);
+          }
+          btn.disabled = false;
+          toast('免邮箱注册暂不可用，请填写邮箱完成注册');
+          em.focus();
+          return;
+        }
+        if(!res || res.error || !res.ok){ btn.disabled=false; toast(res && res.error ? res.error : '注册失败，请重试'); return; }
+        let lr = null;
+        try{
+          const r2 = await fetch(MEDIA_API+'/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ account: uname, password: pass }) });
+          lr = await r2.json();
+        }catch(e){ /* 注册已成功、自动登录没接上：退回登录模式让用户手动登 */ }
+        if(!lr || lr.error || !lr.access_token || !lr.refresh_token){ btn.disabled=false; toast('注册成功，请用用户名登录'); mode='in'; build(); return; }
+        const { error } = await sb.auth.setSession({ access_token: lr.access_token, refresh_token: lr.refresh_token });
+        btn.disabled=false;
+        if(error){ toast(errText(error)); return; }
+        await afterAuth();
+        toast('注册成功，你的昵称是 '+((S.profile && S.profile.nickname) || 'pp_')+'，可在资料里修改');
+        return;
+      }
+      const acct = em.value.trim();
       if(!acct || !pass){ toast(mode==='in' ? '账号和密码都要填' : '邮箱和密码都要填'); return; }
       btn.disabled = true;
       if(mode==='in'){
@@ -2650,7 +2763,7 @@ function renderAccount(){
   const h3 = h('h3');
   const nameTx = document.createTextNode(p.nickname||'用户');
   h3.append(nameTx, h('span','profile-id','ID '+p.user_no));
-  const subP = h('p',null, (p.username ? p.username+' · ' : '')+(S.user.email||''));
+  const subP = h('p',null, (p.username ? p.username+' · ' : '')+dispEmail(S.user.email));
   mid.append(h3, subP);
   const roleTag = tagEl('', p.role==='admin' ? '管理员' : '普通用户');
   roleTag.style.cssText = 'margin-left:auto; ' + (p.role==='admin' ? 'background:rgba(250,36,60,.12); color:var(--accent)' : 'background:rgba(0,113,227,.12); color:var(--blue)');
@@ -2660,7 +2773,7 @@ function renderAccount(){
   const nickB = kv('昵称', p.nickname||'');
   const userB = kv('用户名', p.username||'未设置');
   kv('ID', String(p.user_no||''));
-  kv('邮箱', S.user.email||'');
+  kv('邮箱', dispEmail(S.user.email));
   kv('注册日期', p.created_at ? fmtDate(p.created_at) : '');
   kv('账号状态', p.is_banned ? '已封禁' : '正常', p.is_banned ? 'var(--accent)' : 'var(--green)');
   const pointsB = kv('积分余额', String(p.points||0)+' 分');
@@ -2677,7 +2790,7 @@ function renderAccount(){
   loadProfile().then(np=>{
     if(seq!==viewSeq || !np || !card.isConnected) return;
     nameTx.textContent = np.nickname||'用户';
-    subP.textContent = (np.username ? np.username+' · ' : '')+(S.user.email||'');
+    subP.textContent = (np.username ? np.username+' · ' : '')+dispEmail(S.user.email);
     nickB.textContent = np.nickname||'';
     userB.textContent = np.username||'未设置';
     pointsB.textContent = String(np.points||0)+' 分';
@@ -2753,7 +2866,10 @@ function openAccountModal(){
   body.appendChild(uf);
   /* 邮箱：展示 + 更换（沿用原流程：updateUser 发确认邮件到新邮箱） */
   const emF = h('div','field'); emF.appendChild(h('label',null,'邮箱'));
-  const emIn = h('input'); emIn.type='text'; emIn.setAttribute('inputmode','email'); emIn.value = S.user.email||''; emIn.placeholder='you@example.com'; emF.appendChild(emIn); body.appendChild(emF);
+  const emIn = h('input'); emIn.type='text'; emIn.setAttribute('inputmode','email');
+  /* 内部邮箱（免邮箱注册）不露原值：输入框留空、占位提示未绑定，填了真实邮箱才走更换流程 */
+  const mailIsInternal = /@users\.paopao\.app$/i.test(S.user.email||'');
+  emIn.value = mailIsInternal ? '' : (S.user.email||''); emIn.placeholder = mailIsInternal ? '未绑定邮箱，可填写真实邮箱' : 'you@example.com'; emF.appendChild(emIn); body.appendChild(emF);
   /* 密码：验旧密码；邮箱验证开启时还要邮件验证码（reauthenticate nonce）——原流程原样保留 */
   body.appendChild(secT('修改密码'));
   const needMailCode = !!setGet('email_verify_required', true);
@@ -3026,7 +3142,7 @@ async function renderFootprints(){
   head.appendChild(document.createTextNode('泡泡足迹'));
   const clr = h('button','mini-btn red','清空足迹'); clr.style.flex='none';
   clr.onclick = ()=>confirmBox('清空足迹？','看过的泡泡记录会被全部清空。','清空',true, async ()=>{
-    const { error } = await sb.from('bubble_views').delete().eq('user_id', S.user.id);
+    const { error } = await sb.rpc('clear_my_views');
     if(error){ toast(errText(error)); return; }
     CACHE.footprints = null; CACHE.counts = null;
     toast('已清空'); renderFootprints();
@@ -3562,8 +3678,8 @@ function renderAdminUserDetail(u){
   panel.appendChild(card);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
 }
-/* 管理员修改用户资料（本轮第 1 条）：昵称 + 用户名，页面先过共用校验，
-   再调 admin_edit_user（服务端再校验一遍），错误原文 toast */
+/* 管理员修改用户资料：昵称 + 用户名走 admin_edit_user RPC（页面先过共用校验，
+   服务端再校验一遍）；邮箱 + 重置密码走 /api/admin-user 函数（本轮第 9 条） */
 function openAdminEditUser(u){
   const card = h('div','confirm-card');
   card.appendChild(h('h4',null,'修改用户资料'));
@@ -3586,6 +3702,14 @@ function openAdminEditUser(u){
     userHint.style.color = e ? 'var(--accent)' : '';
   });
   card.appendChild(uf);
+  /* 本轮第 9 条：邮箱与重置密码也归管理员可改——这两项动的是登录账号本身，
+     不走 RPC，保存时调 /api/admin-user（带管理员会话 JWT）由服务端改 */
+  const ef = h('div','field'); ef.appendChild(h('label',null,'邮箱'));
+  const emailIn = h('input'); emailIn.type='text'; emailIn.setAttribute('inputmode','email'); emailIn.value=u.email||''; emailIn.placeholder='you@example.com'; ef.appendChild(emailIn);
+  card.appendChild(ef);
+  const pf = h('div','field'); pf.appendChild(h('label',null,'重置密码'));
+  const pwIn = h('input'); pwIn.type='password'; pwIn.autocomplete='new-password'; pwIn.placeholder='不改请留空（至少 6 位）'; pf.appendChild(pwIn);
+  card.appendChild(pf);
   const btns = h('div','row');
   const ca = h('button','btn btn-ghost','取消'); ca.onclick=closeModal;
   const ok = h('button','btn btn-blue','保存');
@@ -3593,10 +3717,29 @@ function openAdminEditUser(u){
     const nv = nickIn.value.trim(), uv = userIn.value.trim();
     const ne = nicknameError(nv); if(ne){ toast(ne); return; }
     const ue = usernameError(uv); if(ue){ toast(ue); return; }
+    const emailVal = emailIn.value.trim();
+    if(emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)){ toast('邮箱格式不对'); return; }
+    const pwVal = pwIn.value;
+    if(pwVal && pwVal.length < 6){ toast('新密码至少 6 位'); return; }
     ok.disabled = true;
     const { error } = await sb.rpc('admin_edit_user',{ p_user_no:u.user_no, p_nickname:nv, p_username:uv });
     if(error){ toast(errText(error)); ok.disabled=false; return; }
     u.nickname = nv; u.username = uv;
+    /* 邮箱/密码有改动才调函数：body 只带改了的字段，没改的不传 */
+    const apiBody = { user_id: u.id };
+    if(emailVal && emailVal !== (u.email||'')) apiBody.email = emailVal;
+    if(pwVal) apiBody.password = pwVal;
+    if(apiBody.email || apiBody.password){
+      let res = null;
+      try{
+        const { data: sess } = await sb.auth.getSession();
+        const jwt = sess && sess.session ? sess.session.access_token : '';
+        const r = await fetch(MEDIA_API+'/admin-user', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt }, body: JSON.stringify(apiBody) });
+        res = await r.json();
+      }catch(e){ toast('保存服务暂时不可用（昵称/用户名已保存）'); ok.disabled=false; return; }
+      if(!res || res.error || !res.ok){ toast(res && res.error ? res.error : '邮箱/密码保存失败（昵称/用户名已保存）'); ok.disabled=false; return; }
+      if(apiBody.email) u.email = apiBody.email; /* 详情里显示的邮箱同步刷新 */
+    }
     S.authors.delete(u.id); /* 作者缓存里的旧昵称/用户名一并失效 */
     ACACHE.users = {}; /* 用户列表缓存失效，返回列表按新资料重拉 */
     closeModal();
@@ -4055,27 +4198,170 @@ $('pointsCap').onclick = ()=>{ if(S.user) renderCheckin(); };
   }, true);
   document.addEventListener('keydown', e=>{ if(e.key==='Escape' && menu.classList.contains('open')) closeFilter(); });
 })();
-/* 右滑返回手势（fix6-6，本轮第 6 条改造）：只在窄屏（<760px）、带返回按钮的二级页生效。
-   旧版只认屏幕最左 24px 起手，与浏览器/手机系统返回手势抢同一起始区、容易误触；
-   新版：起点在最左 56px 内的滑动直接忽略（整段让给系统），起点 x ≥ 56px 的
-   内容区普遍区域右滑（水平位移 ≥72px 且纵向偏移 ≤40px）→ 触发 CURRENT_BACK
-   （= 该页返回按钮的同一逻辑）。统一挂在 #page 上：世界页 #page 隐藏且
-   CURRENT_BACK 为空，天然不触发、不会与拖泡泡打架。
-   避让：弹窗/展开层/发布面板打开时、输入控件、语音条、视频、底部胶囊区、
-   以及横向可滚动的元素上起手一律不抢手势 */
+/* ================= 页面转场 + 右滑跟手返回（本轮第 3 条重做） =================
+   iOS 式「一层推一层」，用户端与管理员后台共用同一套：
+   - 导航栈 NAV.stack 记页面渲染函数名，包装各页渲染函数后自动判方向：
+     新页入栈 = 前进（新页从右滑入、旧页左移变暗）；目标在栈中 = 返回
+     （当前页向右滑出、上一页从左侧归位）；同页重渲不做动画。
+     动画走「旧页快照层 .nav-ghost + 真内容层 #pageWrap 横移」，不改各页
+     渲染函数本身；约 300ms ease-out，动画期间再导航直接瞬切、不叠动画。
+   - 手势（窄屏触摸）：内容区右滑跟手——先把返回目标页渲进垫层 #pageUnder
+     （借 id 交换让渲染函数写进垫层），当前页 1:1 跟手指右移、垫层从左侧
+     归位；松手过阈值（屏宽 1/3 与 90px 取大）完成返回（垫层转正为内容层），
+     不足回弹（垫层丢弃、栈与 CURRENT_BACK 还原）。起点避开最左 56px（让给
+     系统返回）、弹窗/展开层/发布面板打开时、输入控件、语音条、视频、
+     底部胶囊区与横向可滚动元素上起手一律不抢。世界页无返回不参与。
+   - 桌面端点返回按钮走同一套转场（包装层统一处理），不依赖手势。 */
+const NAV = { stack: [], animating: false, gesture: false, timer: 0 };
+const NAV_EASE = 'cubic-bezier(.32,.72,.24,1)';
+function navDirFor(key){
+  const st = NAV.stack, i = st.indexOf(key);
+  if(i === st.length - 1) return null;              /* 当前页刷新：不动栈、不动画 */
+  if(i >= 0){ st.length = i + 1; return 'back'; }   /* 回到栈里已有的页 */
+  st.push(key);
+  return st.length > 1 ? 'fwd' : null;              /* 入栈新页（栈底第一页不动画） */
+}
+function navKillFx(){
+  clearTimeout(NAV.timer);
+  document.querySelectorAll('.nav-ghost').forEach(g=>g.remove());
+  const wrap = $('pageWrap');
+  if(wrap){ wrap.style.transition=''; wrap.style.transform=''; wrap.style.opacity=''; wrap.style.boxShadow=''; }
+  NAV.animating = false;
+}
+function navGhost(){
+  const page = $('page'), wrap = $('pageWrap');
+  if(!page || page.hidden || !wrap || !wrap.childNodes.length) return null;
+  const g = wrap.cloneNode(true);
+  g.removeAttribute('id'); g.classList.add('nav-ghost');
+  const pr = page.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  g.style.left = (wr.left - pr.left) + 'px'; g.style.top = (wr.top - pr.top) + 'px';
+  g.style.width = wr.width + 'px'; g.style.height = wr.height + 'px';
+  page.appendChild(g);
+  return g;
+}
+function navRun(dir, ghost){
+  const wrap = $('pageWrap');
+  if(!wrap){ ghost.remove(); return; }
+  NAV.animating = true;
+  const D = 300;
+  wrap.style.transition = 'none'; ghost.style.transition = 'none';
+  if(dir === 'fwd'){
+    ghost.style.zIndex = '1'; /* 前进：旧页垫底左移变暗，新页从右盖上来 */
+    wrap.style.transform = 'translateX(100%)'; wrap.style.opacity = '1';
+    wrap.style.boxShadow = '-16px 0 32px rgba(0,0,0,.14)';
+    ghost.style.transform = 'translateX(0)'; ghost.style.opacity = '1';
+  } else {
+    ghost.style.zIndex = '60'; /* 返回：旧页在上向右滑出，新页从左侧归位 */
+    wrap.style.transform = 'translateX(-30%)'; wrap.style.opacity = '.55';
+    ghost.style.transform = 'translateX(0)'; ghost.style.opacity = '1';
+  }
+  void wrap.offsetWidth; /* 强制回流，让起始位移先落定再开过渡 */
+  wrap.style.transition = 'transform '+D+'ms '+NAV_EASE+', opacity '+D+'ms '+NAV_EASE;
+  ghost.style.transition = 'transform '+D+'ms '+NAV_EASE+', opacity '+D+'ms '+NAV_EASE;
+  if(dir === 'fwd'){ wrap.style.transform = 'translateX(0)'; ghost.style.transform = 'translateX(-30%)'; ghost.style.opacity = '.55'; }
+  else { wrap.style.transform = 'translateX(0)'; wrap.style.opacity = '1'; ghost.style.transform = 'translateX(100%)'; }
+  clearTimeout(NAV.timer);
+  NAV.timer = setTimeout(navKillFx, D + 80);
+}
+function wrapNavRender(name){
+  const orig = window[name];
+  if(typeof orig !== 'function' || orig.__navW) return;
+  const fn = function(){
+    if(NAV.gesture){ navDirFor(name); return orig.apply(this, arguments); } /* 手势中：只记账，视觉交给手势层 */
+    const dir = navDirFor(name);
+    let ghost = null;
+    if(dir && !NAV.animating) ghost = navGhost();
+    if(!ghost) navKillFx(); /* 无动画（同页刷新/动画中被打断）：先清掉残留特效再瞬切 */
+    const r = orig.apply(this, arguments);
+    if(ghost){
+      if(NAV.animating) ghost.remove(); /* 嵌套渲染（如 renderMine 内调 renderAuth）已先启动动画，外层这张快照作废 */
+      else navRun(dir, ghost);
+    }
+    return r;
+  };
+  fn.__navW = true;
+  window[name] = fn;
+}
+['renderMine','renderAuth','renderAccount','renderCheckin','renderMyBubbles','renderFavorites',
+ 'renderFootprints','renderNotifications','renderAdminHome','renderAdminReviews','renderReviewDetail',
+ 'renderAdminBubbles','renderAdminBubbleDetail','renderAdminUsers','renderAdminUserDetail',
+ 'renderAdminCodes','renderAdminSettings'].forEach(wrapNavRender);
+/* 回世界 = 回到根：清栈并收掉未完的转场 */
+(function wrapShowWorld(){
+  const orig = window.showWorld;
+  if(typeof orig !== 'function') return;
+  window.showWorld = function(){ NAV.stack.length = 0; navKillFx(); return orig.apply(this, arguments); };
+})();
+
 (function initSwipeBack(){
   const page = $('page'); if(!page) return;
-  let sx = 0, sy = 0, tracking = false, decided = false, armed = false;
+  let sx = 0, sy = 0, tracking = false, decided = false, prepared = false;
+  let under = null, dragWrap = null, savedBack = null, savedView = null, savedStack = null;
   const narrow = ()=>window.matchMedia('(max-width: 759px)').matches;
   const overlayOpen = ()=>{
     const mo = $('modalOverlay'), eo = $('expandOverlay'), pw = $('pubWrap');
     return !!((mo && mo.classList.contains('show')) || (eo && eo.classList.contains('show')) || (pw && pw.classList.contains('show')));
   };
+  function cleanupDrag(){
+    if(under){ under.remove(); under = null; }
+    if(dragWrap){ dragWrap.style.transition=''; dragWrap.style.transform=''; dragWrap.style.opacity=''; dragWrap.style.boxShadow=''; dragWrap = null; }
+    prepared = false; decided = false; NAV.gesture = false;
+  }
+  /* 备垫层：把返回目标页渲到 #pageUnder 里垫在当前页下面。
+     渲染函数都写 $('pageWrap')：临时交换两个节点的 id，让渲染的同步部分
+     与后续异步补画都落进垫层；交换只在一瞬间，渲染函数捕获的 wrap 引用
+     指向垫层后立刻换回，不影响页面其余逻辑 */
+  function prepare(){
+    const wrap = $('pageWrap'); if(!wrap || !CURRENT_BACK) return false;
+    savedBack = CURRENT_BACK; savedView = S.view; savedStack = NAV.stack.slice();
+    under = document.createElement('div'); under.id = 'pageUnder';
+    page.appendChild(under);
+    const sc = window.scrollY;
+    wrap.id = 'pageWrapHold'; under.id = 'pageWrap';
+    NAV.gesture = true;
+    try{ savedBack(); }catch(_){}
+    under.id = 'pageUnder'; wrap.id = 'pageWrap';
+    window.scrollTo(0, sc); /* showPage 顺手滚到顶是给点按导航的，手势中先按住不动 */
+    const pr = page.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+    under.style.left = (wr.left - pr.left) + 'px'; under.style.top = (wr.top - pr.top) + 'px';
+    under.style.width = wr.width + 'px'; under.style.height = Math.max(wr.height, under.scrollHeight) + 'px';
+    under.style.transform = 'translateX(-30%)'; under.style.opacity = '.55';
+    dragWrap = wrap;
+    prepared = true;
+    return true;
+  }
+  function finishGesture(complete){
+    if(!prepared || !under || !dragWrap){ cleanupDrag(); tracking = false; return; }
+    const u = under, w = dragWrap;
+    tracking = false;
+    if(complete){
+      w.style.transition = 'transform .25s '+NAV_EASE;
+      w.style.transform = 'translateX(100%)';
+      u.style.transition = 'transform .25s '+NAV_EASE+', opacity .25s '+NAV_EASE;
+      u.style.transform = 'translateX(0)'; u.style.opacity = '1';
+      under = null; dragWrap = null; prepared = false; decided = false;
+      setTimeout(()=>{
+        u.id = 'pageWrap'; /* 垫层转正：后续渲染按 id 找的就是它 */
+        u.removeAttribute('style');
+        w.remove();
+        NAV.gesture = false;
+      }, 280);
+    } else {
+      /* 回弹：当前页归位、垫层退回左侧后丢弃；栈、CURRENT_BACK、S.view 还原成手势前 */
+      CURRENT_BACK = savedBack; S.view = savedView; NAV.stack = savedStack || NAV.stack;
+      w.style.transition = 'transform .25s '+NAV_EASE;
+      w.style.transform = '';
+      u.style.transition = 'transform .25s '+NAV_EASE+', opacity .25s '+NAV_EASE;
+      u.style.transform = 'translateX(-30%)'; u.style.opacity = '.55';
+      under = null; dragWrap = null; prepared = false; decided = false;
+      setTimeout(()=>{ u.remove(); w.style.transition=''; w.style.boxShadow=''; NAV.gesture = false; }, 280);
+    }
+  }
   page.addEventListener('pointerdown', e=>{
-    tracking = false; decided = false; armed = false;
-    if(!narrow() || !CURRENT_BACK) return;
+    if(tracking) return;
+    if(!narrow() || !CURRENT_BACK || NAV.animating) return;
     if(e.pointerType && e.pointerType !== 'touch') return;
-    if(overlayOpen()) return; /* 弹窗打开时不触发页面返回 */
+    if(overlayOpen()) return; /* 弹窗/展开层/发布面板打开时不触发页面返回 */
     if(e.clientX < 56) return; /* 最左 56px 是系统返回的起始区，网页不抢、直接忽略 */
     const t = e.target;
     if(t.closest('input, textarea, select, .voice-bar, video, video-player, video-skin, .capsule')) return;
@@ -4085,32 +4371,37 @@ $('pointsCap').onclick = ()=>{ if(S.user) renderCheckin(); };
       if((cs.overflowX === 'auto' || cs.overflowX === 'scroll') && n.scrollWidth > n.clientWidth + 2) return; /* 横向滚动区自己滚 */
       n = n.parentElement;
     }
-    sx = e.clientX; sy = e.clientY; tracking = true;
+    sx = e.clientX; sy = e.clientY; tracking = true; decided = false; prepared = false;
   }, { passive:true });
   page.addEventListener('pointermove', e=>{
     if(!tracking) return;
     const dx = e.clientX - sx, dy = e.clientY - sy;
     if(!decided){
-      if(Math.abs(dy) > 14 && Math.abs(dy) >= Math.abs(dx)){ tracking = false; page.style.transform=''; return; } /* 判为竖滑：放弃 */
-      if(dx > 10) decided = true;
+      if(Math.abs(dy) > 14 && Math.abs(dy) >= Math.abs(dx)){ tracking = false; return; } /* 判为竖滑：放弃，什么都不动 */
+      if(dx > 10){
+        decided = true;
+        if(!prepare()){ tracking = false; return; }
+        dragWrap.style.boxShadow = '-16px 0 32px rgba(0,0,0,.14)';
+      }
+      return;
     }
-    if(decided){
-      armed = dx >= 72 && Math.abs(dy) <= 40;
-      /* 跟手反馈：页面轻微右移（阻尼），松手必回弹清零、不留残影 */
-      page.style.transform = 'translateX(' + Math.max(0, Math.min(dx * 0.35, 90)) + 'px)';
-    }
+    if(!prepared) return;
+    if(Math.abs(dy) > 70){ finishGesture(false); return; } /* 拖动中明显转为纵向：当场回弹 */
+    const clamped = Math.max(0, dx);
+    dragWrap.style.transform = 'translateX(' + clamped + 'px)';
+    const prog = Math.min(1, clamped / Math.max(90, innerWidth / 3));
+    under.style.transform = 'translateX(' + (-30 + 30 * prog) + '%)';
+    under.style.opacity = String(0.55 + 0.45 * prog);
   }, { passive:true });
-  const end = ()=>{
+  const end = e=>{
     if(!tracking) return;
     tracking = false;
-    page.style.transition = 'transform .22s ease';
-    page.style.transform = '';
-    setTimeout(()=>{ page.style.transition = ''; }, 240);
-    if(armed && CURRENT_BACK){ const fn = CURRENT_BACK; armed = false; try{ fn(); }catch(_){} }
-    armed = false; decided = false;
+    if(!prepared){ decided = false; return; }
+    const dx = (e && typeof e.clientX === 'number') ? e.clientX - sx : 0;
+    finishGesture(dx >= Math.max(90, innerWidth / 3));
   };
   page.addEventListener('pointerup', end);
-  page.addEventListener('pointercancel', end);
+  page.addEventListener('pointercancel', ()=>{ if(tracking){ tracking = false; if(prepared) finishGesture(false); } });
 })();
 /* 禁双击 / 捏合缩放 */
 document.addEventListener('gesturestart', e=>e.preventDefault());
