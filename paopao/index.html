@@ -2914,9 +2914,10 @@ function statusTagFor(u){
 }
 /* 后台折叠分组（fix6-4）：窄屏（<760px）默认收起、只露标题行，点标题展开/收起
    （grid-rows 动效 + 箭头转向）；宽屏默认全展开。展开状态记在 FOLD_STATE 里，
-   本次会话内跨重绘保留，不落库 */
+   本次会话内跨重绘保留，不落库。第三个参数 narrowOpen=true 的分组窄屏也默认
+   展开（用户定：「全部功能」不折叠，「数据概览」保持窄屏默认折叠） */
 const FOLD_STATE = {};
-function foldSection(key, title){
+function foldSection(key, title, narrowOpen){
   const sec = h('section','fold-sec');
   const head = h('button','fold-head'); head.type='button';
   head.appendChild(document.createTextNode(title));
@@ -2926,7 +2927,7 @@ function foldSection(key, title){
   const body = h('div','fold-body'); const inner = h('div','fold-inner'); body.appendChild(inner);
   sec.append(head, body);
   const narrow = window.matchMedia('(max-width: 759px)').matches;
-  let open = (key in FOLD_STATE) ? FOLD_STATE[key] : !narrow;
+  let open = (key in FOLD_STATE) ? FOLD_STATE[key] : (narrowOpen ? true : !narrow);
   const apply = ()=>{ sec.classList.toggle('closed', !open); head.setAttribute('aria-expanded', open ? 'true' : 'false'); };
   head.onclick = ()=>{ open = !open; FOLD_STATE[key] = open; apply(); };
   apply();
@@ -2946,7 +2947,7 @@ async function renderAdminHome(){
   const grid = h('div','stat-grid');
   const fsStats = foldSection('stats','数据概览'); fsStats.inner.appendChild(grid); wrap.appendChild(fsStats.sec);
   const card = h('div','card menu-card');
-  const fsMenu = foldSection('menu','全部功能'); fsMenu.inner.appendChild(card); wrap.appendChild(fsMenu.sec);
+  const fsMenu = foldSection('menu','全部功能', true); fsMenu.inner.appendChild(card); wrap.appendChild(fsMenu.sec);
   wrap.appendChild(copyrightEl());
   /* 与「我的」同一标准：有缓存先整页渲染、后台回来静默重绘；无缓存显示小泡泡加载动画 */
   const paint = (st, codesN)=>{
