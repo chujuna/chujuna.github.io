@@ -453,7 +453,8 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .menu-row{width:100%; display:flex; align-items:center; gap:12px; padding:15px 18px; text-align:left; border-bottom:1px solid var(--line2); min-height:62px}
 .menu-row:last-child{border-bottom:none}
 .menu-row:active{background:var(--card2)}
-.menu-row .m-ico{width:38px; height:38px; border-radius:12px; background:var(--card2); border:1px solid var(--line2); display:grid; place-items:center; flex:none; color:var(--ink2)}
+.menu-row .m-ico{position:relative; width:38px; height:38px; border-radius:12px; background:var(--card2); border:1px solid var(--line2); display:grid; place-items:center; flex:none; color:var(--ink2)}
+.m-dot{position:absolute; top:-3px; right:-3px; width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 2px var(--card); pointer-events:none}
 .menu-row .m-tx{flex:1; min-width:0}
 .menu-row .m-tx b{display:block; font-size:15px}
 .menu-row .m-tx small{color:var(--ink3); font-size:12px}
@@ -2684,12 +2685,19 @@ async function renderMine(){
   const card = h('div','card menu-card');
   /* 本轮第 5 条：副标题精简——纯解释性/重复主标题的直接去掉，只留有信息量的
      （签到积分数、删除不退积分这类规则提示）；数量/状态仍走右侧 valText */
-  const rowCheckin = menuRow(ICO19.calendar,'签到与积分','每日签到 +'+setGet('checkin_points',2)+' 积分',(p.points||0)+' 积分',renderCheckin);
-  const rowBubbles = menuRow(ICO19.bubbles,'发布的泡泡','删除不退积分', c0.my!=null ? c0.my+' 个' : '', renderMyBubbles);
-  const rowFavs = menuRow(ICO19.star,'收藏的泡泡','', S.myFavorites.size+' 个', renderFavorites);
+  const rowCheckin = menuRow(ICO19.calendar,'签到积分','每日签到 +'+setGet('checkin_points',2)+' 积分',(p.points||0)+' 积分',renderCheckin);
+  const rowBubbles = menuRow(ICO19.bubbles,'我的泡泡','删除不退积分', c0.my!=null ? c0.my+' 个' : '', renderMyBubbles);
+  const rowFavs = menuRow(ICO19.star,'收藏泡泡','', S.myFavorites.size+' 个', renderFavorites);
   const rowHist = menuRow(ICO19.history,'泡泡足迹','', c0.hist!=null ? c0.hist+' 条' : '', renderFootprints);
   const rowNoti = menuRow(ICO19.bell,'站内提醒','', c0.unread ? c0.unread+' 条未读' : '', renderNotifications);
-  card.append(rowCheckin, rowBubbles, rowFavs, rowHist, rowNoti);
+  card.append(rowBubbles, rowFavs, rowHist, rowCheckin, rowNoti); /* fix13：用户定版顺序 */
+  /* fix13：站内提醒有未读时，铃铛图标右上角挂红点（与未读计数同步） */
+  const syncNotiDot = ()=>{
+    const ic = rowNoti.querySelector('.m-ico'); if(!ic) return;
+    const old = ic.querySelector('.m-dot'); if(old) old.remove();
+    if(CACHE.counts && CACHE.counts.unread) ic.appendChild(h('i','m-dot'));
+  };
+  syncNotiDot();
   let rowAdmin = null;
   if(isAdmin()){ rowAdmin = menuRow(ICO19.shield,'管理员后台','审核 · 用户 · 设置', c0.pending ? c0.pending+' 条待审' : '', renderAdminHome); card.appendChild(rowAdmin); }
   wrap.appendChild(card);
@@ -2719,6 +2727,7 @@ async function renderMine(){
   setVal(rowBubbles, CACHE.counts.my+' 个');
   setVal(rowHist, CACHE.counts.hist+' 条');
   setVal(rowNoti, CACHE.counts.unread ? CACHE.counts.unread+' 条未读' : '');
+  syncNotiDot();
   if(rowAdmin) setVal(rowAdmin, pending ? pending+' 条待审' : '');
 }
 /* ---------- 登录 / 注册 ---------- */
@@ -3192,7 +3201,7 @@ async function renderMyBubbles(){
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
-  panel.appendChild(secTitle('发布的泡泡','删除不退还积分'));
+  panel.appendChild(secTitle('我的泡泡','删除不退还积分'));
   /* 本轮第 2 条：与管理员「泡泡管理」完全同款排版（.table-card + 共用 bubbleListRow），
      行内直接有「预览 / 删除」按钮，整行点击也是预览 */
   const list = h('div','table-card'); panel.appendChild(list);
@@ -3231,7 +3240,7 @@ async function renderFavorites(){
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','mine-panel');
   panel.appendChild(backLink('返回我的', renderMine));
-  panel.appendChild(secTitle('收藏的泡泡','点任意一条重新打开查看'));
+  panel.appendChild(secTitle('收藏泡泡','点任意一条重新打开查看'));
   const list = h('div','my-list'); panel.appendChild(list);
   wrap.appendChild(panel); wrap.appendChild(copyrightEl());
   const paint = (cached)=>{
