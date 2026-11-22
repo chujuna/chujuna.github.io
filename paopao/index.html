@@ -2100,8 +2100,7 @@ async function openExpand(b, source){
      第三行举报挨着关闭。世界里打开的泡泡不放删除按钮（删除走列表/后台），列表预览保留。 */
   foot.appendChild(h('div','exp-date-row', '— ' + expTx + ' —'));
   const mrow = h('div','expand-meta-row');
-  const privileged = !!(S.user && (b.user_id===S.user.id || isAdmin()));
-  const fmtN = n=>{ n = Number(n)||0; return (privileged || n<=99) ? String(n) : '99+'; };
+  const fmtN = n=>{ n = Number(n)||0; return n<=99 ? String(n) : '99+'; }; /* fix16b：角标一律封顶 99+，不分身份 */
   const vts = h('div','circ-votes');
   const mkCirc = (icon, count, opts)=>{
     opts = opts || {};
@@ -2348,6 +2347,7 @@ async function buildVideoPlayer(wrap, url){
 /* ================= 发布面板 ================= */
 let PUB = { type:'text', cost:5, file:null, fileUrl:'', filePath:'', uploading:false };
 function openPublish(editB, from){
+  if(!editB || !editB.id || !editB.type){ editB = null; from = ''; }
   if(!S.user){ toast('先登录才能发泡泡'); showPage('mine'); renderAuth(); return; }
   if(banned()){ toast('账号已被封禁，不能发布'); return; }
   buildPublishForm(editB || null, from || '');
@@ -4366,7 +4366,7 @@ async function renderAdminSettings(){
 $('brandBtn').onclick = ()=>{ showWorld(); };
 $('tabWorld').onclick = ()=>{ showWorld(); };
 $('tabMine').onclick = ()=>{ renderMine(); };
-$('tabPub').onclick = openPublish;
+$('tabPub').onclick = ()=>openPublish(); /* fix16b：不能直接绑 openPublish，点击事件会被当成 editB */
 $('refreshBtn').onclick = ()=>{ blipSounds(); swapBatch(); };
 $('pointsCap').onclick = ()=>{ if(S.user) renderCheckin(); };
 (function buildFilter(){
