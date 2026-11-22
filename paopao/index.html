@@ -3439,7 +3439,14 @@ function foldSection(key, title, narrowOpen){
   sec.append(head, body);
   const narrow = window.matchMedia('(max-width: 759px)').matches;
   let open = (key in FOLD_STATE) ? FOLD_STATE[key] : (narrowOpen ? true : !narrow);
-  const apply = ()=>{ sec.classList.toggle('closed', !open); head.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+  const apply = ()=>{
+    sec.classList.toggle('closed', !open); head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    /* fix15：灰层真因——.fold-inner 的 overflow:hidden 把卡片阴影硬生生裁成直角矩形。
+       展开动画结束后放开裁剪让阴影自然晕开；收起时先恢复裁剪再播动画 */
+    clearTimeout(sec._ot);
+    if(open){ sec._ot = setTimeout(()=>{ inner.style.overflow = 'visible'; }, 370); }
+    else { inner.style.overflow = ''; }
+  };
   head.onclick = ()=>{ open = !open; FOLD_STATE[key] = open; apply(); };
   apply();
   return { sec, inner };
