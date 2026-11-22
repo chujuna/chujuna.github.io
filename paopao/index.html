@@ -263,6 +263,10 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .overlay{position:fixed; inset:0; z-index:120; background:rgba(20,20,25,.38); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   display:none; align-items:center; justify-content:center; padding:18px}
 .overlay.show{display:flex}
+/* 隐藏态双保险：多层毛玻璃遮罩叠加后，个别移动端浏览器里已隐藏的层仍可能拦截点击，
+   隐藏时同时关掉可见性与点击拦截，杜绝隐形层压住下层操作 */
+.overlay:not(.show){pointer-events:none; visibility:hidden}
+#busyOverlay:not(.show){pointer-events:none; visibility:hidden}
 /* 公告弹窗专用：遮罩只做轻微压暗、不糊背景——泡泡场在弹窗后面依然清晰可辨，
    不再出现「打开只见一层模糊、以为泡泡没了」的观感；点遮罩空白处也能关（见脚本 closeAnnounce） */
 #announceOverlay{background:rgba(20,20,25,.26); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); cursor:pointer}
