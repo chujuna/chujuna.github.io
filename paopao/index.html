@@ -2071,12 +2071,9 @@ async function openExpand(b, source){
   else if(b.type==='audio'){
     const box = h('div','audio-box');
     if(b.content){ const cap = h('div','expand-body', b.content); cap.style.fontWeight='700'; box.appendChild(cap); }
-    const hint = h('div','vb-hint');
-    const durTx = h('span','vb-dur','加载中…');
-    hint.append(h('span',null,'点按播放 / 暂停 · 按住拖动快进快退'), durTx);
-    if(isHttps(b.media_url)) box.appendChild(buildVoiceBar(b.media_url, durTx));
-    else { box.appendChild(h('div','expand-body','音频链接已失效')); durTx.textContent=''; }
-    box.appendChild(hint);
+    /* fix17：语音条下方提示行（点按播放/暂停·拖动快退 + 共 X:XX）按用户要求整行移除；时长看条上时间即可 */
+    if(isHttps(b.media_url)) box.appendChild(buildVoiceBar(b.media_url, null));
+    else box.appendChild(h('div','expand-body','音频链接已失效'));
     body.appendChild(box);
   }
   else if(b.type==='video'){
@@ -2236,10 +2233,10 @@ function confirmDeleteBubble(b, inExpand, from){
     if(item && !item.leaving) startRotOut(item); /* 沿当前方向飘出，整颗越界才移除（tick 移除分支 kind=drift 会自动补位） */
     toast('已删除');
     if(inExpand) closeExpand(false);
-    
-  /* 管理员泡泡详情删除后回泡泡管理列表：详情页 showPage('admin') 会把 S.view 覆盖成 'admin'，靠 S.view 判断永远命不中，必须由详情页删除按钮显式传 from='adminDetail' 指明去向 */ 
+    /* 管理员泡泡详情删除后回泡泡管理列表：详情页 showPage('admin') 会把 S.view 覆盖成 'admin'，
+       靠 S.view 判断永远命不中，必须由详情页删除按钮显式传 from='adminDetail' 指明去向 */
     if(from==='adminDetail') renderAdminBubbles();
-      else if(S.view==='mine') renderMyBubbles();
+    else if(S.view==='mine') renderMyBubbles();
     else if(S.view==='adminBubbles') renderAdminBubbles();
     topUp();
   });
