@@ -4265,14 +4265,9 @@ async function renderAdminSettings(){
     );
     return async ()=> savePatch({ report_hide_threshold:Number(th.value)||3, world_count_wide:Number(ww.value)||60, world_count_narrow:Number(wn.value)||30, archive_days:Number(ad.value)||30, bubble_opacity:Math.round(Number(opS.rg.value)||opInit)/100, bubble_blur:Number(blS.rg.value)||0 });
   })) ]);
-  /* 邮箱验证：行内 = 设置按钮 + 右侧开关（开关即时保存） */
-  const vsw = switchEl(setGet('email_verify_required', true));
-  vsw.input.onchange = async ()=>{
-    const okSave = await savePatch({ email_verify_required: vsw.input.checked });
-    if(!okSave){ vsw.input.checked = !vsw.input.checked; return; }
-    toast('设置已保存');
-  };
+  /* 邮箱验证：开关在设置弹窗内容顶部（与其他组开关同款，随弹窗保存生效） */
   const verifyRow = rowFor('邮箱验证','发件账号、SMTP 与邮件模板', [ setBtn(()=>openGroup('邮箱验证', body=>{
+    const esw = switchRow('开启邮箱验证','开启后注册必须填邮箱并完成邮件验证；关闭时只需用户名 + 密码即可注册', setGet('email_verify_required', true));
     const senderEmail = tIn(s.sender_email,'如 noreply@paopao.cn'); senderEmail.setAttribute('inputmode','email');
     const senderName = tIn(s.sender_name,'如 泡泡世界');
     const smtpHost = tIn(s.smtp_host,'如 smtp.qq.com'); smtpHost.autocapitalize='off'; smtpHost.spellcheck=false;
@@ -4293,6 +4288,7 @@ async function renderAdminSettings(){
     const tplSubject = tIn(s.mail_tpl_subject,'如 验证你的邮箱');
     const tplBody = h('textarea'); tplBody.value = s.mail_tpl_body||''; tplBody.rows = 4; tplBody.placeholder='点击链接完成验证：{{链接}}';
     body.append(
+      esw.row,
       fld('发件邮箱', senderEmail, '用户收件箱里看到的发件人地址，通常与登录账号相同'),
       fld('发件人名称', senderName),
       fld('SMTP 服务器', smtpHost, '如 QQ 邮箱 smtp.qq.com、163 邮箱 smtp.163.com、Gmail smtp.gmail.com'),
@@ -4306,6 +4302,7 @@ async function renderAdminSettings(){
     );
     return async ()=>{
       const patch = {
+        email_verify_required: esw.input.checked,
         sender_email:senderEmail.value.trim(), sender_name:senderName.value.trim(),
         smtp_host:smtpHost.value.trim(), smtp_port:Number(smtpPort.value)||465, smtp_secure:smtpSecure.value, smtp_user:smtpUser.value.trim(),
         mail_tpl_subject:tplSubject.value, mail_tpl_body:tplBody.value
@@ -4313,7 +4310,7 @@ async function renderAdminSettings(){
       if(smtpPass.value) patch.smtp_pass = smtpPass.value;
       return savePatch(patch);
     };
-  })), vsw.sw ]);
+  })) ]);
   /* 媒体存储 */
   rowFor('媒体存储','图片 / 音频上传与代理', [ setBtn(()=>openGroup('媒体存储', body=>{
     const msw = switchRow('允许上传','关闭后发布时只能粘贴链接，不能上传图片 / 音频文件', setGet('media_upload_enabled', true));
