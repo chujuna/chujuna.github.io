@@ -658,7 +658,7 @@ function apiUrl(srcIdx, params) {
   return api + (api.includes('?') ? '&' : '?') + qs;
 }
 /* 跨域中转链：直连优先（源站日后开跨域可自动恢复），失败走自建 Netlify 中转 */
-const PROXY_BASE = 'https://feiyu-proxy.netlify.app/api/proxy';
+const PROXY_BASE = 'https://hzxcgqmzvforzcktlcqc.supabase.co/functions/v1/paopao/proxy';
 const viaProxy = u => PROXY_BASE + '?url=' + encodeURIComponent(u);
 const PROXIES = [
   u => u,
