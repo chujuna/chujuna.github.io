@@ -730,6 +730,11 @@ body.in-page .filter-drawer{display:none !important}
 .page-loading i:nth-child(1){width:20px; height:20px; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(56,189,248,.88) 55%, rgba(2,132,199,.90))}
 .page-loading i:nth-child(2){width:28px; height:28px; animation-delay:.18s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(167,139,250,.88) 55%, rgba(124,58,237,.90))}
 .page-loading i:nth-child(3){width:16px; height:16px; animation-delay:.36s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(52,211,153,.88) 55%, rgba(5,150,105,.90))}
+/* 按钮内加载（登录/注册中）：同款三色小泡泡，缩小适配按钮高度 */
+.page-loading.in-btn{display:inline-flex; padding:0; gap:5px; align-items:center}
+.page-loading.in-btn i:nth-child(1){width:11px; height:11px}
+.page-loading.in-btn i:nth-child(2){width:14px; height:14px}
+.page-loading.in-btn i:nth-child(3){width:9px; height:9px}
 /* 第 8/9 条：设置组弹窗（参数全进弹窗，整页只剩分组行） */
 /* 本轮第 1 条：弹窗改三段式——标题栏固定、只有内容区滚动、按钮栏固定，
    杜绝标题随内容滚走被裁一半；高度用 dvh 兜底 iOS 地址栏伸缩 */
@@ -2801,7 +2806,7 @@ function renderAuth(){
     const btn = h('button','btn btn-blue', mode==='in' ? '登录' : '注册');
     btn.style.cssText='width:100%; min-height:48px; font-size:15px';
     const btnLabel = mode==='in' ? '登录' : '注册';
-    const setBusy = t=>{ btn.disabled = true; btn.textContent = t; };
+    const setBusy = t=>{ btn.disabled = true; btn.innerHTML=''; const ld = pageLoadingEl(); ld.classList.add('in-btn'); btn.append(ld, document.createTextNode(t)); };
     const setFree = ()=>{ btn.disabled = false; btn.textContent = btnLabel; };
     btn.onclick = async ()=>{
       const pass = pw.value;
