@@ -2216,7 +2216,7 @@ async function deleteMediaFile(path, bubbleId){
     await fetch(MEDIA_API+'/delete-media', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt }, body: JSON.stringify({ path, bubble_id: bubbleId }) });
   }catch(e){}
 }
-function confirmDeleteBubble(b, inExpand){
+function confirmDeleteBubble(b, inExpand, from){
   confirmBox('删除这个泡泡？','删除后不退还积分，泡泡会飘离世界。','删除',true, async ()=>{
     let err = null;
     try{
@@ -2236,8 +2236,11 @@ function confirmDeleteBubble(b, inExpand){
     if(item && !item.leaving) startRotOut(item); /* 沿当前方向飘出，整颗越界才移除（tick 移除分支 kind=drift 会自动补位） */
     toast('已删除');
     if(inExpand) closeExpand(false);
-    if(S.view==='mine') renderMyBubbles();
-    if(S.view==='adminBubbles') renderAdminBubbles();
+    
+  /* 管理员泡泡详情删除后回泡泡管理列表：详情页 showPage('admin') 会把 S.view 覆盖成 'admin'，靠 S.view 判断永远命不中，必须由详情页删除按钮显式传 from='adminDetail' 指明去向 */ 
+    if(from==='adminDetail') renderAdminBubbles();
+      else if(S.view==='mine') renderMyBubbles();
+    else if(S.view==='adminBubbles') renderAdminBubbles();
     topUp();
   });
 }
@@ -3767,7 +3770,7 @@ function renderAdminBubbleDetail(b){
     }
     const ed = h('button','btn btn-ghost','编辑'); ed.onclick=()=>openPublish(b, 'admin');
     acts.appendChild(ed);
-    const del = h('button','btn btn-danger','删除'); del.onclick=()=>confirmDeleteBubble(b,false);
+    const del = h('button','btn btn-danger','删除'); del.onclick=()=>confirmDeleteBubble(b,false,'adminDetail');
     acts.appendChild(del);
   }
   card.appendChild(acts);
