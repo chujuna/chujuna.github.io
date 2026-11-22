@@ -472,6 +472,12 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .profile-top h3{margin:0; font-size:19px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
 .profile-top .profile-id{font-size:12px; font-weight:500; color:var(--ink3); letter-spacing:.02em; white-space:nowrap}
 .profile-top p{margin:2px 0 0; color:var(--ink2); font-size:13px}
+/* 账号信息数据条：三列并排（积分/状态/注册日期），替代逐行罗列、卡片更矮 */
+.acct-stats{display:flex; margin-top:16px; padding:14px 4px; background:var(--bg); border-radius:16px}
+.acct-stat{flex:1; text-align:center; min-width:0}
+.acct-stat + .acct-stat{border-left:1px solid var(--line)}
+.acct-stat b{display:block; font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.acct-stat span{display:block; margin-top:3px; font-size:11px; color:var(--muted)}
 .kv{display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--line2); font-size:13px}
 .kv span{color:var(--ink2)} .kv b{font-weight:600}
 .kv>span{flex:none; white-space:nowrap} .kv>b{min-width:0; text-align:right; word-break:break-all} /* fix16：标签不再被长链接挤成竖排 */
@@ -2936,17 +2942,13 @@ function renderAccount(){
   const roleTag = tagEl('', p.role==='admin' ? '管理员' : '普通用户');
   roleTag.style.cssText = 'margin-left:auto; ' + (p.role==='admin' ? 'background:rgba(250,36,60,.12); color:var(--accent)' : 'background:rgba(0,113,227,.12); color:var(--blue)');
   top.append(av, mid, roleTag); card.appendChild(top);
-  const kvs = h('div'); kvs.style.marginTop='14px';
-  const kv = (k,v,color)=>{ const r=h('div','kv'); r.append(h('span',null,k)); const b=h('b',null,v); if(color) b.style.color=color; r.appendChild(b); kvs.appendChild(r); return b; };
-  const nickB = kv('昵称', p.nickname||'');
-  const userB = kv('用户名', p.username||'未设置');
-  kv('ID', String(p.user_no||''));
-  kv('邮箱', dispEmail(S.user.email));
-  kv('注册日期', p.created_at ? fmtDate(p.created_at) : '');
-  kv('账号状态', p.is_banned ? '已封禁' : '正常', p.is_banned ? 'var(--accent)' : 'var(--green)');
-  const pointsB = kv('积分余额', String(p.points||0)+' 分');
-  card.appendChild(kvs);
-  const editBtn = h('button','btn btn-blue edit-profile-btn','修改资料'); editBtn.style.cssText='width:100%; min-height:48px; margin-top:18px';
+  const stats = h('div','acct-stats');
+  const stat = (label, val, color)=>{ const d=h('div','acct-stat'); const b=h('b',null,val); if(color) b.style.color=color; d.append(b, h('span',null,label)); stats.appendChild(d); return b; };
+  const pointsB = stat('积分余额', String(p.points||0));
+  stat('账号状态', p.is_banned ? '已封禁' : '正常', p.is_banned ? 'var(--accent)' : 'var(--green)');
+  stat('注册日期', p.created_at ? fmtDate(p.created_at).slice(0,10) : '—');
+  card.appendChild(stats);
+  const editBtn = h('button','btn btn-blue edit-profile-btn','修改资料'); editBtn.style.cssText='width:100%; min-height:48px; margin-top:16px';
   editBtn.onclick = ()=>openAccountModal(); /* 第二段：点「修改资料」才打开编辑弹窗 */
   if(banned()) editBtn.disabled = true; /* 封禁：只能浏览，资料不可改 */
   card.appendChild(editBtn);
@@ -2960,9 +2962,7 @@ function renderAccount(){
     if(seq!==viewSeq || !np || !card.isConnected) return;
     nameTx.textContent = np.nickname||'用户';
     subP.textContent = (np.username ? np.username+' · ' : '')+dispEmail(S.user.email);
-    nickB.textContent = np.nickname||'';
-    userB.textContent = np.username||'未设置';
-    pointsB.textContent = String(np.points||0)+' 分';
+    pointsB.textContent = String(np.points||0);
     fillAvatar(av, np.nickname||'用', np.avatar_url);
   });
 }
