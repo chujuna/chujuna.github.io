@@ -687,6 +687,10 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 /* ---------- 正式版补充（小样未覆盖到的正式版元素，参数与小样同源） ---------- */
 .copyright{max-width:1080px; margin:14px auto 0; font-size:12px; color:var(--ink3); text-align:center}
 #modalOverlay.announce-mode{background:rgba(20,20,25,.26); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
+/* 登录/注册等待遮罩：三色泡泡水平垂直居中（与列表页同款 page-loading） */
+#busyOverlay{position:fixed; inset:0; z-index:190; display:none; align-items:center; justify-content:center; background:rgba(20,20,25,.26); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
+#busyOverlay.show{display:flex}
+#busyOverlay .page-loading{padding:0}
 /* 公告独立层：不借用通用弹窗，预览/展示都不影响下层正在编辑的设置弹窗 */
 #noticeOverlay{z-index:150; background:rgba(20,20,25,.26); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
 .field input[type=password],.field input[type=email],.field input[type=number]{width:100%; border:1px solid var(--line); background:var(--card); border-radius:12px; padding:12px 14px; outline:none}
@@ -730,11 +734,6 @@ body.in-page .filter-drawer{display:none !important}
 .page-loading i:nth-child(1){width:20px; height:20px; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(56,189,248,.88) 55%, rgba(2,132,199,.90))}
 .page-loading i:nth-child(2){width:28px; height:28px; animation-delay:.18s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(167,139,250,.88) 55%, rgba(124,58,237,.90))}
 .page-loading i:nth-child(3){width:16px; height:16px; animation-delay:.36s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(52,211,153,.88) 55%, rgba(5,150,105,.90))}
-/* 按钮内加载（登录/注册中）：同款三色小泡泡，缩小适配按钮高度 */
-.page-loading.in-btn{display:inline-flex; padding:0; gap:5px; align-items:center}
-.page-loading.in-btn i:nth-child(1){width:11px; height:11px}
-.page-loading.in-btn i:nth-child(2){width:14px; height:14px}
-.page-loading.in-btn i:nth-child(3){width:9px; height:9px}
 /* 第 8/9 条：设置组弹窗（参数全进弹窗，整页只剩分组行） */
 /* 本轮第 1 条：弹窗改三段式——标题栏固定、只有内容区滚动、按钮栏固定，
    杜绝标题随内容滚走被裁一半；高度用 dvh 兜底 iOS 地址栏伸缩 */
@@ -879,6 +878,7 @@ img.lz.lz-in{opacity:1}
 <!-- 通用弹窗 -->
 <div class="overlay" id="modalOverlay"><div id="modalBox"></div></div>
 <div class="overlay" id="noticeOverlay"><div id="noticeBox"></div></div>
+<div id="busyOverlay"><div class="page-loading"><i></i><i></i><i></i></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
@@ -1123,6 +1123,8 @@ let modalOnClose = null;
 function closeModal(){ const o=$('modalOverlay'); o.classList.remove('show'); o.classList.remove('announce-mode'); $('modalBox').innerHTML=''; if(modalOnClose){ const f=modalOnClose; modalOnClose=null; try{ f(); }catch(e){} } }
 $('modalOverlay').addEventListener('click', e=>{ if(e.target===$('modalOverlay')) closeModal(); });
 function closeNotice(){ const o=$('noticeOverlay'); o.classList.remove('show'); $('noticeBox').innerHTML=''; }
+function showBusyMask(){ $('busyOverlay').classList.add('show'); }
+function hideBusyMask(){ $('busyOverlay').classList.remove('show'); }
 $('noticeOverlay').addEventListener('click', e=>{ if(e.target===$('noticeOverlay')) closeNotice(); });
 function confirmBox(title, body, okText, danger, onOk){
   const card=h('div','confirm-card'); card.appendChild(h('h4',null,title)); card.appendChild(h('p',null,body));
@@ -2806,8 +2808,8 @@ function renderAuth(){
     const btn = h('button','btn btn-blue', mode==='in' ? '登录' : '注册');
     btn.style.cssText='width:100%; min-height:48px; font-size:15px';
     const btnLabel = mode==='in' ? '登录' : '注册';
-    const setBusy = t=>{ btn.disabled = true; btn.innerHTML=''; const ld = pageLoadingEl(); ld.classList.add('in-btn'); btn.append(ld, document.createTextNode(t)); };
-    const setFree = ()=>{ btn.disabled = false; btn.textContent = btnLabel; };
+    const setBusy = t=>{ btn.disabled = true; btn.textContent = t; showBusyMask(); };
+    const setFree = ()=>{ btn.disabled = false; btn.textContent = btnLabel; hideBusyMask(); };
     btn.onclick = async ()=>{
       const pass = pw.value;
       if(mode==='up' && !mailRequired && !regFallback){
