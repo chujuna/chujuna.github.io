@@ -2304,16 +2304,18 @@ function loadVjs10(){
   if(vjs10Loading) return vjs10Loading;
   vjs10Loading = new Promise(resolve=>{
     const css = document.createElement('link'); css.rel='stylesheet';
-    css.href='https://cdn.jsdelivr.net/npm/@videojs/cdn@10/dist/video.css';
+    css.href='https://cdn.jsdelivr.net/npm/@videojs/cdn@10/video.css'; /* fix18：包里没有 dist 目录，文件在包根目录（原 dist 路径 404，播放器从未加载成功过） */
     document.head.appendChild(css);
     const s1 = document.createElement('script'); s1.type='module';
-    s1.src='https://cdn.jsdelivr.net/npm/@videojs/cdn@10/dist/video.js';
+    s1.src='https://cdn.jsdelivr.net/npm/@videojs/cdn@10/video.js';
     const s2 = document.createElement('script'); s2.type='module';
-    s2.src='https://cdn.jsdelivr.net/npm/@videojs/cdn@10/dist/media/hlsjs-video.js';
+    s2.src='https://cdn.jsdelivr.net/npm/@videojs/cdn@10/media/hlsjs-video.js';
     let done=false; const fin=ok=>{ if(!done){ done=true; resolve(ok); } };
-    s2.onload=()=>setTimeout(()=>fin(true),60); s2.onerror=()=>fin(false); s1.onerror=()=>fin(false);
+    s2.onerror=()=>fin(false); s1.onerror=()=>fin(false);
+    /* 成功以 video-player 真正注册为准（模块脚本 onload 不等于组件已定义） */
+    if(window.customElements && customElements.whenDefined) customElements.whenDefined('video-player').then(()=>fin(true)).catch(()=>{});
     document.head.append(s1, s2);
-    setTimeout(()=>fin(!!(window.customElements && customElements.get('video-player'))), 6000);
+    setTimeout(()=>fin(!!(window.customElements && customElements.get('video-player'))), 8000);
   });
   return vjs10Loading;
 }
@@ -2332,7 +2334,8 @@ async function buildVideoPlayer(wrap, url){
     const skin = document.createElement('video-skin');
     const media = document.createElement(isHls ? 'hlsjs-video' : 'video');
     media.setAttribute('slot','media'); media.setAttribute('src', url);
-    media.setAttribute('playsinline',''); media.setAttribute('crossorigin','anonymous');
+    media.setAttribute('playsinline','');
+    if(isHls) media.setAttribute('crossorigin','anonymous'); /* 普通 MP4 不加 crossorigin，免得没开 CORS 的链接被浏览器拦 */
     skin.appendChild(media); player.appendChild(skin);
     wrap.appendChild(player); EX.vjsEl = player;
     media.addEventListener('error', ()=>{ wrap.innerHTML=''; wrap.appendChild(h('div','media-file-line','视频链接已失效')); }, { once:true });
