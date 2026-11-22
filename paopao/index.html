@@ -349,7 +349,10 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 /* fix10-3：展开层固定区第一行改版——左侧真实计数 chip（地球=出现、放大镜=查看），
    右侧圆形图标钮（点赞/踩带数量角标、举报无角标），整行固定不随正文滚动 */
 .expand-card{position:relative}
-.expand-meta-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 24px 0}
+.expand-meta-row{display:flex; align-items:center; justify-content:center; gap:10px; padding:10px 24px 0}
+.exp-date-row{text-align:center; font-size:12px; color:var(--ink3); padding:12px 24px 0; letter-spacing:.03em}
+.circ-btn.on{color:#D97706; border-color:rgba(217,119,6,.45); background:rgba(245,158,11,.14)}
+.circ-btn.on svg{fill:#F59E0B}
 .stat-chips{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0}
 .stat-chip{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:999px; background:rgba(120,120,128,.12); color:var(--ink2); font-size:12px}
 .stat-chip svg{flex:none}
@@ -885,6 +888,7 @@ const P = {
   play:'<polygon points="6 3 20 12 6 21 6 3"/>',
   pause:'<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
   thumbsUp:'<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+  thumbsDown:'<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
   footprints:'<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 16v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 2 14 3.8 14 5.5c0 3.11 2 5.66 2 8.68V16a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
   circleAlert:'<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
   star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
@@ -2082,9 +2086,11 @@ async function openExpand(b, source){
      出现由 record_shows 在泡泡进入世界时记录、查看由 record_view 在打开时记录，
      均为数据库真实计数）+ 右侧圆形图标钮（点赞/踩带数量角标、举报无角标、均无文字） */
   const expTx = (b.is_permanent || !b.expires_at) ? '永久保留' : (fmtDate(b.expires_at).slice(0,10)+' 自动归档');
+  /* fix12：展开层底部布局定版——第一行归档提示居中（— 日期 自动归档 —）；
+     第二行六个圆形图标钮一行（出现/查看/赞/踩/收藏/分享，踩改为大拇指向下）；
+     第三行举报挨着关闭。世界里打开的泡泡不放删除按钮（删除走列表/后台），列表预览保留。 */
+  foot.appendChild(h('div','exp-date-row', '— ' + expTx + ' —'));
   const mrow = h('div','expand-meta-row');
-  /* fix11-5：出现/查看/点赞/踩/举报五钮统一圆形、统一大小（34px）、统一角标；
-     角标超过 99 显示 99+，但泡泡主人与管理员看真实数（详情数据不受封顶影响） */
   const privileged = !!(S.user && (b.user_id===S.user.id || isAdmin()));
   const fmtN = n=>{ n = Number(n)||0; return (privileged || n<=99) ? String(n) : '99+'; };
   const vts = h('div','circ-votes');
@@ -2099,39 +2105,34 @@ async function openExpand(b, source){
   const showC = mkCirc(VPATH.globe, b.show_count||0, { stat:true, title:'在世界出现次数' });
   const viewC = mkCirc(VPATH.search, (b.view_count||0)+1, { stat:true, title:'被查看次数' });
   const like = mkCirc(VPATH.thumbsUp, b.like_count||0);
-  const dis = mkCirc(VPATH.footprints, b.dislike_count||0);
-  const rep2 = mkCirc(VPATH.circleAlert, b.report_count||0);
-  if(S.user && b.user_id===S.user.id){ rep2.btn.disabled = true; }
+  const dis = mkCirc(VPATH.thumbsDown, b.dislike_count||0);
+  const favC = mkCirc(VPATH.star, null, { title:'收藏' });
+  favC.btn.classList.toggle('on', S.myFavorites.has(b.id));
+  const shareC = mkCirc(VPATH.share, null, { title:'分享' });
   const syncVote = ()=>{
     like.btn.classList.toggle('liked', S.myReactions.get(b.id)==='like');
     dis.btn.classList.toggle('disliked', S.myReactions.get(b.id)==='dislike');
     if(like.badge) like.badge.textContent = fmtN(b.like_count||0);
     if(dis.badge) dis.badge.textContent = fmtN(b.dislike_count||0);
-    if(rep2.badge) rep2.badge.textContent = fmtN(b.report_count||0);
   };
   syncVote();
   like.btn.onclick = ()=>{ doReaction(b,'like').then(syncVote); };
   dis.btn.onclick = ()=>{ doReaction(b,'dislike').then(syncVote); };
-  rep2.btn.onclick = ()=>doReport(b);
+  favC.btn.onclick = ()=>doFavorite(b, favC.btn, null);
+  shareC.btn.onclick = ()=>doShare(b);
   mrow.appendChild(vts);
-  mrow.appendChild(h('span','stat-exp', expTx));
   foot.appendChild(mrow);
-  /* 动作行 */
+  /* 动作行：举报紧挨关闭；删除只在列表预览（source=list）时出现，世界里不放 */
   const acts = h('div','expand-actions');
-  if(S.user && (b.user_id===S.user.id || isAdmin())){
+  if((source||'list')==='list' && S.user && (b.user_id===S.user.id || isAdmin())){
     const del = h('button','btn btn-ghost','删除'); del.style.color='var(--accent)';
     del.onclick = ()=>confirmDeleteBubble(b, true);
     acts.appendChild(del);
   }
-  const fav = h('button','btn btn-fav'+(S.myFavorites.has(b.id)?' on':''));
-  fav.innerHTML = vIcon(VPATH.star, 16);
-  const favTx = h('span',null, S.myFavorites.has(b.id) ? '已收藏' : '收藏');
-  fav.appendChild(favTx);
-  fav.onclick = ()=>doFavorite(b, fav, favTx);
-  acts.appendChild(fav);
-  const share = h('button','btn btn-ghost'); share.innerHTML = vIcon(VPATH.share, 16); share.appendChild(h('span',null,'分享'));
-  share.onclick = ()=>doShare(b);
-  acts.appendChild(share);
+  const repB = h('button','btn btn-ghost'); repB.innerHTML = vIcon(VPATH.circleAlert, 15); repB.appendChild(h('span',null,'举报'));
+  if(S.user && b.user_id===S.user.id){ repB.disabled = true; }
+  repB.onclick = ()=>doReport(b);
+  acts.appendChild(repB);
   const close = h('button','btn btn-primary','关闭'); close.onclick=()=>closeExpand(true);
   acts.appendChild(close);
   foot.appendChild(acts);
