@@ -1026,6 +1026,27 @@ function applySiteIdentity(){
 }
 function setGet(key, dflt){ const v=S.settings ? S.settings[key] : undefined; return (v===undefined||v===null) ? dflt : v; }
 
+/* 账号校验（注册表单与账号资料弹窗共用一套）：
+   昵称仅显示不登录——≤6 个字符、只能数字/字母/汉字；
+   用户名可登录——纯字母 1–8 位、全站唯一且不区分大小写 */
+function nicknameError(v){
+  if(!v) return '昵称不能为空';
+  if([...v].length>6) return '昵称最多 6 个字符';
+  if(!/^[0-9A-Za-z\u4e00-\u9fff]+$/.test(v)) return '昵称只能用数字、字母、汉字';
+  return '';
+}
+function usernameError(v){
+  if(!v) return '用户名不能为空';
+  if(!/^[A-Za-z]{1,8}$/.test(v)) return '用户名只能是纯字母，1–8 位';
+  return '';
+}
+/* 用户名占用预查：走公开视图按 username 不区分大小写精确匹配（纯字母无通配符风险）；
+   登录状态下排除自己（改资料时与现用户名同名不算占用） */
+async function usernameTaken(uname){
+  const { data } = await sb.from('public_profiles').select('id,username').ilike('username', uname).limit(5);
+  return (data||[]).some(p=>p.username && p.username.toLowerCase()===String(uname).toLowerCase() && (!S.user || p.id!==S.user.id));
+}
+
 async function loadProfile(){
   if(!S.user){ S.profile=null; updatePointsCap(); return null; }
   const { data } = await sb.from('profiles').select('*').eq('id', S.user.id).single();
@@ -1053,7 +1074,7 @@ async function authorsFor(rows){
        未登录/普通用户查不到别人的昵称编号，泡泡表面与展开层只剩默认「用户」；
        视图只暴露 id/user_no/nickname/avatar_url/role 且授权 anon+authenticated 读。
        本人资料与管理员后台（要邮箱/积分/封禁）仍走 profiles，不经这里 */
-    const { data } = await sb.from('public_profiles').select('id,user_no,nickname,role,avatar_url').in('id', ids);
+    const { data } = await sb.from('public_profiles').select('id,user_no,nickname,username,role,avatar_url').in('id', ids);
     (data||[]).forEach(p=>S.authors.set(p.id,p));
   }
 }
@@ -1780,10 +1801,23 @@ function cleanupExpandMedia(){
   EX.voice = null;
   if(EX.vjsEl){ try{ EX.vjsEl.remove(); }catch(e){} EX.vjsEl=null; }
 }
+/* 深链清理：分享链接 ?b=<短码> 打开的泡泡关闭后，把地址栏恢复成无参数的主页面网址。
+   只在「当前 URL 的 b 参数正是这个泡泡的短码」时用 replaceState 还原为 origin + pathname
+   （不写死目录，页面迁移后自动跟随；不刷新不跳转）；参数清掉后再次调用天然跳过，只执行一次。 */
+function clearDeepLinkParam(b){
+  try{
+    const param = new URLSearchParams(location.search).get('b');
+    if(!param || !b || !b.share_code || param !== b.share_code) return;
+    history.replaceState(null, '', location.origin + location.pathname);
+  }catch(e){}
+}
 function closeExpand(popFromWorld){
   if(popFromWorld) audioCtx(); /* 关闭手势内先 resume 音频上下文，爆点音效才不会被 iOS 静默 */
   const overlay = $('expandOverlay');
   const wasWorld = EX.source==='world' && popFromWorld && EX.b;
+  /* 正常关闭与看完爆点关闭都经 closeExpand 收口：深链泡泡（source==='link'）在此统一还原网址；
+     世界/列表/admin 点开的泡泡 source 不同，不受影响 */
+  if(EX.source==='link') clearDeepLinkParam(EX.b);
   cleanupExpandMedia();
   overlay.classList.remove('show');
   if(wasWorld){
@@ -1807,7 +1841,7 @@ async function openExpand(b, source){
   const av = h('span','avatar'); fillAvatar(av, b.is_demo ? 'DEMO' : (a.nickname||'用户'), b.is_demo ? '' : a.avatar_url);
   const who = h('span','who');
   const wb = h('b'); wb.textContent = (b.is_demo ? 'DEMO' : String(a.nickname||'用户').slice(0,6)) + ((S.user && b.user_id===S.user.id) ? '（我）' : '');
-  const wid = h('small','who-id','ID '+a.user_no);
+  const wid = h('small','who-id', a.username ? ('用户名 '+a.username+' · ID '+a.user_no) : ('ID '+a.user_no));
   who.append(wb, wid);
   const mr = h('span','meta-right');
   let prio;
@@ -2421,7 +2455,7 @@ async function renderMine(){
   mini.append(av, tx);
   const ar = h('span'); ar.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--ink3); flex:none"><path d="m9 18 6-6-6-6"/></svg>';
   mini.appendChild(ar.firstChild);
-  mini.onclick = renderAccount; /* 第 14 条：点头像卡进资料页，菜单不再有「账号信息」 */
+  mini.onclick = ()=>openAccountModal(); /* 第 14 条：点头像卡进账号资料（原资料页已改弹窗），菜单不再有「账号信息」 */
   wrap.appendChild(mini);
   if(p.is_banned){ const bn = h('div',null,'账号已被封禁：能浏览，不能发布与签到'); bn.style.cssText='color:var(--accent);font-size:13px;margin:-4px 2px 12px'; wrap.appendChild(bn); }
   const c0 = CACHE.counts || {};
@@ -2480,6 +2514,7 @@ function renderAuth(){
   let mode = 'in';
   const build = ()=>{
     form.innerHTML='';
+    let userIn = null;
     tIn.classList.toggle('on', mode==='in'); tUp.classList.toggle('on', mode==='up');
     title.textContent = mode==='in' ? '欢迎回来' : '加入泡泡世界';
     desc.textContent = mode==='in' ? '登录后可以签到、发泡泡、管理你的内容。' : '注册后可以签到、发泡泡、管理你的内容。';
@@ -2488,33 +2523,54 @@ function renderAuth(){
       noteTx.innerHTML = '';
       noteTx.append(document.createTextNode('注册成功赠送 '), h('b',null,setGet('newbie_points',5)+' 积分'), document.createTextNode('新手礼。'));
       if(setGet('email_verify_required', true)) noteTx.append(document.createTextNode('当前开启'), h('b',null,'邮箱验证'), document.createTextNode('：验证邮件发出后，点邮件里的链接完成验证，才能发布和签到（此开关管理员可控）。'));
-      const f1 = h('div','field'); f1.appendChild(h('label',null,'昵称'));
-      const nick = h('input'); nick.type='text'; nick.id='authNick'; nick.maxLength=6; nick.placeholder='给大家认识的名字'; f1.appendChild(nick); form.appendChild(f1);
+      const f1 = h('div','field'); f1.appendChild(h('label',null,'用户名'));
+      userIn = h('input'); userIn.type='text'; userIn.id='authUser'; userIn.maxLength=8; userIn.placeholder='纯字母，1–8 位'; f1.appendChild(userIn);
+      f1.appendChild(h('div','hint','用户名可用于登录；昵称注册后自动生成，可在资料里修改'));
+      form.appendChild(f1);
     }
-    const f2 = h('div','field'); f2.appendChild(h('label',null,'邮箱'));
-    const em = h('input'); em.type='text'; em.setAttribute('inputmode','email'); em.id='authEmail'; em.placeholder='you@example.com'; f2.appendChild(em); form.appendChild(f2);
+    const f2 = h('div','field'); f2.appendChild(h('label',null, mode==='in' ? '用户名 / ID / 邮箱' : '邮箱'));
+    const em = h('input'); em.type='text'; em.id='authEmail'; em.placeholder = mode==='in' ? '用户名、ID 或邮箱' : 'you@example.com'; if(mode==='up') em.setAttribute('inputmode','email'); f2.appendChild(em); form.appendChild(f2);
     const f3 = h('div','field'); f3.appendChild(h('label',null,'密码'));
     const pw = h('input'); pw.type='password'; pw.id='authPw'; pw.placeholder='至少 6 位'; f3.appendChild(pw); form.appendChild(f3);
     const btn = h('button','btn btn-blue', mode==='in' ? '登录' : '注册');
     btn.style.cssText='width:100%; min-height:48px; font-size:15px';
     btn.onclick = async ()=>{
-      const email = em.value.trim(), pass = pw.value;
-      if(!email || !pass){ toast('邮箱和密码都要填'); return; }
+      const acct = em.value.trim(), pass = pw.value;
+      if(!acct || !pass){ toast(mode==='in' ? '账号和密码都要填' : '邮箱和密码都要填'); return; }
       btn.disabled = true;
       if(mode==='in'){
-        const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-        btn.disabled=false;
-        if(error){ toast(errText(error)); return; }
+        if(acct.includes('@')){
+          /* 邮箱登录：直连 Supabase */
+          const { error } = await sb.auth.signInWithPassword({ email: acct, password: pass });
+          btn.disabled=false;
+          if(error){ toast(errText(error)); return; }
+        } else if(/^[A-Za-z]+$/.test(acct) || /^\d+$/.test(acct)){
+          /* 用户名 / ID 登录：走 Netlify 函数 /api/login 换回 Supabase 会话令牌，
+             再 setSession 接回原有登录后流程（loadProfile、封禁判断等都在 afterAuth 里） */
+          let res = null;
+          try{
+            const r = await fetch(MEDIA_API+'/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ account: acct, password: pass }) });
+            res = await r.json();
+          }catch(e){ btn.disabled=false; toast('登录服务暂时不可用，请改用邮箱登录'); return; }
+          if(!res || res.error || !res.access_token || !res.refresh_token){ btn.disabled=false; toast(res && res.error ? res.error : '登录失败，请重试'); return; }
+          const { error } = await sb.auth.setSession({ access_token: res.access_token, refresh_token: res.refresh_token });
+          btn.disabled=false;
+          if(error){ toast(errText(error)); return; }
+        } else {
+          btn.disabled=false; toast('账号格式不对：填用户名、ID 或邮箱'); return;
+        }
         toast('登录成功'); await afterAuth();
       } else {
-        const nickEl = $('authNick'); const nick = nickEl ? nickEl.value.trim() : '';
-        if(!nick){ toast('先填昵称'); btn.disabled=false; return; }
-        if(nick.length>6){ toast('昵称最多 6 个字'); btn.disabled=false; return; }
-        const { data, error } = await sb.auth.signUp({ email, password: pass, options:{ data:{ nickname: nick } } });
+        const uname = userIn ? userIn.value.trim() : '';
+        const ue = usernameError(uname);
+        if(ue){ toast(ue); btn.disabled=false; return; }
+        if(await usernameTaken(uname)){ toast('用户名「'+uname+'」已被占用，换一个'); btn.disabled=false; return; }
+        const { data, error } = await sb.auth.signUp({ email: acct, password: pass, options:{ data:{ username: uname } } });
         btn.disabled=false;
         if(error){ toast(errText(error)); return; }
         if(!data.session){ toast('注册成功，请先去邮箱完成验证，再回来登录'); mode='in'; build(); return; }
-        toast('注册成功，新手积分已到账'); await afterAuth();
+        await afterAuth();
+        toast('注册成功，你的昵称是 '+((S.profile && S.profile.nickname) || 'pp_')+'，可在资料里修改');
       }
     };
     form.appendChild(btn);
@@ -2531,40 +2587,34 @@ async function afterAuth(){
   await Promise.all([loadProfile(), loadMyMarks()]);
   renderMine();
 }
-/* ---------- 资料页（预览 + 修改资料，第 4 条） ---------- */
-async function renderAccount(){
-  S.view='account'; showPage('account');
-  const seq = ++viewSeq;
-  const wrap = $('pageWrap'); wrap.innerHTML='';
-  const panel = h('div','mine-panel');
-  panel.appendChild(backLink('返回我的', renderMine));
-  const p = S.profile||{};
-  const card = h('div','card profile-card');
+/* ---------- 账号资料弹窗（原资料页改弹窗：在「我的」点头像卡打开） ---------- */
+function openAccountModal(){
+  if(!S.user){ renderAuth(); return; }
+  const p = S.profile || {};
+  /* 与系统设置同一套三段式弹窗：sm-head 固定、sm-body 滚动、sm-foot 固定 */
+  const mc = h('div','confirm-card set-modal');
+  const head = h('div','sm-head'); head.appendChild(h('h4',null,'账号资料')); mc.appendChild(head);
+  const body = h('div','sm-body'); mc.appendChild(body);
+  /* 身份头：头像 + 昵称（主行）+ 用户名 · 邮箱（次行）+ 角色标签 */
   const top = h('div','profile-top');
   const av = h('span','avatar'); fillAvatar(av, p.nickname||'用', p.avatar_url);
   const mid = h('div');
   const h3 = h('h3'); h3.append(document.createTextNode(p.nickname||'用户'), h('span','profile-id','ID '+p.user_no));
-  mid.append(h3, h('p',null, S.user.email||''));
+  mid.append(h3, h('p',null, (p.username ? '用户名 '+p.username+' · ' : '')+(S.user.email||'')));
   const roleTag = tagEl('', p.role==='admin' ? '管理员' : '普通用户');
   roleTag.style.cssText = 'margin-left:auto; ' + (p.role==='admin' ? 'background:rgba(250,36,60,.12); color:var(--accent)' : 'background:rgba(0,113,227,.12); color:var(--blue)');
-  top.append(av, mid, roleTag); card.appendChild(top);
+  top.append(av, mid, roleTag); body.appendChild(top);
+  /* 只读信息：ID 在这里看，邮箱更换在下方表单 */
   const kvs = h('div'); kvs.style.marginTop='14px';
   const kv = (k,v,color,attr)=>{ const r=h('div','kv'); r.append(h('span',null,k)); const b=h('b',null,v); if(color) b.style.color=color; if(attr) b.dataset.kv=attr; r.appendChild(b); kvs.appendChild(r); return b; };
-  kv('邮箱', S.user.email||'');
+  kv('ID', String(p.user_no||''));
   kv('注册日期', p.created_at ? fmtDate(p.created_at) : '');
   kv('账号状态', p.is_banned ? '已封禁' : '正常', p.is_banned ? 'var(--accent)' : 'var(--green)');
   const pointsB = kv('积分余额', String(p.points||0)+' 分', null, 'points');
-  card.appendChild(kvs);
-  /* 按钮行：修改资料（展开/收起表单） + 退出登录 */
-  const row = h('div'); row.style.cssText='display:flex; gap:10px; margin-top:18px';
-  const editBtn = h('button','btn btn-blue','修改资料'); editBtn.style.flex='1';
-  const out = h('button','btn btn-ghost','退出登录'); out.style.cssText='flex:1; color:var(--accent)';
-  out.onclick = ()=>confirmBox('退出登录？','退出后需要重新登录才能发布和签到。','退出',false, async ()=>{ await sb.auth.signOut(); S.user=null; S.profile=null; resetCache(); updatePointsCap(); toast('已退出'); renderMine(); showWorld(); });
-  row.append(editBtn, out); card.appendChild(row);
-  /* 修改表单（默认收起） */
-  const form = h('div'); form.style.display='none'; form.style.marginTop='18px';
-  card.appendChild(form);
-  /* 头像 */
+  body.appendChild(kvs);
+  const secT = (t)=>{ const d=h('div'); d.style.cssText='font-size:14px; font-weight:700; margin:20px 0 10px'; d.textContent=t; return d; };
+  body.appendChild(secT('修改资料'));
+  /* 头像（保存逻辑与原资料页相同：上传后直接写 profiles.avatar_url） */
   const avF = h('div','field');
   avF.appendChild(h('label',null,'头像'));
   const avRow = h('div'); avRow.style.cssText='display:flex; align-items:center; gap:12px';
@@ -2589,45 +2639,49 @@ async function renderAccount(){
     }catch(e){ toast(errText(e)); }
     avBtn.disabled = false; avBtn.textContent = '更换头像'; avFile.value='';
   };
-  avRow.append(avPrev, avBtn, avFile); avF.appendChild(avRow); form.appendChild(avF);
-  /* 邮箱 */
+  avRow.append(avPrev, avBtn, avFile); avF.appendChild(avRow); body.appendChild(avF);
+  /* 昵称：仅显示不登录，共用校验（≤6 字符、只能数字/字母/汉字），输入时即时提示 */
+  const nf = h('div','field'); nf.appendChild(h('label',null,'昵称'));
+  const nickIn = h('input'); nickIn.type='text'; nickIn.maxLength=6; nickIn.value=p.nickname||''; nickIn.placeholder='最多 6 个字符'; nf.appendChild(nickIn);
+  const nickHint = h('div','hint','仅用于显示，不能登录 · 最多 6 个字符，只能数字、字母、汉字'); nf.appendChild(nickHint);
+  nickIn.addEventListener('input', ()=>{
+    const e = nicknameError(nickIn.value.trim());
+    nickHint.textContent = e || '仅用于显示，不能登录';
+    nickHint.style.color = e ? 'var(--accent)' : '';
+  });
+  body.appendChild(nf);
+  /* 用户名：可登录，纯字母 1–8 位、唯一不区分大小写；老账号没设置的在这里补设 */
+  const uf = h('div','field'); uf.appendChild(h('label',null,'用户名'));
+  const userIn = h('input'); userIn.type='text'; userIn.maxLength=8; userIn.value=p.username||''; userIn.placeholder='纯字母，1–8 位'; uf.appendChild(userIn);
+  const userHint = h('div','hint', p.username ? '可用于登录，改名后旧用户名立即失效' : '还没设置用户名：纯字母 1–8 位，设置后可用于登录'); uf.appendChild(userHint);
+  let userCheckTimer = null;
+  userIn.addEventListener('input', ()=>{
+    const v = userIn.value.trim();
+    if(!v && !(p.username||'')){ userHint.textContent='还没设置用户名：纯字母 1–8 位，设置后可用于登录'; userHint.style.color=''; return; }
+    const e = usernameError(v);
+    if(e){ userHint.textContent = e; userHint.style.color='var(--accent)'; return; }
+    if(v.toLowerCase() === String(p.username||'').toLowerCase()){ userHint.textContent='可用于登录，改名后旧用户名立即失效'; userHint.style.color=''; return; }
+    userHint.textContent='检查是否被占用…'; userHint.style.color='';
+    clearTimeout(userCheckTimer);
+    userCheckTimer = setTimeout(async ()=>{
+      if(userIn.value.trim()!==v) return;
+      const taken = await usernameTaken(v);
+      if(userIn.value.trim()!==v) return;
+      userHint.textContent = taken ? '用户名「'+v+'」已被占用，换一个' : '这个用户名可以用';
+      userHint.style.color = taken ? 'var(--accent)' : 'var(--green)';
+    }, 400);
+  });
+  body.appendChild(uf);
+  /* 邮箱：展示 + 更换（沿用原流程：updateUser 发确认邮件到新邮箱） */
   const emF = h('div','field'); emF.appendChild(h('label',null,'邮箱'));
-  const emIn = h('input'); emIn.type='text'; emIn.setAttribute('inputmode','email'); emIn.value = S.user.email||''; emIn.placeholder='you@example.com'; emF.appendChild(emIn); form.appendChild(emF);
-  /* 用户名（昵称） */
-  const nf = h('div','field'); nf.appendChild(h('label',null,'用户名（最多 6 个字）'));
-  const nickIn = h('input'); nickIn.type='text'; nickIn.maxLength=6; nickIn.value=p.nickname||''; nickIn.placeholder='最多 6 个字'; nf.appendChild(nickIn); form.appendChild(nf);
-  const saveInfo = h('button','btn btn-blue','保存资料'); saveInfo.style.cssText='width:100%; min-height:46px';
-  saveInfo.onclick = async ()=>{
-    const v = nickIn.value.trim();
-    if(!v){ toast('用户名不能为空'); return; }
-    if(v.length>6){ toast('用户名最多 6 个字'); return; }
-    saveInfo.disabled = true;
-    if(v !== (p.nickname||'')){
-      const { error } = await sb.from('profiles').update({ nickname:v }).eq('id', S.user.id);
-      if(error){ toast(errText(error)); saveInfo.disabled=false; return; }
-      if(S.profile) S.profile.nickname = v;
-      S.authors.delete(S.user.id);
-    }
-    const newEmail = emIn.value.trim();
-    if(newEmail && newEmail !== (S.user.email||'')){
-      const { error } = await sb.auth.updateUser({ email:newEmail });
-      if(error){ toast(errText(error)); saveInfo.disabled=false; return; }
-      toast('资料已保存；邮箱确认邮件已发到新邮箱，点链接确认后生效');
-    } else {
-      toast('资料已保存');
-    }
-    saveInfo.disabled = false;
-    renderAccount();
-  };
-  form.appendChild(saveInfo);
-  /* 密码：验旧密码；邮箱验证开启时还要邮件验证码（reauthenticate nonce） */
-  const pwTitle = h('div'); pwTitle.style.cssText='font-size:14px; font-weight:700; margin:20px 0 10px'; pwTitle.textContent='修改密码';
-  form.appendChild(pwTitle);
+  const emIn = h('input'); emIn.type='text'; emIn.setAttribute('inputmode','email'); emIn.value = S.user.email||''; emIn.placeholder='you@example.com'; emF.appendChild(emIn); body.appendChild(emF);
+  /* 密码：验旧密码；邮箱验证开启时还要邮件验证码（reauthenticate nonce）——原流程原样保留 */
+  body.appendChild(secT('修改密码'));
   const needMailCode = !!setGet('email_verify_required', true);
   const oldF = h('div','field'); oldF.appendChild(h('label',null,'旧密码'));
-  const oldIn = h('input'); oldIn.type='password'; oldIn.placeholder='输入当前密码'; oldIn.autocomplete='current-password'; oldF.appendChild(oldIn); form.appendChild(oldF);
+  const oldIn = h('input'); oldIn.type='password'; oldIn.placeholder='输入当前密码'; oldIn.autocomplete='current-password'; oldF.appendChild(oldIn); body.appendChild(oldF);
   const newF = h('div','field'); newF.appendChild(h('label',null,'新密码（至少 6 位）'));
-  const newIn = h('input'); newIn.type='password'; newIn.placeholder='输入新密码'; newIn.autocomplete='new-password'; newF.appendChild(newIn); form.appendChild(newF);
+  const newIn = h('input'); newIn.type='password'; newIn.placeholder='输入新密码'; newIn.autocomplete='new-password'; newF.appendChild(newIn); body.appendChild(newF);
   let nonceIn = null;
   if(needMailCode){
     const ncF = h('div','field'); ncF.appendChild(h('label',null,'邮件验证码'));
@@ -2641,7 +2695,7 @@ async function renderAccount(){
       toast('验证码已发送到你的邮箱');
       sendBtn.disabled = false;
     };
-    ncRow.append(nonceIn, sendBtn); ncF.appendChild(ncRow); form.appendChild(ncF);
+    ncRow.append(nonceIn, sendBtn); ncF.appendChild(ncRow); body.appendChild(ncF);
   }
   const savePw = h('button','btn btn-ghost','修改密码'); savePw.style.cssText='width:100%; min-height:46px';
   savePw.onclick = async ()=>{
@@ -2664,20 +2718,60 @@ async function renderAccount(){
     toast('密码已修改');
     savePw.disabled = false;
   };
-  form.appendChild(savePw);
-  editBtn.onclick = ()=>{
-    const open = form.style.display==='none';
-    form.style.display = open ? '' : 'none';
-    editBtn.textContent = open ? '收起修改' : '修改资料';
+  body.appendChild(savePw);
+  /* 退出登录 */
+  const out = h('button','btn btn-ghost','退出登录'); out.style.cssText='width:100%; min-height:46px; margin-top:14px; color:var(--accent)';
+  out.onclick = ()=>confirmBox('退出登录？','退出后需要重新登录才能发布和签到。','退出',false, async ()=>{ await sb.auth.signOut(); S.user=null; S.profile=null; resetCache(); updatePointsCap(); toast('已退出'); renderMine(); showWorld(); });
+  body.appendChild(out);
+  /* 底栏：取消 / 保存资料（昵称 + 用户名 + 邮箱，与原资料页同一套保存逻辑） */
+  const foot = h('div','sm-foot');
+  const btns = h('div','row');
+  const ca = h('button','btn btn-ghost','取消'); ca.onclick=closeModal;
+  const ok = h('button','btn btn-blue','保存资料');
+  ok.onclick = async ()=>{
+    const nv = nickIn.value.trim();
+    const ne = nicknameError(nv);
+    if(ne){ toast(ne); return; }
+    const uv = userIn.value.trim(), curU = p.username||'';
+    const unameChanged = uv.toLowerCase() !== curU.toLowerCase();
+    if(unameChanged){
+      const ue = usernameError(uv);
+      if(ue){ toast(ue); return; }
+    }
+    ok.disabled = true;
+    if(unameChanged){
+      if(await usernameTaken(uv)){ toast('用户名「'+uv+'」已被占用，换一个'); ok.disabled=false; return; }
+      const { error } = await sb.from('profiles').update({ username: uv }).eq('id', S.user.id);
+      if(error){ toast(errText(error)); ok.disabled=false; return; }
+      if(S.profile) S.profile.username = uv;
+      S.authors.delete(S.user.id);
+    }
+    if(nv !== (p.nickname||'')){
+      const { error } = await sb.from('profiles').update({ nickname:nv }).eq('id', S.user.id);
+      if(error){ toast(errText(error)); ok.disabled=false; return; }
+      if(S.profile) S.profile.nickname = nv;
+      S.authors.delete(S.user.id);
+    }
+    const newEmail = emIn.value.trim();
+    let emailChanged = false;
+    if(newEmail && newEmail !== (S.user.email||'')){
+      const { error } = await sb.auth.updateUser({ email:newEmail });
+      if(error){ toast(errText(error)); ok.disabled=false; return; }
+      emailChanged = true;
+    }
+    ok.disabled = false;
+    closeModal();
+    toast(emailChanged ? '资料已保存；邮箱确认邮件已发到新邮箱，点链接确认后生效' : '资料已保存');
+    renderMine(); /* 刷新「我的」头部（昵称 / 头像 / 用户名）与缓存展示 */
   };
-  panel.appendChild(card);
-  wrap.appendChild(panel);
-  wrap.appendChild(copyrightEl());
+  btns.append(ca, ok); foot.appendChild(btns); mc.appendChild(foot);
+  openModal(mc);
   loadProfile().then(np=>{
-    if(seq!==viewSeq || !np) return;
+    if(!np || !mc.isConnected) return;
     pointsB.textContent = String(np.points||0)+' 分';
   });
 }
+
 /* ---------- 签到与积分 ---------- */
 async function renderCheckin(){
   S.view='checkin'; showPage('checkin');
@@ -3255,9 +3349,9 @@ async function renderAdminUsers(kwVal){
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
   panel.appendChild(backLink('返回后台', renderAdminHome));
-  panel.appendChild(secTitle('用户管理','按昵称 / 邮箱 / ID 搜索 · 点一条看详情'));
+  panel.appendChild(secTitle('用户管理','按昵称 / 用户名 / 邮箱 / ID 搜索 · 点一条看详情'));
   const bar = h('div','filter-bar');
-  const inp = h('input'); inp.type='text'; inp.placeholder='搜用户：昵称、邮箱或 ID…'; inp.value=kwVal;
+  const inp = h('input'); inp.type='text'; inp.placeholder='搜用户：昵称、用户名、邮箱或 ID…'; inp.value=kwVal;
   inp.onchange=()=>renderAdminUsers(inp.value.trim());
   bar.appendChild(inp); panel.appendChild(bar);
   const table = h('div','table-card'); panel.appendChild(table);
@@ -3271,7 +3365,7 @@ async function renderAdminUsers(kwVal){
       av.style.cssText='width:38px;height:38px;font-size:15px';
       fillAvatar(av, u.nickname||'用', u.avatar_url);
       table.appendChild(trowEl(av, u.nickname||'用户', [statusTagFor(u)],
-        [document.createTextNode((u.email||'')+' · ID '+u.user_no)],
+        [document.createTextNode('用户名 '+(u.username||'—')+' · ID '+u.user_no)],
         ()=>renderAdminUserDetail(u), false));
     });
   };
@@ -3279,7 +3373,7 @@ async function renderAdminUsers(kwVal){
   let q = sb.from('profiles').select('*').order('created_at',{ascending:false}).limit(100);
   if(kwv){
     if(/^\d+$/.test(kwv)) q = q.eq('user_no', Number(kwv));
-    else q = q.or('nickname.ilike.%'+kwv.replace(/[%_,()]/g,'')+'%,email.ilike.%'+kwv.replace(/[%_,()]/g,'')+'%');
+    else q = q.or('nickname.ilike.%'+kwv.replace(/[%_,()]/g,'')+'%,username.ilike.%'+kwv.replace(/[%_,()]/g,'')+'%,email.ilike.%'+kwv.replace(/[%_,()]/g,'')+'%');
   }
   const { data, error } = await q;
   if(seq!==viewSeq) return;
@@ -3304,6 +3398,7 @@ function renderAdminUserDetail(u){
   head.append(av, info); card.appendChild(head);
   const kvBox = h('div','detail-kv');
   const kv = (k,v)=>{ const r=h('div','kv'); r.append(h('span',null,k), h('b',null,v)); kvBox.appendChild(r); };
+  kv('用户名', u.username||'—');
   kv('积分余额', String(u.points||0)+' 分');
   kv('注册日期', fmtDate(u.created_at));
   kv('账号状态', u.is_banned ? '已封禁' : '正常');
