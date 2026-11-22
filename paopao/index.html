@@ -497,6 +497,10 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .auth-alt button{color:var(--blue); font-size:13px; font-weight:600; padding:2px 4px}
 .gift-hint{font-size:12px; color:var(--ink3); margin:-10px 0 14px; text-align:center}
 .auth-card{padding:28px 24px; max-width:460px; margin:0 auto}
+/* fix12：登录/注册整块（标题+副标题+卡片+版权行）在可用区内水平、垂直都居中 */
+.auth-wrap{display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100dvh - 164px - env(safe-area-inset-top) - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding:8px 0 12px}
+.auth-wrap .auth-head{width:100%; margin:0 auto 16px}
+.auth-wrap .auth-card{width:100%; margin:0}
 .auth-card h3{font-size:23px; font-weight:800; margin:0 0 6px}
 .auth-card p{color:var(--ink2); font-size:13px; margin:0 0 18px}
 .verify-note{display:flex; gap:8px; justify-content:center; background:rgba(0,113,227,.07); border-radius:12px; padding:10px 13px; font-size:12px; color:var(--ink2); margin-top:14px; line-height:1.5}
@@ -2726,7 +2730,7 @@ function renderAuth(){
   const head = h('div','auth-head');
   const title = h('h3',null,'欢迎回来'); head.appendChild(title);
   const desc = h('p',null,'登录后可以签到、发泡泡、管理你的内容。'); head.appendChild(desc);
-  wrap.appendChild(head);
+  const box = h('div','auth-wrap'); box.appendChild(head); /* fix12：整块居中容器 */
   const card = h('div','card auth-card');
   const form = h('div'); card.appendChild(form);
   const note = h('div','verify-note'); note.style.display='none';
@@ -2856,8 +2860,9 @@ function renderAuth(){
     form.appendChild(alt);
   };
   build();
-  wrap.appendChild(card);
-  wrap.appendChild(copyrightEl());
+  box.appendChild(card);
+  box.appendChild(copyrightEl());
+  wrap.appendChild(box);
 }
 async function afterAuth(){
   const { data } = await sb.auth.getSession();
