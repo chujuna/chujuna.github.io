@@ -114,7 +114,7 @@ svg{display:block}
   will-change:transform,opacity; backface-visibility:hidden;
   background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(56,189,248,.88) 55%, rgba(2,132,199,.90));
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55), inset 4px 5px 10px rgba(255,255,255,.32), 0 6px 16px rgba(90,90,160,.22);
-  animation:ldRise 1.5s ease-in-out infinite}
+  animation:ldRise 1.5s ease-in-out infinite alternate}
 .app-loader .ld-b:nth-child(1){left:6px; width:44px; height:44px; animation-delay:0s}
 .app-loader .ld-b:nth-child(2){left:44px; width:64px; height:64px; animation-delay:.22s;
   background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(167,139,250,.88) 55%, rgba(124,58,237,.90))}
@@ -124,7 +124,8 @@ svg{display:block}
   background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(251,146,60,.90) 55%, rgba(234,88,12,.92))}
 .app-loader .ld-b:nth-child(5){left:96px; width:18px; height:18px; animation-delay:.88s}
 @keyframes ldRise{0%{transform:translateY(10px) scale(.92); opacity:.35}45%{opacity:1}100%{transform:translateY(-26px) scale(1); opacity:.9}}
-.app-loader .ld-txt{font-size:15px; font-weight:600; color:var(--ink2); letter-spacing:.06em}
+.app-loader .ld-txt{font-size:15px; font-weight:600; color:var(--ink2); letter-spacing:.06em; animation:ldTxt 1.8s ease-in-out infinite}
+@keyframes ldTxt{0%,100%{opacity:.55}50%{opacity:1}}
 /* 开屏隔离（本轮）：加载层在场期间底层整体退出绘制/合成——世界舞台、顶栏、底部胶囊、
    换一批钮全部 visibility:hidden。它们本来就被不透明的加载层盖住、用户看不见，
    却在以 60fps 全速预加载渲染：几十颗泡泡逐帧合成、悬浮层的 backdrop-filter 逐帧重算模糊，
@@ -278,7 +279,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .expand-body{font-size:17px; line-height:1.7; word-break:break-word}
 .expand-img{width:100%; height:250px; border-radius:18px; margin-bottom:14px; display:grid; place-items:center; color:rgba(255,255,255,.92);
   background:linear-gradient(135deg,#38BDF8,#818CF8 55%,#E879F9); position:relative; overflow:hidden}
-.expand-photo{width:100%; display:block; border-radius:14px; margin-bottom:12px; background:rgba(120,120,128,.12)}
+.expand-photo{width:100%; display:block; border-radius:14px; margin-bottom:12px; background:rgba(120,120,128,.12); max-height:40vh; object-fit:cover}
 .expand-video{width:100%; aspect-ratio:16/9; background:#000; border-radius:18px; margin-bottom:14px; display:block; object-fit:contain}
 /* Video.js 10 容器：与原生视频同尺寸同圆角；播放器是 Web 组件
    <video-player><video-skin>…</video-skin></video-player>，由远程模块脚本注册后在容器内升级渲染，
@@ -345,6 +346,30 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .expand-statbar b{color:var(--ink); font-weight:700}
 .expand-actions{display:flex; gap:10px; padding:12px 24px 20px}
 .expand-actions .btn{flex:1}
+/* fix10-3：展开层固定区第一行改版——左侧真实计数 chip（地球=出现、放大镜=查看），
+   右侧圆形图标钮（点赞/踩带数量角标、举报无角标），整行固定不随正文滚动 */
+.expand-card{position:relative}
+.expand-meta-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 24px 0}
+.stat-chips{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0}
+.stat-chip{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:999px; background:rgba(120,120,128,.12); color:var(--ink2); font-size:12px}
+.stat-chip svg{flex:none}
+.stat-chip b{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums}
+.stat-exp{font-size:11px; color:var(--ink3)}
+.circ-votes{display:flex; align-items:center; gap:10px; flex:none}
+.circ-btn{position:relative; width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--card2); color:var(--ink2); display:grid; place-items:center; cursor:pointer; transition:.15s; padding:0; font-family:inherit}
+.circ-btn:active{transform:scale(.93)}
+.circ-btn.liked{background:rgba(250,36,60,.10); border-color:rgba(250,36,60,.30); color:var(--accent)}
+.circ-btn.disliked{background:rgba(0,0,0,.07); border-color:rgba(0,0,0,.20); color:var(--ink)}
+.circ-btn:disabled{opacity:.45}
+.cb-badge{position:absolute; top:-5px; right:-7px; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--ink); color:#fff; font-size:10px; font-weight:700; display:grid; place-items:center; font-variant-numeric:tabular-nums; box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.circ-btn.liked .cb-badge{background:var(--accent)}
+/* fix10-4：内容可滚时的浮动小箭头（滑到底自动消失） */
+.scroll-hint{position:absolute; left:50%; bottom:138px; transform:translateX(-50%); z-index:4; width:34px; height:34px; border-radius:50%; background:rgba(30,30,34,.55); color:#fff; display:grid; place-items:center; opacity:0; pointer-events:none; transition:opacity .3s ease; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
+.scroll-hint.show{opacity:1; animation:hintFloat 1.4s ease-in-out infinite}
+@keyframes hintFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}
+/* fix10-7：子页内容淡入（用户页/管理员页切换不再硬切） */
+.mine-panel{animation:pageIn .32s cubic-bezier(.2,.7,.3,1)}
+@keyframes pageIn{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:translateY(0)}}
 .btn-fav{border:1px solid var(--line); background:var(--card2); color:var(--ink2)}
 .btn-fav.on{background:rgba(255,159,10,.14); border-color:rgba(255,159,10,.45); color:var(--orange)}
 .btn-fav.on svg{fill:currentColor}
@@ -679,7 +704,7 @@ body.in-page .filter-drawer{display:none !important}
 .page-loading{display:flex; gap:9px; align-items:flex-end; justify-content:center; padding:34px 0}
 .page-loading i{border-radius:50%; will-change:transform,opacity; backface-visibility:hidden;
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55), inset 3px 4px 8px rgba(255,255,255,.32), 0 4px 10px rgba(90,90,160,.18);
-  animation:ldRise 1.3s ease-in-out infinite}
+  animation:ldRise 1.3s ease-in-out infinite alternate}
 .page-loading i:nth-child(1){width:20px; height:20px; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(56,189,248,.88) 55%, rgba(2,132,199,.90))}
 .page-loading i:nth-child(2){width:28px; height:28px; animation-delay:.18s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(167,139,250,.88) 55%, rgba(124,58,237,.90))}
 .page-loading i:nth-child(3){width:16px; height:16px; animation-delay:.36s; background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.92), rgba(52,211,153,.88) 55%, rgba(5,150,105,.90))}
@@ -886,6 +911,9 @@ function icon(name, cls){ return '<svg class="ic '+(cls||'')+'" viewBox="0 0 24 
 function setIcon(el, name, cls){ el.innerHTML = icon(name, cls); }
 /* 小样同款图标输出：<svg width height viewBox fill/stroke>，路径与小样 ICONS 表一致（Lucide 官方） */
 const VPATH = {
+  globe:'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  chevronDown:'<path d="m6 9 6 6 6-6"/>',
   thumbsUp:'<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
   footprints:'<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 16v-2.38C20 11.5 21.03 10.5 21 8c-.03-2.72-1.49-6-4.5-6C14.63 2 14 3.8 14 5.5c0 3.11 2 5.66 2 8.68V16a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
   circleAlert:'<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
@@ -933,12 +961,24 @@ function wireLazyImg(img){
   return img;
 }
 /* 头像填充：有 avatar_url 显示图片，没有显示昵称首字（配色沿用小样 AV_COLORS） */
+/* fix10-1：jsDelivr 地址换 GitHub 原始地址（部分网络下 jsDelivr 连不上、图被误判失效时兜底） */
+function altMediaUrl(u){
+  if(typeof u !== 'string') return '';
+  const m = u.match(/^https:\/\/cdn\.jsdelivr\.net\/gh\/([^/]+)\/([^/@]+)@([^/]+)\/(.+)$/);
+  return m ? 'https://raw.githubusercontent.com/'+m[1]+'/'+m[2]+'/'+m[3]+'/'+m[4] : '';
+}
 function fillAvatar(el, name, url){
   el.innerHTML = '';
   if(url && isHttps(url)){
     el.style.background = 'rgba(120,120,128,.15)';
-    const img = document.createElement('img'); img.alt=''; wireLazyImg(img); img.src = url;
-    img.addEventListener('error', ()=>{ el.innerHTML=''; el.textContent = String(name||'用').charAt(0); el.style.background = avColor(name||''); });
+    const img = document.createElement('img'); img.alt=''; wireLazyImg(img);
+    /* 头像加载失败先自动换原始地址重试一次，两边都不行才回退首字（fix10-1） */
+    img.addEventListener('error', ()=>{
+      const alt = altMediaUrl(url);
+      if(alt && img.src !== alt){ img.src = alt; return; }
+      el.innerHTML=''; el.textContent = String(name||'用').charAt(0); el.style.background = avColor(name||'');
+    });
+    img.src = url;
     el.appendChild(img);
   } else {
     el.textContent = String(name||'用').charAt(0);
@@ -953,7 +993,7 @@ function pageLoadingEl(){
 }
 /* 读文件为 dataURL（上传与本地预览共用） */
 function readFileDataUrl(file){
-  return new Promise((res, rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+  return new Promise((res, rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(fr.result); fr.onerror = ()=>rej(new Error('读取文件失败：文件可能还没下载到本机（比如还在 iCloud 里），请先在「文件」App 里打开一次再重试')); fr.readAsDataURL(file); });
 }
 /* 带传输进度的上传请求（fix6-1）：fetch 拿不到 upload progress，改 XMLHttpRequest；
    onProg(ratio 0–1) 是「请求体发出比例」，只代表传输阶段，服务端确认由调用方在拿到
@@ -990,7 +1030,7 @@ function h(tag, cls, text){ const el=document.createElement(tag); if(cls) el.cla
 function $(id){ return document.getElementById(id); }
 let toastTimer=null;
 function toast(msg){ const t=$('toast'); t.textContent=String(msg||''); t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
-function errText(e){ const m = (e && e.message) ? e.message : String(e||'操作失败'); if(/permission denied/i.test(m)) return '没有权限执行这个操作'; return m; }
+function errText(e){ const m = (e && e.message) ? e.message : (typeof e==='string' ? e : ''); if(!m || /^\[object /.test(m)) return '操作失败，请重试'; if(/permission denied/i.test(m)) return '没有权限执行这个操作'; return m; }
 function fmtDate(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 function shanghaiToday(){ return new Date(Date.now()+8*3600*1000).toISOString().slice(0,10); }
 function isHttps(u){ return typeof u==='string' && /^https:\/\//i.test(u.trim()); }
@@ -1871,6 +1911,10 @@ function clearDeepLinkParam(b){
   }catch(e){}
 }
 function closeExpand(popFromWorld){
+  /* fix10-2：打开后 450ms 内的关闭一律忽略——世界里点泡泡的同一次点按，pointerup
+     先开层、紧随的 click 会被重定向到刚盖上来的遮罩触发背景关闭，泡泡还没看就爆了 */
+  if(EX.openedAt && Date.now() - EX.openedAt < 450) return;
+  EX.openedAt = 0;
   if(popFromWorld) audioCtx(); /* 关闭手势内先 resume 音频上下文，爆点音效才不会被 iOS 静默 */
   const overlay = $('expandOverlay');
   const wasWorld = EX.source==='world' && popFromWorld && EX.b;
@@ -1933,6 +1977,8 @@ async function openExpand(b, source){
         setTimeout(()=>{ if(ph.parentNode) ph.parentNode.removeChild(ph); }, 500);
       });
       img.addEventListener('error', ()=>{
+        const alt = altMediaUrl(b.media_url);
+        if(alt && img.src !== alt){ img.src = alt; return; }
         const phEl = h('div','expand-img'); phEl.innerHTML = vIcon(VPATH.image, 54, 'rgba(255,255,255,.9)');
         if(wrap.parentNode) wrap.parentNode.replaceChild(phEl, wrap);
         toast('图片链接失效，已显示占位');
@@ -1963,45 +2009,43 @@ async function openExpand(b, source){
     buildVideoPlayer(wrap, b.media_url);
     if(b.content) body.appendChild(h('div','expand-body', b.content));
   }
-  /* 点赞 / 踩 / 举报 */
-  const votes = h('div','vote-row');
-  const mkVote = (body, label)=>{
-    const btn = h('button','vote-btn'); btn.innerHTML = vIcon(body, 13);
-    btn.appendChild(document.createTextNode(' '+label+' '));
-    const n = h('span','n','0'); btn.appendChild(n);
-    votes.appendChild(btn); return { btn, n };
-  };
-  const like = mkVote(VPATH.thumbsUp,'点赞'); like.n.textContent = String(b.like_count||0);
-  const dis = mkVote(VPATH.footprints,'踩'); dis.n.textContent = String(b.dislike_count||0);
-  let rep;
-  if(S.user && b.user_id===S.user.id){
-    rep = mkVote(VPATH.circleAlert,'举报'); rep.n.textContent = String(b.report_count||0);
-    rep.btn.disabled = true; rep.btn.style.opacity = '.45';
-  } else {
-    rep = mkVote(VPATH.circleAlert,'举报'); rep.n.textContent = String(b.report_count||0);
-  }
-  const syncVote = ()=>{
-    like.btn.classList.toggle('liked', S.myReactions.get(b.id)==='like');
-    dis.btn.classList.toggle('disliked', S.myReactions.get(b.id)==='dislike');
-    like.n.textContent = String(b.like_count||0);
-    dis.n.textContent = String(b.dislike_count||0);
-    rep.n.textContent = String(b.report_count||0);
-  };
-  syncVote();
-  like.btn.onclick = ()=>{ doReaction(b,'like').then(syncVote); };
-  dis.btn.onclick = ()=>{ doReaction(b,'dislike').then(syncVote); };
-  rep.btn.onclick = ()=>doReport(b);
-  body.appendChild(votes);
+  /* 点赞 / 踩 / 举报已移入底部固定区（fix10-3：圆形图标钮 + 数量角标，与出现/查看计数同行固定） */
   /* 底部固定区（本轮第 7 条）：统计行从正文里移出，与动作行一起挂卡底固定不滚——
      统计行在动作行上方单独一行；归档文案（本轮第 4 条）按发布时冻结的 expires_at
      显示固定日期，永久泡泡（expires_at 为空）显示「永久保留」，不再相对推算 */
   const foot = h('div','expand-foot');
-  const stat = h('div','expand-statbar');
-  const s1 = h('span'); s1.append(document.createTextNode('在世界出现 '), h('b',null,String(b.show_count||0)), document.createTextNode(' 次'));
-  const s2 = h('span'); s2.append(document.createTextNode('被查看 '), h('b',null,String((b.view_count||0)+1)), document.createTextNode(' 次'));
+  /* fix10-3：固定区第一行——左侧真实计数（地球=在世界出现次数、放大镜=被查看次数；
+     出现由 record_shows 在泡泡进入世界时记录、查看由 record_view 在打开时记录，
+     均为数据库真实计数）+ 右侧圆形图标钮（点赞/踩带数量角标、举报无角标、均无文字） */
   const expTx = (b.is_permanent || !b.expires_at) ? '永久保留' : (fmtDate(b.expires_at).slice(0,10)+' 自动归档');
-  stat.append(s1, s2, h('span',null, expTx));
-  foot.appendChild(stat);
+  const mrow = h('div','expand-meta-row');
+  const chips = h('div','stat-chips');
+  const mkChip = (icon, val)=>{ const c = h('span','stat-chip'); c.innerHTML = vIcon(icon, 14); c.appendChild(h('b',null,String(val))); return c; };
+  chips.append(mkChip(VPATH.globe, b.show_count||0), mkChip(VPATH.search, (b.view_count||0)+1), h('span','stat-exp', expTx));
+  mrow.appendChild(chips);
+  const vts = h('div','circ-votes');
+  const mkCirc = (icon, count)=>{
+    const btn = h('button','circ-btn'); btn.type = 'button'; btn.innerHTML = vIcon(icon, 18);
+    let badge = null;
+    if(count != null){ badge = h('span','cb-badge', String(count)); btn.appendChild(badge); }
+    vts.appendChild(btn); return { btn, badge };
+  };
+  const like = mkCirc(VPATH.thumbsUp, b.like_count||0);
+  const dis = mkCirc(VPATH.footprints, b.dislike_count||0);
+  const rep2 = mkCirc(VPATH.circleAlert, null);
+  if(S.user && b.user_id===S.user.id){ rep2.btn.disabled = true; }
+  const syncVote = ()=>{
+    like.btn.classList.toggle('liked', S.myReactions.get(b.id)==='like');
+    dis.btn.classList.toggle('disliked', S.myReactions.get(b.id)==='dislike');
+    if(like.badge) like.badge.textContent = String(b.like_count||0);
+    if(dis.badge) dis.badge.textContent = String(b.dislike_count||0);
+  };
+  syncVote();
+  like.btn.onclick = ()=>{ doReaction(b,'like').then(syncVote); };
+  dis.btn.onclick = ()=>{ doReaction(b,'dislike').then(syncVote); };
+  rep2.btn.onclick = ()=>doReport(b);
+  mrow.appendChild(vts);
+  foot.appendChild(mrow);
   /* 动作行 */
   const acts = h('div','expand-actions');
   if(S.user && (b.user_id===S.user.id || isAdmin())){
@@ -2023,6 +2067,13 @@ async function openExpand(b, source){
   foot.appendChild(acts);
   card.appendChild(foot);
   $('expandOverlay').classList.add('show');
+  EX.openedAt = Date.now();
+  /* fix10-4：内容比卡高时浮一颗小箭头提示还能往下滑，滑到底自动消失 */
+  const hint = h('div','scroll-hint'); hint.innerHTML = vIcon(VPATH.chevronDown, 18); hint.setAttribute('aria-hidden','true');
+  card.appendChild(hint);
+  const updHint = ()=>{ hint.classList.toggle('show', body.scrollHeight - body.clientHeight - body.scrollTop > 24); };
+  body.addEventListener('scroll', updHint, { passive:true });
+  requestAnimationFrame(()=>requestAnimationFrame(updHint));
   /* 计数 */
   try{
     await sb.rpc('record_view',{ p_bubble: b.id });
@@ -2642,6 +2693,9 @@ function renderAuth(){
     const pw = h('input'); pw.type='password'; pw.id='authPw'; pw.placeholder='至少 6 位'; f3.appendChild(pw); form.appendChild(f3);
     const btn = h('button','btn btn-blue', mode==='in' ? '登录' : '注册');
     btn.style.cssText='width:100%; min-height:48px; font-size:15px';
+    const btnLabel = mode==='in' ? '登录' : '注册';
+    const setBusy = t=>{ btn.disabled = true; btn.textContent = t; };
+    const setFree = ()=>{ btn.disabled = false; btn.textContent = btnLabel; };
     btn.onclick = async ()=>{
       const pass = pw.value;
       if(mode==='up' && !mailRequired && !regFallback){
@@ -2651,8 +2705,8 @@ function renderAuth(){
         if(!uname || !pass){ toast('用户名和密码都要填'); return; }
         if(pass.length < 6){ toast('密码至少 6 位'); return; }
         const ue0 = usernameError(uname); if(ue0){ toast(ue0); return; }
-        btn.disabled = true;
-        if(await usernameTaken(uname)){ toast('用户名「'+uname+'」已被占用，换一个'); btn.disabled=false; return; }
+        setBusy(mode==='in' ? '登录中，请稍候～' : '注册中，请稍候～');
+        if(await usernameTaken(uname)){ toast('用户名「'+uname+'」已被占用，换一个'); setFree(); return; }
         let res = null, unreachable = false;
         try{
           const r = await fetch(MEDIA_API+'/register', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username: uname, password: pass }) });
@@ -2669,20 +2723,21 @@ function renderAuth(){
             em = h('input'); em.type='text'; em.id='authEmail'; em.placeholder='you@example.com'; em.setAttribute('inputmode','email'); f2b.appendChild(em);
             form.insertBefore(f2b, f3);
           }
-          btn.disabled = false;
+          setFree();
           toast('免邮箱注册暂不可用，请填写邮箱完成注册');
           em.focus();
           return;
         }
-        if(!res || res.error || !res.ok){ btn.disabled=false; toast(res && res.error ? res.error : '注册失败，请重试'); return; }
+        if(!res || res.error || !res.ok){ setFree(); toast(res && res.error ? res.error : '注册失败，请重试'); return; }
+        setBusy('注册成功，正在登录～');
         let lr = null;
         try{
           const r2 = await fetch(MEDIA_API+'/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ account: uname, password: pass }) });
           lr = await r2.json();
         }catch(e){ /* 注册已成功、自动登录没接上：退回登录模式让用户手动登 */ }
-        if(!lr || lr.error || !lr.access_token || !lr.refresh_token){ btn.disabled=false; toast('注册成功，请用用户名登录'); mode='in'; build(); return; }
+        if(!lr || lr.error || !lr.access_token || !lr.refresh_token){ setFree(); toast('注册成功，请用用户名登录'); mode='in'; build(); return; }
         const { error } = await sb.auth.setSession({ access_token: lr.access_token, refresh_token: lr.refresh_token });
-        btn.disabled=false;
+        setFree();
         if(error){ toast(errText(error)); return; }
         await afterAuth();
         toast('注册成功，你的昵称是 '+((S.profile && S.profile.nickname) || 'pp_')+'，可在资料里修改');
@@ -2690,12 +2745,12 @@ function renderAuth(){
       }
       const acct = em.value.trim();
       if(!acct || !pass){ toast(mode==='in' ? '账号和密码都要填' : '邮箱和密码都要填'); return; }
-      btn.disabled = true;
+      setBusy(mode==='in' ? '登录中，请稍候～' : '注册中，请稍候～');
       if(mode==='in'){
         if(acct.includes('@')){
           /* 邮箱登录：直连 Supabase */
           const { error } = await sb.auth.signInWithPassword({ email: acct, password: pass });
-          btn.disabled=false;
+          setFree();
           if(error){ toast(errText(error)); return; }
         } else if(/^[A-Za-z]+$/.test(acct) || /^\d+$/.test(acct)){
           /* 用户名 / ID 登录：走 Netlify 函数 /api/login 换回 Supabase 会话令牌，
@@ -2704,22 +2759,22 @@ function renderAuth(){
           try{
             const r = await fetch(MEDIA_API+'/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ account: acct, password: pass }) });
             res = await r.json();
-          }catch(e){ btn.disabled=false; toast('登录服务暂时不可用，请改用邮箱登录'); return; }
-          if(!res || res.error || !res.access_token || !res.refresh_token){ btn.disabled=false; toast(res && res.error ? res.error : '登录失败，请重试'); return; }
+          }catch(e){ setFree(); toast('登录服务暂时不可用，请改用邮箱登录'); return; }
+          if(!res || res.error || !res.access_token || !res.refresh_token){ setFree(); toast(res && res.error ? res.error : '登录失败，请重试'); return; }
           const { error } = await sb.auth.setSession({ access_token: res.access_token, refresh_token: res.refresh_token });
-          btn.disabled=false;
+          setFree();
           if(error){ toast(errText(error)); return; }
         } else {
-          btn.disabled=false; toast('账号格式不对：填用户名、ID 或邮箱'); return;
+          setFree(); toast('账号格式不对：填用户名、ID 或邮箱'); return;
         }
         toast('登录成功'); await afterAuth();
       } else {
         const uname = userIn ? userIn.value.trim() : '';
         const ue = usernameError(uname);
-        if(ue){ toast(ue); btn.disabled=false; return; }
-        if(await usernameTaken(uname)){ toast('用户名「'+uname+'」已被占用，换一个'); btn.disabled=false; return; }
+        if(ue){ toast(ue); setFree(); return; }
+        if(await usernameTaken(uname)){ toast('用户名「'+uname+'」已被占用，换一个'); setFree(); return; }
         const { data, error } = await sb.auth.signUp({ email: acct, password: pass, options:{ data:{ username: uname } } });
-        btn.disabled=false;
+        setFree();
         if(error){ toast(errText(error)); return; }
         if(!data.session){ toast('注册成功，请先去邮箱完成验证，再回来登录'); mode='in'; build(); return; }
         await afterAuth();
