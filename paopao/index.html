@@ -3147,7 +3147,8 @@ async function renderCheckin(){
     toast('签到成功 +'+setGet('checkin_points',2)); renderCheckin();
   };
   card.appendChild(btn);
-  card.appendChild(h('div','checkin-note', banned() ? '账号已被封禁，不能签到' : '每天可签 1 次（规则由管理员设置）'));
+  const noteEl = h('div','checkin-note', banned() ? '账号已被封禁，不能签到' : '每天可签 1 次（规则由管理员设置）');
+  card.appendChild(noteEl);
   panel.appendChild(card);
   panel.appendChild(secTitle('积分明细','每一分都有记录'));
   const list = h('div','log-list'); panel.appendChild(list);
@@ -3166,7 +3167,10 @@ async function renderCheckin(){
     pagerAttach(list, 'pointsLog', logs, ()=>paintLogs(logs));
   };
   if(CACHE.pointsLog) paintLogs(CACHE.pointsLog); else list.appendChild(pageLoadingEl());
-  loadProfile().then(np=>{ if(seq===viewSeq && np) big.textContent = String(np.points||0); });
+  loadProfile().then(np=>{ if(seq!==viewSeq || !np) return; big.textContent = String(np.points||0);
+    /* 档案刷新后按最新封禁状态重绘（进页面后才被封禁/解封也能立刻反映，不再靠旧状态判断） */
+    noteEl.textContent = banned() ? '账号已被封禁，不能签到' : '每天可签 1 次（规则由管理员设置）';
+    paintBtn(!!CACHE.checkinSigned); });
   const today = shanghaiToday();
   const [doneRes, logsRes] = await Promise.all([
     sb.from('checkins').select('id').eq('user_id', S.user.id).eq('checkin_date', today),
