@@ -359,8 +359,8 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .stat-chip b{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums}
 .stat-exp{font-size:11px; color:var(--ink3)}
 .circ-votes{display:flex; align-items:center; gap:14px; flex:none}
-.circ-btn.stat{cursor:default; background:rgba(120,120,128,.10)}
-.circ-btn.stat:active{transform:none}
+.circ-btn.is-stat{cursor:default; background:rgba(120,120,128,.10)}
+.circ-btn.is-stat:active{transform:none}
 .circ-btn{position:relative; width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--card2); color:var(--ink2); display:grid; place-items:center; cursor:pointer; transition:.15s; padding:0; font-family:inherit}
 .circ-btn:active{transform:scale(.93)}
 .circ-btn.liked{background:rgba(250,36,60,.10); border-color:rgba(250,36,60,.30); color:var(--accent)}
@@ -2097,7 +2097,7 @@ async function openExpand(b, source){
   const vts = h('div','circ-votes');
   const mkCirc = (icon, count, opts)=>{
     opts = opts || {};
-    const btn = h('button','circ-btn'+(opts.stat ? ' stat' : '')); btn.type = 'button'; btn.innerHTML = vIcon(icon, 15);
+    const btn = h('button','circ-btn'+(opts.stat ? ' is-stat' : '')); btn.type = 'button'; btn.innerHTML = vIcon(icon, 15);
     let badge = null;
     if(count != null){ badge = h('span','cb-badge', fmtN(count)); btn.appendChild(badge); }
     if(opts.title) btn.title = opts.title;
