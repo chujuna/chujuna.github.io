@@ -355,15 +355,20 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .stat-chip svg{flex:none}
 .stat-chip b{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums}
 .stat-exp{font-size:11px; color:var(--ink3)}
-.circ-votes{display:flex; align-items:center; gap:10px; flex:none}
-.circ-btn{position:relative; width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--card2); color:var(--ink2); display:grid; place-items:center; cursor:pointer; transition:.15s; padding:0; font-family:inherit}
+.circ-votes{display:flex; align-items:center; gap:8px; flex:none}
+.circ-btn.stat{cursor:default; background:rgba(120,120,128,.10)}
+.circ-btn.stat:active{transform:none}
+.circ-btn{position:relative; width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--card2); color:var(--ink2); display:grid; place-items:center; cursor:pointer; transition:.15s; padding:0; font-family:inherit}
 .circ-btn:active{transform:scale(.93)}
 .circ-btn.liked{background:rgba(250,36,60,.10); border-color:rgba(250,36,60,.30); color:var(--accent)}
 .circ-btn.disliked{background:rgba(0,0,0,.07); border-color:rgba(0,0,0,.20); color:var(--ink)}
 .circ-btn:disabled{opacity:.45}
-.cb-badge{position:absolute; top:-5px; right:-7px; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--ink); color:#fff; font-size:10px; font-weight:700; display:grid; place-items:center; font-variant-numeric:tabular-nums; box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.cb-badge{position:absolute; top:-4px; right:-6px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--ink); color:#fff; font-size:10px; font-weight:700; display:grid; place-items:center; font-variant-numeric:tabular-nums; box-shadow:0 1px 4px rgba(0,0,0,.25)}
 .circ-btn.liked .cb-badge{background:var(--accent)}
 /* fix10-4：内容可滚时的浮动小箭头（滑到底自动消失） */
+.lightbox{position:fixed; inset:0; z-index:500; background:rgba(10,10,14,.94); display:grid; place-items:center; cursor:zoom-out}
+.lightbox[hidden]{display:none}
+.lightbox img{max-width:100vw; max-height:100vh; object-fit:contain}
 .scroll-hint{position:absolute; left:50%; bottom:138px; transform:translateX(-50%); z-index:4; width:34px; height:34px; border-radius:50%; background:rgba(30,30,34,.55); color:#fff; display:grid; place-items:center; opacity:0; pointer-events:none; transition:opacity .3s ease; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px)}
 .scroll-hint.show{opacity:1; animation:hintFloat 1.4s ease-in-out infinite}
 @keyframes hintFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}
@@ -485,7 +490,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .load-more{width:calc(100% - 36px); margin:12px 18px 16px; min-height:42px; font-size:14px}
 .list-end{padding:12px 18px 16px; text-align:center; color:var(--ink3); font-size:12px}
 .expand-meta .who .who-id-inline{font-size:12px; font-weight:500; color:var(--ink3); margin-left:7px}
-.auth-head{max-width:460px; margin:6px auto 16px; padding:0 2px}
+.auth-head{max-width:460px; margin:6px auto 16px; padding:0 2px; text-align:center}
 .auth-head h3{font-size:24px; font-weight:800; margin:0 0 6px}
 .auth-head p{color:var(--ink2); font-size:13px; margin:0}
 .auth-alt{margin-top:14px; text-align:center; font-size:13px; color:var(--ink3)}
@@ -494,7 +499,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .auth-card{padding:28px 24px; max-width:460px; margin:0 auto}
 .auth-card h3{font-size:23px; font-weight:800; margin:0 0 6px}
 .auth-card p{color:var(--ink2); font-size:13px; margin:0 0 18px}
-.verify-note{display:flex; gap:8px; background:rgba(0,113,227,.07); border-radius:12px; padding:10px 13px; font-size:12px; color:var(--ink2); margin-top:14px; line-height:1.5}
+.verify-note{display:flex; gap:8px; justify-content:center; background:rgba(0,113,227,.07); border-radius:12px; padding:10px 13px; font-size:12px; color:var(--ink2); margin-top:14px; line-height:1.5}
 
 /* ---------- 管理员 ---------- */
 .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
@@ -839,6 +844,7 @@ img.lz.lz-in{opacity:1}
 
 <!-- 泡泡展开层 -->
 <div class="overlay" id="expandOverlay"><div class="expand-card" id="expandCard"></div></div>
+<div class="lightbox" id="lightbox" hidden><img id="lightboxImg" alt=""></div>
 
 <!-- 发布弹窗 -->
 <div class="sheet-wrap" id="pubWrap">
@@ -971,14 +977,18 @@ function fillAvatar(el, name, url){
   el.innerHTML = '';
   if(url && isHttps(url)){
     el.style.background = 'rgba(120,120,128,.15)';
-    const img = document.createElement('img'); img.alt=''; wireLazyImg(img);
-    /* 头像加载失败先自动换原始地址重试一次，两边都不行才回退首字（fix10-1） */
+    const img = document.createElement('img'); img.alt=''; img.decoding = 'async';
+    /* fix11-4：头像不用懒加载（小图直出，排除懒加载在 iOS 上不触发的显示风险），
+       加载完成简单淡入；失败先换原始地址重试一次，两边都不行才回退首字 */
+    img.style.opacity = '0'; img.style.transition = 'opacity .3s ease';
+    img.addEventListener('load', ()=>{ img.style.opacity = '1'; }, { once:true });
     img.addEventListener('error', ()=>{
       const alt = altMediaUrl(url);
       if(alt && img.src !== alt){ img.src = alt; return; }
       el.innerHTML=''; el.textContent = String(name||'用').charAt(0); el.style.background = avColor(name||'');
     });
     img.src = url;
+    if(img.complete && img.naturalWidth > 0) img.style.opacity = '1';
     el.appendChild(img);
   } else {
     el.textContent = String(name||'用').charAt(0);
@@ -1014,12 +1024,50 @@ function xhrUpload(payload, jwt, onProg){
     xhr.send(JSON.stringify(payload));
   });
 }
+/* fix11-4b：图片按文件头真实字节判断格式，不信 file.type——
+   iPhone 的 HEIC 照片曾被标成 image/png 存成 .png，字节却是 HEVC，浏览器按 png 解码失败，
+   表现为「上传成功但头像不显示」。嗅探到 HEIC/AVIF 先在本机画布转成 JPEG 再传
+   （iOS Safari 能原生解码 HEIC 到画布）；转码失败回退原文件，由服务端嗅探拦下并给人话提示。 */
+async function sniffImageFormat(file){
+  try{
+    const b = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    if(b.length > 3 && b[0]===0xFF && b[1]===0xD8 && b[2]===0xFF) return 'jpeg';
+    if(b.length > 4 && b[0]===0x89 && b[1]===0x50 && b[2]===0x4E && b[3]===0x47) return 'png';
+    if(b.length > 3 && b[0]===0x47 && b[1]===0x49 && b[2]===0x46) return 'gif';
+    if(b.length > 12 && b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[3]===0x46 && b[8]===0x57 && b[9]===0x45 && b[10]===0x42 && b[11]===0x50) return 'webp';
+    if(b.length > 12 && b[4]===0x66 && b[5]===0x74 && b[6]===0x79 && b[7]===0x70){
+      const brand = String.fromCharCode(b[8], b[9], b[10], b[11]);
+      if(['heic','heix','hevc','mif1','msf1','heim','heis'].includes(brand)) return 'heic';
+      if(brand==='avif' || brand==='avis') return 'avif';
+    }
+  }catch(e){ /* 读不到文件头就当未知格式，交给后续流程 */ }
+  return '';
+}
+async function prepareImageUpload(file){
+  const fmt = await sniffImageFormat(file);
+  if(fmt !== 'heic' && fmt !== 'avif') return file;
+  try{
+    const url = URL.createObjectURL(file);
+    try{
+      const img = await new Promise((res, rej)=>{ const im = new Image(); im.onload = ()=>res(im); im.onerror = rej; im.src = url; });
+      const scale = Math.min(1, 1600 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+      cv.height = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      const blob = await new Promise(res=>cv.toBlob(res, 'image/jpeg', 0.88));
+      if(blob) return new File([blob], 'image.jpg', { type: 'image/jpeg' });
+    } finally { URL.revokeObjectURL(url); }
+  }catch(e){ /* 转码失败回退原文件，服务端会给明确提示 */ }
+  return file;
+}
 /* 通用媒体上传（头像 / Logo 用；发布面板有自己的 PUB 流程）：返回 { url, path } */
 async function uploadFileToMedia(file, kind){
   const maxMB = kind==='image' ? 5 : 10;
   if(file.size > maxMB*1024*1024) throw new Error('文件不能超过 '+maxMB+'MB');
   const { data } = await sb.auth.getSession();
   const jwt = data && data.session ? data.session.access_token : '';
+  if(kind === 'image') file = await prepareImageUpload(file);
   const dataUrl = await readFileDataUrl(file);
   const data_base64 = String(dataUrl).split(',')[1] || '';
   return xhrUpload({ kind, filename:file.name, mime:file.type, data_base64 }, jwt, null);
@@ -1092,7 +1140,7 @@ function applySiteIdentity(){
   const mark = document.querySelector('.brand-mark');
   if(mark){
     const logo = S.settings && S.settings.site_logo_url;
-    if(logo && isHttps(logo)){ mark.style.background = 'url("'+logo+'") center / cover no-repeat'; }
+    if(logo && isHttps(logo) && !/["'\s]/.test(logo)){ mark.style.background = 'url("'+logo+'") center / cover no-repeat'; }
     else { mark.style.background = ''; }
   }
   const desc = (S.settings && S.settings.site_desc) || '';
@@ -1114,14 +1162,17 @@ function nicknameError(v){
 }
 function usernameError(v){
   if(!v) return '用户名不能为空';
-  if(!/^[A-Za-z]{1,8}$/.test(v)) return '用户名只能是纯字母，1–8 位';
+  const lv = String(v).toLowerCase();
+  if(!/^[a-z0-9]{2,8}$/.test(lv) || !/[a-z]/.test(lv)) return '用户名只能是 2–8 位字母或数字组合，不能全是数字';
   return '';
 }
 /* 用户名占用预查：走公开视图按 username 不区分大小写精确匹配（纯字母无通配符风险）；
    登录状态下排除自己（改资料时与现用户名同名不算占用） */
 async function usernameTaken(uname){
-  const { data } = await sb.from('public_profiles').select('id,username').ilike('username', uname).limit(5);
-  return (data||[]).some(p=>p.username && p.username.toLowerCase()===String(uname).toLowerCase() && (!S.user || p.id!==S.user.id));
+  const u = String(uname||'').toLowerCase();
+  const { data } = await sb.from('public_profiles').select('id,username').ilike('username', u).limit(5);
+  if((data||[]).some(p=>p.username && p.username.toLowerCase()===u && (!S.user || p.id!==S.user.id))) return true;
+  return false;
 }
 
 async function loadProfile(){
@@ -1852,7 +1903,7 @@ function updateWorldEmpty(){
     worldEmptyNode = h('div','world-empty');
     const ico = h('div','we-ico');
     ico.innerHTML = '<svg width="92" height="92" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"><circle cx="10" cy="13" r="6.5"/><circle cx="17.5" cy="6.5" r="3.2"/><path d="M7.5 10.8a3.4 3.4 0 0 1 2-1.7"/></svg>';
-    worldEmptyNode.append(ico, h('div','we-tx','好气人，都没有泡泡｡°(°¯᷄◠¯᷅°)°｡'));
+    worldEmptyNode.append(ico, h('div','we-tx','好气人，都没有泡泡'));
     stage.appendChild(worldEmptyNode);
   }
   worldEmptyNode.classList.toggle('show', poolLoadedOk && visiblePool().length===0);
@@ -1910,6 +1961,13 @@ function clearDeepLinkParam(b){
     history.replaceState(null, '', location.origin + location.pathname);
   }catch(e){}
 }
+/* fix11-6：图片灯箱——全屏看原图（contain 不裁切），点任意处关闭 */
+function openLightbox(url){
+  const lb = $('lightbox'), im = $('lightboxImg');
+  im.onerror = ()=>{ const alt = altMediaUrl(url); if(alt && im.src !== alt) im.src = alt; };
+  im.src = url; lb.hidden = false;
+}
+$('lightbox').addEventListener('click', ()=>{ $('lightbox').hidden = true; $('lightboxImg').removeAttribute('src'); });
 function closeExpand(popFromWorld){
   /* fix10-2：打开后 450ms 内的关闭一律忽略——世界里点泡泡的同一次点按，pointerup
      先开层、紧随的 click 会被重定向到刚盖上来的遮罩触发背景关闭，泡泡还没看就爆了 */
@@ -1985,6 +2043,8 @@ async function openExpand(b, source){
       });
       img.src = b.media_url;
       wrap.appendChild(img);
+      wrap.style.cursor = 'zoom-in'; wrap.title = '点击查看原图';
+      wrap.addEventListener('click', ()=>openLightbox(b.media_url));
       body.appendChild(wrap);
     } else {
       const ph = h('div','expand-img'); ph.innerHTML = vIcon(VPATH.image, 54, 'rgba(255,255,255,.9)'); body.appendChild(ph);
@@ -2019,32 +2079,38 @@ async function openExpand(b, source){
      均为数据库真实计数）+ 右侧圆形图标钮（点赞/踩带数量角标、举报无角标、均无文字） */
   const expTx = (b.is_permanent || !b.expires_at) ? '永久保留' : (fmtDate(b.expires_at).slice(0,10)+' 自动归档');
   const mrow = h('div','expand-meta-row');
-  const chips = h('div','stat-chips');
-  const mkChip = (icon, val)=>{ const c = h('span','stat-chip'); c.innerHTML = vIcon(icon, 14); c.appendChild(h('b',null,String(val))); return c; };
-  chips.append(mkChip(VPATH.globe, b.show_count||0), mkChip(VPATH.search, (b.view_count||0)+1), h('span','stat-exp', expTx));
-  mrow.appendChild(chips);
+  /* fix11-5：出现/查看/点赞/踩/举报五钮统一圆形、统一大小（34px）、统一角标；
+     角标超过 99 显示 99+，但泡泡主人与管理员看真实数（详情数据不受封顶影响） */
+  const privileged = !!(S.user && (b.user_id===S.user.id || isAdmin()));
+  const fmtN = n=>{ n = Number(n)||0; return (privileged || n<=99) ? String(n) : '99+'; };
   const vts = h('div','circ-votes');
-  const mkCirc = (icon, count)=>{
-    const btn = h('button','circ-btn'); btn.type = 'button'; btn.innerHTML = vIcon(icon, 18);
+  const mkCirc = (icon, count, opts)=>{
+    opts = opts || {};
+    const btn = h('button','circ-btn'+(opts.stat ? ' stat' : '')); btn.type = 'button'; btn.innerHTML = vIcon(icon, 15);
     let badge = null;
-    if(count != null){ badge = h('span','cb-badge', String(count)); btn.appendChild(badge); }
+    if(count != null){ badge = h('span','cb-badge', fmtN(count)); btn.appendChild(badge); }
+    if(opts.title) btn.title = opts.title;
     vts.appendChild(btn); return { btn, badge };
   };
+  const showC = mkCirc(VPATH.globe, b.show_count||0, { stat:true, title:'在世界出现次数' });
+  const viewC = mkCirc(VPATH.search, (b.view_count||0)+1, { stat:true, title:'被查看次数' });
   const like = mkCirc(VPATH.thumbsUp, b.like_count||0);
   const dis = mkCirc(VPATH.footprints, b.dislike_count||0);
-  const rep2 = mkCirc(VPATH.circleAlert, null);
+  const rep2 = mkCirc(VPATH.circleAlert, b.report_count||0);
   if(S.user && b.user_id===S.user.id){ rep2.btn.disabled = true; }
   const syncVote = ()=>{
     like.btn.classList.toggle('liked', S.myReactions.get(b.id)==='like');
     dis.btn.classList.toggle('disliked', S.myReactions.get(b.id)==='dislike');
-    if(like.badge) like.badge.textContent = String(b.like_count||0);
-    if(dis.badge) dis.badge.textContent = String(b.dislike_count||0);
+    if(like.badge) like.badge.textContent = fmtN(b.like_count||0);
+    if(dis.badge) dis.badge.textContent = fmtN(b.dislike_count||0);
+    if(rep2.badge) rep2.badge.textContent = fmtN(b.report_count||0);
   };
   syncVote();
   like.btn.onclick = ()=>{ doReaction(b,'like').then(syncVote); };
   dis.btn.onclick = ()=>{ doReaction(b,'dislike').then(syncVote); };
   rep2.btn.onclick = ()=>doReport(b);
   mrow.appendChild(vts);
+  mrow.appendChild(h('span','stat-exp', expTx));
   foot.appendChild(mrow);
   /* 动作行 */
   const acts = h('div','expand-actions');
@@ -2422,6 +2488,7 @@ async function uploadMedia(file, t){
   try{
     const { data } = await sb.auth.getSession();
     const jwt = data && data.session ? data.session.access_token : '';
+    if(t === 'image') file = await prepareImageUpload(file);
     const dataUrl = await readFileDataUrl(file);
     const data_base64 = String(dataUrl).split(',')[1] || '';
     const json = await xhrUpload({ kind:t, filename:file.name, mime:file.type, data_base64 }, jwt, ratio=>setProg(Math.min(90, Math.round(ratio*90))));
@@ -2676,13 +2743,13 @@ function renderAuth(){
     const mailRequired = !!setGet('email_verify_required', true);
     title.textContent = mode==='in' ? '欢迎回来' : '创建账号';
     desc.textContent = mode==='in' ? '登录后可以签到、发泡泡、管理你的内容。' : '注册后可以签到、发泡泡、管理你的内容。';
-    note.style.display = mode==='up' ? '' : 'none';
+    note.style.display = (mode==='up' && setGet('email_verify_required', true)) ? '' : 'none';
     if(mode==='up'){
       noteTx.innerHTML = '';
-      noteTx.append(document.createTextNode('注册成功赠送 '), h('b',null,setGet('newbie_points',5)+' 积分'), document.createTextNode('新手礼。'));
       if(setGet('email_verify_required', true)) noteTx.append(document.createTextNode('当前开启'), h('b',null,'邮箱验证'), document.createTextNode('：验证邮件发出后，点邮件里的链接完成验证，才能发布和签到（此开关管理员可控）。'));
       const f1 = h('div','field'); f1.appendChild(h('label',null,'用户名'));
-      userIn = h('input'); userIn.type='text'; userIn.id='authUser'; userIn.maxLength=8; userIn.placeholder='纯字母，1–8 位'; f1.appendChild(userIn);
+      userIn = h('input'); userIn.type='text'; userIn.id='authUser'; userIn.maxLength=8; userIn.placeholder='2–8 位，字母或字母+数字'; f1.appendChild(userIn);
+      userIn.addEventListener('input', ()=>{ const l = userIn.value.toLowerCase(); if(l!==userIn.value) userIn.value = l; });
       form.appendChild(f1);
     }
     if(mode==='in' || mailRequired || regFallback){
@@ -2701,7 +2768,7 @@ function renderAuth(){
       if(mode==='up' && !mailRequired && !regFallback){
         /* 免邮箱注册：POST /api/register 建号（内部邮箱由服务端生成），成功后
            立刻用同一用户名+密码走用户名登录路径（/api/login + setSession） */
-        const uname = userIn ? userIn.value.trim() : '';
+        const uname = userIn ? userIn.value.trim().toLowerCase() : '';
         if(!uname || !pass){ toast('用户名和密码都要填'); return; }
         if(pass.length < 6){ toast('密码至少 6 位'); return; }
         const ue0 = usernameError(uname); if(ue0){ toast(ue0); return; }
@@ -2752,24 +2819,22 @@ function renderAuth(){
           const { error } = await sb.auth.signInWithPassword({ email: acct, password: pass });
           setFree();
           if(error){ toast(errText(error)); return; }
-        } else if(/^[A-Za-z]+$/.test(acct) || /^\d+$/.test(acct)){
+        } else {
           /* 用户名 / ID 登录：走 Netlify 函数 /api/login 换回 Supabase 会话令牌，
              再 setSession 接回原有登录后流程（loadProfile、封禁判断等都在 afterAuth 里） */
           let res = null;
           try{
-            const r = await fetch(MEDIA_API+'/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ account: acct, password: pass }) });
+            const r = await fetch(MEDIA_API+'/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ account: acct.includes('@') ? acct : acct.toLowerCase(), password: pass }) });
             res = await r.json();
           }catch(e){ setFree(); toast('登录服务暂时不可用，请改用邮箱登录'); return; }
           if(!res || res.error || !res.access_token || !res.refresh_token){ setFree(); toast(res && res.error ? res.error : '登录失败，请重试'); return; }
           const { error } = await sb.auth.setSession({ access_token: res.access_token, refresh_token: res.refresh_token });
           setFree();
           if(error){ toast(errText(error)); return; }
-        } else {
-          setFree(); toast('账号格式不对：填用户名、ID 或邮箱'); return;
         }
         toast('登录成功'); await afterAuth();
       } else {
-        const uname = userIn ? userIn.value.trim() : '';
+        const uname = userIn ? userIn.value.trim().toLowerCase() : '';
         const ue = usernameError(uname);
         if(ue){ toast(ue); setFree(); return; }
         if(await usernameTaken(uname)){ toast('用户名「'+uname+'」已被占用，换一个'); setFree(); return; }
@@ -2882,6 +2947,9 @@ function openAccountModal(){
       if(S.profile) S.profile.avatar_url = res.url;
       S.authors.delete(S.user.id);
       fillAvatar(avPrev, p.nickname||'用', res.url);
+      /* fix11-4：同步刷新弹窗身后页面上的本人头像（账号信息页/我的页头像卡），不必重开页面 */
+      if(document.querySelector('.profile-card')) renderAccount();
+      else if(S.view==='mine') renderMine();
       toast('头像已更新');
     }catch(e){ toast(errText(e)); }
     avBtn.disabled = false; avBtn.textContent = '更换头像'; avFile.value='';
@@ -2899,12 +2967,13 @@ function openAccountModal(){
   body.appendChild(nf);
   /* 用户名：可登录，纯字母 1–8 位、唯一不区分大小写；老账号没设置的在这里补设 */
   const uf = h('div','field'); uf.appendChild(h('label',null,'用户名'));
-  const userIn = h('input'); userIn.type='text'; userIn.maxLength=8; userIn.value=p.username||''; userIn.placeholder='纯字母，1–8 位'; uf.appendChild(userIn);
-  const userHint = h('div','hint', p.username ? '可用于登录，改名后旧用户名立即失效' : '还没设置用户名：纯字母 1–8 位，设置后可用于登录'); uf.appendChild(userHint);
+  const userIn = h('input'); userIn.type='text'; userIn.maxLength=8; userIn.value=p.username||''; userIn.placeholder='2–8 位，字母或字母+数字'; uf.appendChild(userIn);
+  const userHint = h('div','hint', p.username ? '可用于登录，改名后旧用户名立即失效' : '还没设置用户名：2–8 位字母或字母+数字，设置后可用于登录'); uf.appendChild(userHint);
   let userCheckTimer = null;
   userIn.addEventListener('input', ()=>{
+    const low = userIn.value.toLowerCase(); if(low!==userIn.value) userIn.value = low;
     const v = userIn.value.trim();
-    if(!v && !(p.username||'')){ userHint.textContent='还没设置用户名：纯字母 1–8 位，设置后可用于登录'; userHint.style.color=''; return; }
+    if(!v && !(p.username||'')){ userHint.textContent='还没设置用户名：2–8 位字母或字母+数字，设置后可用于登录'; userHint.style.color=''; return; }
     const e = usernameError(v);
     if(e){ userHint.textContent = e; userHint.style.color='var(--accent)'; return; }
     if(v.toLowerCase() === String(p.username||'').toLowerCase()){ userHint.textContent='可用于登录，改名后旧用户名立即失效'; userHint.style.color=''; return; }
@@ -2979,7 +3048,7 @@ function openAccountModal(){
     const nv = nickIn.value.trim();
     const ne = nicknameError(nv);
     if(ne){ toast(ne); return; }
-    const uv = userIn.value.trim(), curU = p.username||'';
+    const uv = userIn.value.trim().toLowerCase(), curU = p.username||'';
     const unameChanged = uv.toLowerCase() !== curU.toLowerCase();
     if(unameChanged){
       const ue = usernameError(uv);
@@ -3638,6 +3707,7 @@ async function renderAdminUsers(kwVal){
   /* 类型防御：历史上这里被 menuRow 的 onclick 直接调用、收到过 PointerEvent，
      非字符串一律当空搜索（搜索框绝不许再出现 [object PointerEvent]） */
   if(typeof kwVal !== 'string') kwVal = '';
+  ADMIN_DETAIL_NO = 0;
   S.view='admin'; showPage('admin');
   const seq = ++viewSeq;
   pagerReset('adminUsers');
@@ -3677,7 +3747,9 @@ async function renderAdminUsers(kwVal){
   ACACHE.users[kwv] = data||[];
   paint(ACACHE.users[kwv]);
 }
+let ADMIN_DETAIL_NO = 0; /* 当前正打开的用户详情编号：赠送成功后据此决定留在详情还是回列表 */
 function renderAdminUserDetail(u){
+  ADMIN_DETAIL_NO = u.user_no;
   S.view='admin'; showPage('admin');
   const wrap = $('pageWrap'); wrap.innerHTML='';
   const panel = h('div','admin-panel');
@@ -3769,7 +3841,7 @@ function openAdminEditUser(u){
   const ca = h('button','btn btn-ghost','取消'); ca.onclick=closeModal;
   const ok = h('button','btn btn-blue','保存');
   ok.onclick = async ()=>{
-    const nv = nickIn.value.trim(), uv = userIn.value.trim();
+    const nv = nickIn.value.trim(), uv = userIn.value.trim().toLowerCase();
     const ne = nicknameError(nv); if(ne){ toast(ne); return; }
     const ue = usernameError(uv); if(ue){ toast(ue); return; }
     const emailVal = emailIn.value.trim();
@@ -3831,7 +3903,10 @@ function openGift(u){
     const { error } = await sb.rpc('admin_gift_points',{ p_user_no:u.user_no, p_amount:Math.floor(finalAmt), p_note:note.value.trim()||null });
     if(error){ toast(errText(error)); return; }
     ACACHE.users = {}; ACACHE.home = null;
-    toast(finalAmt>0 ? '已赠送 '+Math.floor(finalAmt)+' 积分' : '已扣除 '+Math.abs(Math.floor(finalAmt))+' 积分'); renderAdminUsers('');
+    u.points = (u.points||0) + Math.floor(finalAmt); /* 详情页就地同步新余额 */
+    toast(finalAmt>0 ? '已赠送 '+Math.floor(finalAmt)+' 积分' : '已扣除 '+Math.abs(Math.floor(finalAmt))+' 积分');
+    /* fix11-2：从用户详情打开的赠送，确定后关弹窗留在详情（按新余额重渲染）；从列表打开的才回列表 */
+    if(ADMIN_DETAIL_NO && ADMIN_DETAIL_NO === u.user_no) renderAdminUserDetail(u); else renderAdminUsers('');
   };
   btns.append(ca, ok); card.appendChild(btns); openModal(card);
 }
