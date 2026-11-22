@@ -244,8 +244,11 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
    不再出现「打开只见一层模糊、以为泡泡没了」的观感；点遮罩空白处也能关（见脚本 closeAnnounce） */
 #announceOverlay{background:rgba(20,20,25,.26); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); cursor:pointer}
 #announceOverlay .announce-card{cursor:default}
-.expand-card{width:min(92vw,520px); max-height:86vh; overflow-y:auto; background:var(--card); border-radius:26px; box-shadow:var(--shadow-lg);
-  padding:26px 24px 22px; animation:pop .32s cubic-bezier(.2,1.4,.4,1)}
+/* fix7-3：展开卡改纵向 flex——正文区 .expand-scroll 独立滚动，底部动作区固定不随内容滚走；
+   内边距从卡本人移到滚动区/动作区，卡只负责圆角、限高与裁剪 */
+.expand-card{width:min(92vw,520px); max-height:86vh; background:var(--card); border-radius:26px; box-shadow:var(--shadow-lg);
+  padding:0; display:flex; flex-direction:column; overflow:hidden; animation:pop .32s cubic-bezier(.2,1.4,.4,1)}
+.expand-scroll{flex:1 1 auto; min-height:0; overflow-y:auto; padding:26px 24px 46px; -webkit-overflow-scrolling:touch}
 @keyframes pop{from{transform:scale(.55); opacity:0}to{transform:scale(1); opacity:1}}
 .expand-meta{display:flex; align-items:center; gap:10px; margin-bottom:14px}
 .avatar{width:42px; height:42px; border-radius:50%; flex:none; display:grid; place-items:center; color:#fff; font-weight:800; font-size:17px}
@@ -312,7 +315,15 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .video-box{width:100%; aspect-ratio:16/9; border-radius:18px; background:#000; display:grid; place-items:center; color:#fff; position:relative; overflow:hidden; margin-bottom:14px}
 .video-box .v-play{width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.22); backdrop-filter:blur(6px); display:grid; place-items:center}
 .video-box small{position:absolute; bottom:10px; left:12px; font-size:11px; background:rgba(0,0,0,.45); padding:3px 9px; border-radius:999px}
-.expand-actions{display:flex; gap:10px; margin-top:18px}
+/* fix7-3：动作区固定卡底（flex:none）+ 毛玻璃底；上沿 ::before 是 36px 渐变 veil——
+   从透明渐入与动作区同色的雾面，mask 让模糊本身也渐入，正文从下方滚过时渐渐没入雾里 */
+.expand-actions{display:flex; gap:10px; flex:none; position:relative; z-index:3; padding:14px 24px 20px;
+  background:color-mix(in srgb, var(--card) 86%, transparent);
+  backdrop-filter:blur(16px) saturate(160%); -webkit-backdrop-filter:blur(16px) saturate(160%)}
+.expand-actions::before{content:''; position:absolute; left:0; right:0; top:-36px; height:36px; pointer-events:none;
+  background:linear-gradient(to bottom, transparent, color-mix(in srgb, var(--card) 86%, transparent));
+  backdrop-filter:blur(16px) saturate(160%); -webkit-backdrop-filter:blur(16px) saturate(160%);
+  -webkit-mask-image:linear-gradient(to bottom, transparent, #000 85%); mask-image:linear-gradient(to bottom, transparent, #000 85%)}
 .expand-actions .btn{flex:1}
 .btn-fav{border:1px solid var(--line); background:var(--card2); color:var(--ink2)}
 .btn-fav.on{background:rgba(255,159,10,.14); border-color:rgba(255,159,10,.45); color:var(--orange)}
@@ -615,7 +626,8 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
   .expand-actions{gap:7px}
   .expand-actions .btn{font-size:13px; padding:10px 4px}
   .vote-btn{font-size:11px; gap:3px; padding:5px 3px}
-  .expand-card{padding:22px 16px 18px}
+  .expand-scroll{padding:22px 16px 44px}
+  .expand-actions{padding-left:16px; padding-right:16px}
 }
 /* 第 3 条：筛选按钮只在世界显示——离开世界时按钮收缩消失，积分胶囊随 flex 布局动画滑到它的位置 */
 .filter-toggle{transition:background .2s, color .2s, opacity .3s ease, transform .3s ease, width .3s ease, margin-left .3s ease, padding .3s ease, border-color .3s ease; overflow:hidden}
@@ -677,9 +689,20 @@ body.in-page .filter-drawer{display:none !important}
 /* ---------- fix6-2：图片懒加载——到位前微光扫过占位，到位后淡入；缓存秒开不闪 ---------- */
 img.lz{opacity:0; transition:opacity .5s ease}
 img.lz.lz-in{opacity:1}
-.expand-photo.lz-wait{min-height:180px; background:linear-gradient(100deg, rgba(120,120,128,.13) 40%, rgba(120,120,128,.30) 50%, rgba(120,120,128,.13) 60%); background-size:200% 100%; animation:lzShimmer 1.15s linear infinite}
+/* fix7-2：展开大图的占位改由外层容器 .expand-photo-wrap + 独立占位层 .photo-ph 承担。
+   旧版把微光背景挂在 img 本人（.expand-photo.lz-wait）身上，而 img.lz{opacity:0} 把占位
+   连同图片一起藏掉，加载期间用户什么都看不到、等于没占位。现在占位层是不透明元素：
+   微光扫过 + 居中小泡泡加载动画（与全站 page-loading 同款），图到位淡入、占位淡出后移除 */
+.expand-photo-wrap{position:relative; border-radius:14px; overflow:hidden; margin-bottom:12px}
+.expand-photo-wrap.waiting{min-height:200px}
+.expand-photo-wrap .expand-photo{margin-bottom:0}
+.photo-ph{position:absolute; inset:0; z-index:2; display:grid; place-items:center;
+  background:linear-gradient(100deg, rgba(120,120,128,.13) 40%, rgba(120,120,128,.30) 50%, rgba(120,120,128,.13) 60%);
+  background-size:200% 100%; animation:lzShimmer 1.15s linear infinite; transition:opacity .45s ease}
+.photo-ph.out{opacity:0; pointer-events:none}
+.photo-ph .page-loading{padding:0}
 @keyframes lzShimmer{from{background-position:180% 0}to{background-position:-80% 0}}
-@media (prefers-reduced-motion: reduce){ .expand-photo.lz-wait{animation:none} img.lz{transition:none} }
+@media (prefers-reduced-motion: reduce){ .photo-ph{animation:none} img.lz{transition:none} }
 /* ---------- fix6-4：管理员后台分组折叠（窄屏默认收起，点标题行展开/收起） ---------- */
 .fold-sec{margin-top:16px}
 .fold-head{display:flex; align-items:center; gap:8px; width:100%; padding:2px; font-size:15px; font-weight:700; color:var(--ink); background:none; border:none; text-align:left; cursor:pointer; font-family:inherit}
@@ -1026,7 +1049,11 @@ async function loadMyMarks(){
 async function authorsFor(rows){
   const ids=[...new Set(rows.map(r=>r.user_id).filter(id=>!S.authors.has(id)))];
   if(ids.length){
-    const { data } = await sb.from('profiles').select('id,user_no,nickname,role,avatar_url').in('id', ids);
+    /* 作者公开信息走 public_profiles 视图（fix7-1）：profiles 表 RLS 只放行本人与管理员，
+       未登录/普通用户查不到别人的昵称编号，泡泡表面与展开层只剩默认「用户」；
+       视图只暴露 id/user_no/nickname/avatar_url/role 且授权 anon+authenticated 读。
+       本人资料与管理员后台（要邮箱/积分/封禁）仍走 profiles，不经这里 */
+    const { data } = await sb.from('public_profiles').select('id,user_no,nickname,role,avatar_url').in('id', ids);
     (data||[]).forEach(p=>S.authors.set(p.id,p));
   }
 }
@@ -1773,6 +1800,8 @@ async function openExpand(b, source){
   await authorsFor([b]);
   const a = authorOf(b);
   const card = $('expandCard'); card.innerHTML='';
+  /* fix7-3：卡内分两层——.expand-scroll 承接全部正文并独立滚动，动作区单独挂卡底固定不滚 */
+  const body = h('div','expand-scroll'); card.appendChild(body);
   /* 头部：与小样 expand-meta 同结构（头像 + who + 右列标签/时间） */
   const meta = h('div','expand-meta');
   const av = h('span','avatar'); fillAvatar(av, b.is_demo ? 'DEMO' : (a.nickname||'用户'), b.is_demo ? '' : a.avatar_url);
@@ -1789,22 +1818,34 @@ async function openExpand(b, source){
   else if((b.report_count||0) > 0) prio = tagEl('report-tag','被举报 '+(b.report_count||0)+' 次 · 低优先');
   else { prio = tagEl('',''); prio.style.cssText='background:rgba(255,159,10,.16);color:var(--orange)'; prio.textContent = b.cost+' 积分 · '+TYPE_META[b.type].name; }
   mr.append(prio, h('small','who-time', fmtTimeShort(b.created_at)+' 发布'));
-  meta.append(av, who, mr); card.appendChild(meta);
+  meta.append(av, who, mr); body.appendChild(meta);
   /* 内容 */
-  if(b.type==='text'){ card.appendChild(h('div','expand-body', b.content||'')); }
+  if(b.type==='text'){ body.appendChild(h('div','expand-body', b.content||'')); }
   else if(b.type==='image'){
     if(isHttps(b.media_url)){
-      const img = h('img','expand-photo'); img.alt=''; wireLazyImg(img); img.src=b.media_url;
+      /* fix7-2：图片包一层 .expand-photo-wrap，等待态由独立占位层 .photo-ph 承担
+         （微光 + 小泡泡动画，先接入 DOM 再赋 src，保证 load 不漏接）；
+         图 load 后容器撤 waiting、占位淡出并移除；缓存秒开时 load 照样触发、占位不闪 */
+      const wrap = h('div','expand-photo-wrap waiting');
+      const ph = h('div','photo-ph'); ph.appendChild(pageLoadingEl()); wrap.appendChild(ph);
+      const img = h('img','expand-photo'); img.alt=''; wireLazyImg(img);
+      img.addEventListener('load', ()=>{
+        wrap.classList.remove('waiting');
+        ph.classList.add('out');
+        setTimeout(()=>{ if(ph.parentNode) ph.parentNode.removeChild(ph); }, 500);
+      });
       img.addEventListener('error', ()=>{
-        const ph = h('div','expand-img'); ph.innerHTML = vIcon(VPATH.image, 54, 'rgba(255,255,255,.9)');
-        if(img.parentNode) img.parentNode.replaceChild(ph, img);
+        const phEl = h('div','expand-img'); phEl.innerHTML = vIcon(VPATH.image, 54, 'rgba(255,255,255,.9)');
+        if(wrap.parentNode) wrap.parentNode.replaceChild(phEl, wrap);
         toast('图片链接失效，已显示占位');
       });
-      card.appendChild(img);
+      img.src = b.media_url;
+      wrap.appendChild(img);
+      body.appendChild(wrap);
     } else {
-      const ph = h('div','expand-img'); ph.innerHTML = vIcon(VPATH.image, 54, 'rgba(255,255,255,.9)'); card.appendChild(ph);
+      const ph = h('div','expand-img'); ph.innerHTML = vIcon(VPATH.image, 54, 'rgba(255,255,255,.9)'); body.appendChild(ph);
     }
-    if(b.content) card.appendChild(h('div','expand-body', b.content));
+    if(b.content) body.appendChild(h('div','expand-body', b.content));
   }
   else if(b.type==='audio'){
     const box = h('div','audio-box');
@@ -1815,14 +1856,14 @@ async function openExpand(b, source){
     if(isHttps(b.media_url)) box.appendChild(buildVoiceBar(b.media_url, durTx));
     else { box.appendChild(h('div','expand-body','音频链接已失效')); durTx.textContent=''; }
     box.appendChild(hint);
-    card.appendChild(box);
+    body.appendChild(box);
   }
   else if(b.type==='video'){
     const wrap = h('div','expand-player');
     if(/\.m3u8($|\?)/i.test(b.media_url||'')) wrap.appendChild(h('span','hls-tag','HLS · m3u8'));
-    card.appendChild(wrap);
+    body.appendChild(wrap);
     buildVideoPlayer(wrap, b.media_url);
-    if(b.content) card.appendChild(h('div','expand-body', b.content));
+    if(b.content) body.appendChild(h('div','expand-body', b.content));
   }
   /* 点赞 / 踩 / 举报 */
   const votes = h('div','vote-row');
@@ -1852,13 +1893,13 @@ async function openExpand(b, source){
   like.btn.onclick = ()=>{ doReaction(b,'like').then(syncVote); };
   dis.btn.onclick = ()=>{ doReaction(b,'dislike').then(syncVote); };
   rep.btn.onclick = ()=>doReport(b);
-  card.appendChild(votes);
+  body.appendChild(votes);
   /* 出现 / 查看统计 */
   const stat = h('div','stat-line');
   const s1 = h('span'); s1.append(document.createTextNode('在世界出现 '), h('b',null,String(b.show_count||0)), document.createTextNode(' 次'));
   const s2 = h('span'); s2.append(document.createTextNode('被查看 '), h('b',null,String((b.view_count||0)+1)), document.createTextNode(' 次'));
   stat.append(s1, s2, h('span',null, b.is_permanent ? '永久泡泡不会过期归档' : '30 天后自动归档'));
-  card.appendChild(stat);
+  body.appendChild(stat);
   /* 动作行 */
   const acts = h('div','expand-actions');
   if(S.user && (b.user_id===S.user.id || isAdmin())){
