@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>泡泡世界</title>
+<!-- Video.js 10（官方 CDN 片段，HLS 走 hls.js 引擎） -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/cdn@10.5.0/video.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/cdn@10.5.0/media/hlsjs-video.js"></script>
 <style>
 :root{
   --bg:#F5F5F7; --card:#FFFFFF; --card2:#FBFBFD;
@@ -281,13 +284,11 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
   background:linear-gradient(135deg,#38BDF8,#818CF8 55%,#E879F9); position:relative; overflow:hidden}
 .expand-photo{width:100%; display:block; border-radius:14px; margin-bottom:12px; background:rgba(120,120,128,.12); max-height:40vh; object-fit:cover}
 .expand-video{width:100%; aspect-ratio:16/9; background:#000; border-radius:18px; margin-bottom:14px; display:block; object-fit:contain}
-/* Video.js 10 容器：与原生视频同尺寸同圆角；播放器是 Web 组件
-   <video-player><video-skin>…</video-skin></video-player>，由远程模块脚本注册后在容器内升级渲染，
-   皮肤强调色对齐全站蓝色（--media-accent-color 是 v10 皮肤的官方主题变量） */
-.expand-player{position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:18px; margin-bottom:14px; overflow:hidden}
-.expand-player video-player{display:block; width:100%; height:100%}
-.expand-player video-skin{display:block; width:100%; height:100%; --media-accent-color:#0071E3; --media-border-radius:0px}
-.expand-player video-skin video,.expand-player video-skin hls-video,.expand-player video-skin hlsjs-video{display:block; width:100%; height:100%; background:#000}
+/* Video.js 10 播放器（样式规则与影视页相同：播放器本体直角，圆角由 .expand-player 容器 overflow 裁剪） */
+.expand-player{position:relative; width:100%; background:#000; border-radius:18px; margin-bottom:14px; overflow:hidden}
+.expand-player video-player, .expand-player video-skin{display:block; width:100%}
+.expand-player video-player, .expand-player video-skin, .expand-player hlsjs-video{border-radius:0 !important; --media-border-radius:0; --border-radius:0}
+.expand-player video-skin{width:min(100%,111vh) !important; margin-inline:auto}
 .expand-player .hls-tag{position:absolute; top:10px; left:10px; z-index:5; font-size:10px; font-weight:800; letter-spacing:.06em; color:#fff; background:rgba(250,36,60,.85); padding:2px 8px; border-radius:999px; pointer-events:none}
 .media-file-line{font-size:11px; color:var(--ink3); margin-top:8px; word-break:break-all}
 /* 发布媒体区精简成一行：上传按钮与链接输入同行，已选文件时整行换成文件信息行（同高），
@@ -2297,52 +2298,23 @@ function buildVoiceBar(url, durEl){
   return bar;
 }
 
-/* ---------- Video.js 10（videojs.org 新款，远程组件） ---------- */
-let vjs10Loading = null;
-function loadVjs10(){
-  if(window.customElements && customElements.get('video-player')) return Promise.resolve(true);
-  if(vjs10Loading) return vjs10Loading;
-  vjs10Loading = new Promise(resolve=>{
-    const css = document.createElement('link'); css.rel='stylesheet';
-    css.href='https://cdn.jsdelivr.net/npm/@videojs/cdn@10.5.0/video.css'; /* fix18：包里没有 dist 目录，文件在包根目录（原 dist 路径 404，播放器从未加载成功过） */
-    document.head.appendChild(css);
-    const s1 = document.createElement('script'); s1.type='module';
-    s1.src='https://cdn.jsdelivr.net/npm/@videojs/cdn@10.5.0/video.js';
-    const s2 = document.createElement('script'); s2.type='module';
-    s2.src='https://cdn.jsdelivr.net/npm/@videojs/cdn@10.5.0/media/hlsjs-video.js';
-    let done=false; const fin=ok=>{ if(!done){ done=true; resolve(ok); } };
-    s2.onerror=()=>fin(false); s1.onerror=()=>fin(false);
-    /* 成功以 video-player 真正注册为准（模块脚本 onload 不等于组件已定义） */
-    if(window.customElements && customElements.whenDefined) customElements.whenDefined('video-player').then(()=>fin(true)).catch(()=>{});
-    document.head.append(s1, s2);
-    setTimeout(()=>fin(!!(window.customElements && customElements.get('video-player'))), 8000);
-  });
-  return vjs10Loading;
-}
-async function buildVideoPlayer(wrap, url){
+/* ---------- Video.js 10（与影视页完全相同的接法：head 静态引入 10.5.0，video-player > video-skin > hlsjs-video，src 用 setAttribute） ---------- */
+function buildVideoPlayer(wrap, url){
   if(!isHttps(url)){
     const box = h('div','video-box');
-    const vp = h('span','v-play'); vp.innerHTML = vIcon('<polygon points="6 3 20 12 6 21 6 3"/>', 26, '#fff', true);
+    const vp = h('span','v-play'); vp.innerHTML = vIcon('<polygon points=\"6 3 20 12 6 21 6 3\"/>', 26, '#fff', true);
     box.append(vp, h('small',null,'视频链接已失效'));
     wrap.replaceWith(box); return;
   }
-  const ok = await loadVjs10().catch(()=>false);
-  if(!document.body.contains(wrap)) return;
-  if(ok){
-    const isHls = /\.m3u8($|\?)/i.test(url);
-    const player = document.createElement('video-player');
-    const skin = document.createElement('video-skin');
-    const media = document.createElement(isHls ? 'hlsjs-video' : 'video');
-    media.setAttribute('src', url);
-    media.setAttribute('playsinline','');
-    skin.appendChild(media); player.appendChild(skin);
-    wrap.appendChild(player); EX.vjsEl = player;
-    media.addEventListener('error', ()=>{ wrap.innerHTML=''; wrap.appendChild(h('div','media-file-line','视频链接已失效')); }, { once:true });
-  } else {
-    const v = h('video','expand-video'); v.src=url; v.controls=true; v.playsInline=true; v.setAttribute('playsinline','');
-    v.addEventListener('error', ()=>{ wrap.innerHTML=''; wrap.appendChild(h('div','media-file-line','视频链接已失效')); }, { once:true });
-    wrap.appendChild(v); EX.vjsEl = v;
-  }
+  const player = document.createElement('video-player');
+  const skin = document.createElement('video-skin');
+  skin.setAttribute('style', 'display: block; width: 100%; aspect-ratio: 16 / 9; --media-controls-before-start: visible;');
+  const media = document.createElement('hlsjs-video');
+  media.setAttribute('playsinline','');
+  media.addEventListener('error', ()=>{ wrap.innerHTML=''; wrap.appendChild(h('div','media-file-line','视频链接已失效')); }, { once:true });
+  try { media.setAttribute('src', url); } catch(e){ /* 播放器组件未就绪时忽略 */ }
+  skin.appendChild(media); player.appendChild(skin);
+  wrap.appendChild(player); EX.vjsEl = player;
 }
 </script>
 <script>
