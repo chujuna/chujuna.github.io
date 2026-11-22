@@ -1922,12 +1922,14 @@ async function doFavorite(b, btn, txEl){
   if(txEl) txEl.textContent = S.myFavorites.has(b.id) ? '已收藏' : '收藏';
 }
 function shareUrlFor(b){
-  /* 分享参数优先用 8 位短码 share_code；老数据没有短码时回退 UUID */
-  const code = (b && b.share_code) ? b.share_code : b.id;
-  return location.origin + location.pathname + '?b=' + encodeURIComponent(code);
+  /* 分享参数只用 8 位短码 share_code（测试阶段，不再兼容旧 UUID 链接）；
+     万一数据没有短码，返回空串——绝不生成带长 ID 的链接，由 doShare 提示 */
+  if(!b || !b.share_code) return '';
+  return location.origin + location.pathname + '?b=' + encodeURIComponent(b.share_code);
 }
 function doShare(b){
   const url = shareUrlFor(b);
+  if(!url){ toast('这条泡泡暂时无法生成分享链接'); return; }
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(url).then(()=>toast('链接已复制，去分享吧')).catch(()=>toast(url));
   } else toast(url);
@@ -3837,20 +3839,13 @@ setTimeout(hideBoot, 3200);
 async function deepLink(){
   const param = new URLSearchParams(location.search).get('b');
   if(!param) return;
-  if(/^[A-Za-z0-9]{8}$/.test(param)){
-    /* 8 位短码：先在已加载池子里按 share_code 找，省一次查询 */
-    const inPool = S.pool.find(b=>b.share_code===param);
-    if(inPool){ openExpand(inPool, 'link'); return; }
-    /* 不在池里（不在首屏范围内）时按短码查库，连作者信息一起补齐后打开 */
-    const { data } = await sb.from('bubbles').select('*').eq('share_code', param).single();
-    if(!data || data.deleted_at || data.status!=='visible'){ toast('这个泡泡已不可见'); return; }
-    await authorsFor([data]);
-    S.poolById.set(data.id, data);
-    openExpand(data, 'link');
-    return;
-  }
-  /* 旧格式 UUID（带连字符）：仍按 id 打开，保证以前发出的老链接不失效 */
-  const { data } = await sb.from('bubbles').select('*').eq('id', param).single();
+  /* 只认 8 位短码（测试阶段，不再兼容旧 UUID 链接）：格式不对与查不到短码同等处理 */
+  if(!/^[A-Za-z0-9]{8}$/.test(param)){ toast('这个泡泡已不可见'); return; }
+  /* 先在已加载池子里按 share_code 找，省一次查询 */
+  const inPool = S.pool.find(b=>b.share_code===param);
+  if(inPool){ openExpand(inPool, 'link'); return; }
+  /* 不在池里（不在首屏范围内）时按短码查库，连作者信息一起补齐后打开 */
+  const { data } = await sb.from('bubbles').select('*').eq('share_code', param).single();
   if(!data || data.deleted_at || data.status!=='visible'){ toast('这个泡泡已不可见'); return; }
   await authorsFor([data]);
   S.poolById.set(data.id, data);
