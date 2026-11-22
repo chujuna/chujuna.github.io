@@ -89,9 +89,9 @@ svg{display:block}
 .btn-primary{background:var(--ink); color:var(--bg)}
 @media (prefers-color-scheme: dark){ .btn-primary{background:#F5F5F7; color:#000} }
 .btn-blue{background:var(--blue); color:#fff}
-/* 签到按钮禁用态（今日已签到 / 账号被封禁）：灰底灰字、不可点击 */
-.checkin-btn:disabled{background:#E4E4E7; color:#8E8E93; transform:none; cursor:not-allowed}
-@media (prefers-color-scheme: dark){ .checkin-btn:disabled{background:#2C2C2E; color:#636366} }
+/* 按钮禁用态（已签到 / 被封禁 / 不可用）：灰底灰字、不可点击，全站统一 */
+.btn:disabled{background:#E4E4E7; color:#8E8E93; transform:none; cursor:not-allowed}
+@media (prefers-color-scheme: dark){ .btn:disabled{background:#2C2C2E; color:#636366} }
 .btn-ghost{background:var(--card); border:1px solid var(--line); color:var(--ink)}
 .btn-danger{background:var(--accent); color:#fff}
 .btn[disabled]{opacity:.45; pointer-events:none}
@@ -2940,6 +2940,7 @@ function renderAccount(){
   card.appendChild(kvs);
   const editBtn = h('button','btn btn-blue','修改资料'); editBtn.style.cssText='width:100%; min-height:48px; margin-top:18px';
   editBtn.onclick = ()=>openAccountModal(); /* 第二段：点「修改资料」才打开编辑弹窗 */
+  if(banned()) editBtn.disabled = true; /* 封禁：只能浏览，资料不可改 */
   card.appendChild(editBtn);
   const out = h('button','btn btn-ghost','退出登录'); out.style.cssText='width:100%; min-height:46px; margin-top:10px; color:var(--accent)';
   out.onclick = ()=>confirmBox('退出登录？','退出后需要重新登录才能发布和签到。','退出',false, async ()=>{ await sb.auth.signOut(); S.user=null; S.profile=null; resetCache(); updatePointsCap(); toast('已退出'); renderMine(); showWorld(); });
@@ -2960,6 +2961,7 @@ function renderAccount(){
 /* ---------- 修改资料弹窗（两段式第二段：只含编辑项，保存后回账号信息页刷新） ---------- */
 function openAccountModal(){
   if(!S.user){ renderAuth(); return; }
+  if(banned()){ toast('账号已被封禁，不能修改资料'); return; }
   const p = S.profile || {};
   /* 与系统设置同一套三段式弹窗：sm-head 固定、sm-body 滚动、sm-foot 固定 */
   const mc = h('div','confirm-card set-modal');
