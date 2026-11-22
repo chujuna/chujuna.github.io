@@ -682,6 +682,8 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 /* ---------- 正式版补充（小样未覆盖到的正式版元素，参数与小样同源） ---------- */
 .copyright{max-width:1080px; margin:14px auto 0; font-size:12px; color:var(--ink3); text-align:center}
 #modalOverlay.announce-mode{background:rgba(20,20,25,.26); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
+/* 公告独立层：不借用通用弹窗，预览/展示都不影响下层正在编辑的设置弹窗 */
+#noticeOverlay{z-index:150; background:rgba(20,20,25,.26); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
 .field input[type=password],.field input[type=email],.field input[type=number]{width:100%; border:1px solid var(--line); background:var(--card); border-radius:12px; padding:12px 14px; outline:none}
 .field input[type=password]:focus,.field input[type=email]:focus,.field input[type=number]:focus{border-color:var(--blue)}
 .unread-dot{width:9px; height:9px; border-radius:50%; background:var(--accent); flex:none}
@@ -866,6 +868,7 @@ img.lz.lz-in{opacity:1}
 
 <!-- 通用弹窗 -->
 <div class="overlay" id="modalOverlay"><div id="modalBox"></div></div>
+<div class="overlay" id="noticeOverlay"><div id="noticeBox"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
@@ -1109,6 +1112,8 @@ function openModal(node){ const o=$('modalOverlay'), b=$('modalBox'); b.innerHTM
 let modalOnClose = null;
 function closeModal(){ const o=$('modalOverlay'); o.classList.remove('show'); o.classList.remove('announce-mode'); $('modalBox').innerHTML=''; if(modalOnClose){ const f=modalOnClose; modalOnClose=null; try{ f(); }catch(e){} } }
 $('modalOverlay').addEventListener('click', e=>{ if(e.target===$('modalOverlay')) closeModal(); });
+function closeNotice(){ const o=$('noticeOverlay'); o.classList.remove('show'); $('noticeBox').innerHTML=''; }
+$('noticeOverlay').addEventListener('click', e=>{ if(e.target===$('noticeOverlay')) closeNotice(); });
 function confirmBox(title, body, okText, danger, onOk){
   const card=h('div','confirm-card'); card.appendChild(h('h4',null,title)); card.appendChild(h('p',null,body));
   const btns=h('div','row');
@@ -4297,7 +4302,7 @@ async function renderAdminSettings(){
     const gapWrap = h('div','fld-row'); gapWrap.append(gapNum, gapUnit);
     const prevBtn = h('button','mini-btn blue','预览弹窗'); prevBtn.type='button';
     prevBtn.onclick = ()=>showNotice({ title:nTitle.value, body:nBody.value }, true);
-    body.append(nsw.row, fld('弹窗标题', nTitle), fld('弹窗内容', nBody), fld('弹窗间隔', gapWrap, '用户关掉后，隔多久再弹一次（记录存在用户本地浏览器）'), fld('预览', prevBtn, '预览会替换当前弹窗，关闭后重新点「设置」继续编辑'));
+    body.append(nsw.row, fld('弹窗标题', nTitle), fld('弹窗内容', nBody), fld('弹窗间隔', gapWrap, '用户关掉后，隔多久再弹一次（记录存在用户本地浏览器）'), fld('预览', prevBtn, '在上方预览效果，关闭预览可继续编辑'));
     return async ()=> savePatch({ notice_enabled:nsw.input.checked, notice_title:nTitle.value, notice_body:nBody.value, notice_interval_hours:(Number(gapNum.value)||24) * (gapUnit.value==='d' ? 24 : 1) });
   })) ]);
   /* 网站与 SEO（第 10 条）；fix6-5：排第一位——行先按原顺序建好，函数末尾再挪到卡片最前 */
@@ -4592,15 +4597,15 @@ function showNotice(n, isPreview){
   card.append(ico, h('h4',null, n.title||'公告'), h('p',null, n.body||''));
   const btn = h('button','btn btn-blue','知道了');
   btn.onclick = ()=>{
-    closeModal();
+    closeNotice();
     if(!isPreview){
       const sig = hashStr((n.title||'')+'|'+(n.body||''));
       try{ localStorage.setItem('paopao_notice_seen', JSON.stringify({ sig, at: Date.now() })); }catch(e){}
     }
   };
   card.appendChild(btn);
-  openModal(card);
-  $('modalOverlay').classList.add('announce-mode');
+  const nb = $('noticeBox'); nb.innerHTML=''; nb.appendChild(card);
+  $('noticeOverlay').classList.add('show');
 }
 function maybeShowNotice(){
   const s = S.settings||{};
