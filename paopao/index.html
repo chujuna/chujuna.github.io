@@ -469,6 +469,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .profile-top p{margin:2px 0 0; color:var(--ink2); font-size:13px}
 .kv{display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--line2); font-size:13px}
 .kv span{color:var(--ink2)} .kv b{font-weight:600}
+.kv>span{flex:none; white-space:nowrap} .kv>b{min-width:0; text-align:right; word-break:break-all} /* fix16：标签不再被长链接挤成竖排 */
 .points-card{padding:24px; text-align:center}
 .points-card .big{font-size:46px; font-weight:800; letter-spacing:-.02em; line-height:1.1; margin-bottom:14px}
 .points-card .lbl{color:var(--ink2); font-size:13px; margin-bottom:14px}
@@ -557,7 +558,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .detail-head .info small{color:var(--ink3); font-size:12px}
 .detail-kv{padding:2px 20px 6px}
 .detail-actions{display:flex; gap:10px; padding:14px 20px 20px; flex-wrap:wrap}
-.detail-actions .btn{flex:1; min-width:96px}
+.detail-actions .btn{flex:1; min-width:70px}
 
 /* ---------- 确认弹窗 ---------- */
 .confirm-card{width:min(88vw,380px); background:var(--card); border-radius:22px; box-shadow:var(--shadow-lg); padding:24px; text-align:center; animation:pop .25s ease}
@@ -2346,10 +2347,10 @@ async function buildVideoPlayer(wrap, url){
 <script>
 /* ================= 发布面板 ================= */
 let PUB = { type:'text', cost:5, file:null, fileUrl:'', filePath:'', uploading:false };
-function openPublish(){
+function openPublish(editB, from){
   if(!S.user){ toast('先登录才能发泡泡'); showPage('mine'); renderAuth(); return; }
   if(banned()){ toast('账号已被封禁，不能发布'); return; }
-  buildPublishForm();
+  buildPublishForm(editB || null, from || '');
   const wrap = $('pubWrap');
   wrap.classList.remove('closing'); wrap.classList.add('show');
   requestAnimationFrame(()=>requestAnimationFrame(()=>wrap.classList.add('in')));
@@ -2384,13 +2385,20 @@ $('pubWrap').addEventListener('click', e=>{ if(e.target===$('pubWrap')) closePub
   addEventListener('pointermove', e=>onMove(e.clientY));
   addEventListener('pointerup', e=>onUp(e.clientY));
 })();
-function buildPublishForm(){
+function buildPublishForm(editB, from){
   const body = $('pubBody'); body.innerHTML='';
-  PUB = { type:'text', cost:5, file:null, fileUrl:'', filePath:'', uploading:false, permanent:false };
+  /* fix16：编辑模式——editB 为要编辑的泡泡：类型/档位锁定、不扣分，提交走 edit_bubble */
+  PUB = { type: editB ? editB.type : 'text', cost: editB ? editB.cost : 5, file:null, fileUrl:'', filePath:'', uploading:false, permanent:false, editId: editB ? editB.id : null, editFrom: from || '' };
+  if(editB){
+    const note = h('div','hint'); note.style.marginBottom='10px';
+    note.textContent = PUB.editFrom === 'admin' ? '管理员编辑 · 类型与档位不可改' : '编辑泡泡 · 类型与档位不可改';
+    body.appendChild(note);
+  }
   const seg = h('div','seg');
+  if(editB){ seg.style.opacity = '.55'; seg.style.pointerEvents = 'none'; }
   ['text','image','audio','video'].forEach(t=>{
-    const b = h('button', t==='text'?'on':'', TYPE_META[t].name); b.dataset.t = t;
-    b.onclick = ()=>{ PUB.type=t; seg.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); syncPubForm(); };
+    const b = h('button', t===PUB.type?'on':'', TYPE_META[t].name); b.dataset.t = t;
+    b.onclick = ()=>{ if(PUB.editId) return; PUB.type=t; seg.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); syncPubForm(); };
     seg.appendChild(b);
   });
   body.appendChild(seg);
@@ -2407,6 +2415,7 @@ function buildPublishForm(){
   const codeIn = h('input'); codeIn.type='text'; codeIn.id='permCodeInput'; codeIn.placeholder='输入授权码'; codeIn.autocomplete='off';
   codeField.appendChild(codeIn); permBox.appendChild(codeField);
   swIn.onchange = ()=>{ codeField.style.display = swIn.checked ? '' : 'none'; PUB.permanent = swIn.checked; };
+  if(editB) permBox.style.display = 'none';
   body.appendChild(permBox);
   /* 积分档位（小样 cost-row） */
   const costField = h('div','field'); costField.style.marginBottom='4px';
@@ -2431,10 +2440,26 @@ function buildPublishForm(){
   /* 按钮 */
   const btns = h('div','sheet-actions');
   const cancel = h('button','btn btn-ghost','取消'); cancel.onclick=closePublish;
-  const go = h('button','btn btn-blue','发布泡泡');
+  const go = h('button','btn btn-blue', editB ? '保存修改' : '发布泡泡');
   go.onclick = ()=>submitPublish(codeIn);
   btns.append(cancel, go); body.appendChild(btns);
+  if(editB) costField.style.display = 'none';
   syncPubForm();
+  if(editB){
+    const ci = $('contentInput'); if(ci) ci.value = editB.content || '';
+    if(editB.type !== 'text'){
+      if(editB.media_path){
+        PUB.fileUrl = editB.media_url || ''; PUB.filePath = editB.media_path;
+        const ui = $('upInfo');
+        if(ui){ ui.hidden = false; const mr = $('mediaRow'); if(mr) mr.style.display = 'none';
+          const ub = $('upName'); if(ub) ub.textContent = editB.type === 'image' ? '图片已上传' : '音频已上传';
+          const um = $('upMeta'); if(um) um.textContent = '点右侧按钮移除后可重新上传或贴链接';
+          const th = $('upThumb'); if(th){ if(editB.type === 'image' && editB.media_url){ th.src = editB.media_url; th.style.display = ''; } else th.style.display = 'none'; } }
+      } else if(editB.media_url){
+        const mi = $('mediaInput'); if(mi) mi.value = editB.media_url;
+      }
+    }
+  }
 }
 function syncPubForm(){
   const form = $('pubForm'); if(!form) return; form.innerHTML='';
@@ -2542,6 +2567,17 @@ async function submitPublish(codeIn){
   if(t==='text' && !content){ toast('先写点内容'); return; }
   if(t==='text' && content.length>300){ toast('文字最多 300 字'); return; }
   if(t!=='text' && content.length>150){ toast('说明最多 150 字'); return; }
+  if(PUB.editId){
+    const eid = PUB.editId, efrom = PUB.editFrom;
+    const { error } = await sb.rpc('edit_bubble', { p_id: eid, p_content: content, p_media_url: mediaUrl || null, p_media_path: mediaPath || null });
+    if(error){ toast(errText(error)); return; }
+    const nb = S.poolById.get(eid);
+    if(nb){ nb.content = content; if(t !== 'text'){ nb.media_url = mediaUrl; nb.media_path = mediaPath; } }
+    CACHE.myBubbles = null; CACHE.counts = null; ACACHE.bubbles = {};
+    closePublish(); toast('已保存');
+    if(efrom === 'admin') renderAdminBubbles(); else renderMyBubbles();
+    return;
+  }
   const permCode = PUB.permanent ? (codeIn.value||'').trim() : '';
   if(PUB.permanent && !permCode){ toast('请输入授权码'); return; }
   if(!PUB.permanent && S.profile && S.profile.points < PUB.cost){ toast('积分不足，还差 '+(PUB.cost - S.profile.points)+' 分，去签到吧'); return; }
@@ -3200,6 +3236,11 @@ function bubbleTags(b, extra){
   if(extra) tags.push(extra);
   return tags;
 }
+/* fix16：我的泡泡编辑入口——发布后 3 分钟内可改，超时点编辑只提示不打开（服务端 edit_bubble 同步强制） */
+function tryEditBubble(b){
+  if(Date.now() - new Date(b.created_at).getTime() > 3 * 60 * 1000){ toast('超过3分钟，无法编辑'); return; }
+  openPublish(b, 'mine');
+}
 async function renderMyBubbles(){
   S.view='mine'; showPage('mine');
   const seq = ++viewSeq;
@@ -3225,7 +3266,8 @@ async function renderMyBubbles(){
           [document.createTextNode('出现 '+(b.show_count||0)+' · 查看 '+(b.view_count||0)+' · 点赞 '+(b.like_count||0))]
         ],
         onOpen: ()=>openExpand(b,'list'),
-        onPreview: ()=>openExpand(b,'list'),
+        onPreview: ()=>tryEditBubble(b),
+        previewLabel: '编辑',
         onDelete: ()=>confirmDeleteBubble(b,false)
       }));
     });
@@ -3410,7 +3452,7 @@ function bubbleListRow(b, opts){
   row.appendChild(main);
   if(opts.onPreview || opts.onDelete){
     const acts = h('span','row-acts');
-    if(opts.onPreview){ const v = h('button','mini-btn','预览'); v.type='button'; v.onclick = e=>{ e.stopPropagation(); opts.onPreview(); }; acts.appendChild(v); }
+    if(opts.onPreview){ const v = h('button','mini-btn', opts.previewLabel || '预览'); v.type='button'; v.onclick = e=>{ e.stopPropagation(); opts.onPreview(); }; acts.appendChild(v); }
     if(opts.onDelete){ const d = h('button','mini-btn red','删除'); d.type='button'; d.onclick = e=>{ e.stopPropagation(); opts.onDelete(); }; acts.appendChild(d); }
     row.appendChild(acts);
   } else {
@@ -3723,6 +3765,8 @@ function renderAdminBubbleDetail(b){
       hd.onclick=async()=>{ const { error } = await sb.rpc('admin_bubble_action',{ p_bubble:b.id, p_action:'hide' }); if(error) toast(errText(error)); else { ACACHE.bubbles = {}; toast('已下架'); S.pool=S.pool.filter(x=>x.id!==b.id); b.status='hidden'; renderAdminBubbleDetail(b); } };
       acts.appendChild(hd);
     }
+    const ed = h('button','btn btn-ghost','编辑'); ed.onclick=()=>openPublish(b, 'admin');
+    acts.appendChild(ed);
     const del = h('button','btn btn-danger','删除'); del.onclick=()=>confirmDeleteBubble(b,false);
     acts.appendChild(del);
   }
