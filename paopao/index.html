@@ -489,8 +489,8 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .my-row .info small{display:block; color:var(--ink3); font-size:12px; line-height:1.5}
 .icon-btn{width:38px; height:38px; border-radius:50%; display:grid; place-items:center; background:var(--card2); border:1px solid var(--line2); flex:none}
 /* 本轮：列表行内操作按钮（预览/删除）、共用分页控件、展开层昵称后 ID、登录页框外标题 */
-.trow .row-acts{display:flex; gap:8px; flex:none; align-items:center}
-.trow .main small{display:block; line-height:1.5}
+.trow .row-acts{display:flex; gap:6px; flex:none; align-items:center}
+.trow .main small{display:block; line-height:1.45; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} /* fix14：小字单行省略，不再中途断行 */
 .load-more{width:calc(100% - 36px); margin:12px 18px 16px; min-height:42px; font-size:14px}
 .list-end{padding:12px 18px 16px; text-align:center; color:var(--ink3); font-size:12px}
 .expand-meta .who .who-id-inline{font-size:12px; font-weight:500; color:var(--ink3); margin-left:7px}
@@ -519,13 +519,13 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .filter-bar select,.filter-bar input{border:1px solid var(--line); background:var(--card); border-radius:10px; padding:9px 12px; min-height:38px}
 .filter-bar input{flex:1; min-width:150px}
 .table-card{background:var(--card); border-radius:var(--r-lg); box-shadow:var(--shadow); border:1px solid var(--line2); overflow:hidden}
-.trow{display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--line2); font-size:13px}
+.trow{display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line2); font-size:13px}
 .trow:last-child{border-bottom:none}
 .trow .main{flex:1; min-width:0}
 .trow .main b{display:block; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .trow .main small{color:var(--ink3); font-size:12px}
 .trow .ops{display:flex; gap:6px; flex:none}
-.mini-btn{padding:7px 13px; border-radius:999px; font-size:12px; font-weight:700; background:var(--card2); border:1px solid var(--line); min-height:34px}
+.mini-btn{padding:6px 11px; border-radius:999px; font-size:12px; font-weight:700; background:var(--card2); border:1px solid var(--line); min-height:30px}
 .mini-btn.red{color:var(--accent)}
 .mini-btn.blue{color:var(--blue)}
 .switch{position:relative; width:50px; height:30px; flex:none}
@@ -1010,6 +1010,14 @@ function pageLoadingEl(){
   return d;
 }
 /* 读文件为 dataURL（上传与本地预览共用） */
+/* fix14：iOS 从「文件」App 选的文件常无 type，按扩展名补一个声明 mime（服务端仍以字节嗅探为准） */
+function mimeOf(file){
+  if(file.type) return file.type;
+  const ext = (file.name.split('.').pop()||'').toLowerCase();
+  const M = { mp3:'audio/mpeg', m4a:'audio/mp4', aac:'audio/aac', wav:'audio/wav', ogg:'audio/ogg', oga:'audio/ogg', opus:'audio/ogg', flac:'audio/flac', aif:'audio/aiff', aiff:'audio/aiff',
+    jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', webp:'image/webp', bmp:'image/bmp', heic:'image/heic', heif:'image/heif' };
+  return M[ext] || '';
+}
 function readFileDataUrl(file){
   return new Promise((res, rej)=>{ const fr = new FileReader(); fr.onload = ()=>res(fr.result); fr.onerror = ()=>rej(new Error('读取文件失败：文件可能还没下载到本机（比如还在 iCloud 里），请先在「文件」App 里打开一次再重试')); fr.readAsDataURL(file); });
 }
@@ -1078,7 +1086,7 @@ async function uploadFileToMedia(file, kind){
   if(kind === 'image') file = await prepareImageUpload(file);
   const dataUrl = await readFileDataUrl(file);
   const data_base64 = String(dataUrl).split(',')[1] || '';
-  return xhrUpload({ kind, filename:file.name, mime:file.type, data_base64 }, jwt, null);
+  return xhrUpload({ kind, filename:file.name, mime:mimeOf(file), data_base64 }, jwt, null);
 }
 
 /* ================= 基础工具（安全：用户内容只走 textContent） ================= */
@@ -2438,7 +2446,7 @@ function syncPubForm(){
     if((t==='image' || t==='audio') && setGet('media_upload_enabled', true)){
       const up = h('button','btn btn-ghost','上传文件'); up.id='upPick'; up.type='button';
       const fileIn = h('input'); fileIn.type='file'; fileIn.hidden=true; fileIn.id='mediaFile';
-      fileIn.accept = t==='image' ? 'image/*' : 'audio/*';
+      fileIn.accept = t==='image' ? 'image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif' : '.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.aif,.aiff,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/ogg,audio/flac'; /* fix14：iOS 对 audio/* 置灰 MP3，改显式扩展名 */
       up.onclick=()=>fileIn.click();
       fileIn.onchange=()=>{ if(fileIn.files[0]) uploadMedia(fileIn.files[0], t); };
       row.append(up, fileIn);
@@ -2496,7 +2504,7 @@ async function uploadMedia(file, t){
     if(t === 'image') file = await prepareImageUpload(file);
     const dataUrl = await readFileDataUrl(file);
     const data_base64 = String(dataUrl).split(',')[1] || '';
-    const json = await xhrUpload({ kind:t, filename:file.name, mime:file.type, data_base64 }, jwt, ratio=>setProg(Math.min(90, Math.round(ratio*90))));
+    const json = await xhrUpload({ kind:t, filename:file.name, mime:mimeOf(file), data_base64 }, jwt, ratio=>setProg(Math.min(90, Math.round(ratio*90))));
     PUB.fileUrl = json.url || ''; PUB.filePath = json.path || '';
     setProg(100, 'done'); /* 服务端已确认成功——此刻才到 100% */
     const ui = $('upInfo');
@@ -2584,7 +2592,6 @@ function backLink(text, fn){
 }
 function copyrightEl(){
   const d = h('div','copyright');
-  d.append(document.createTextNode('协助Muse · '));
   const ic = h('span');
   ic.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px" aria-hidden="true">'+P.copyright+'</svg>';
   d.append(ic, document.createTextNode(' By FeiYu'));
@@ -2686,9 +2693,9 @@ async function renderMine(){
      （签到积分数、删除不退积分这类规则提示）；数量/状态仍走右侧 valText */
   const rowCheckin = menuRow(ICO19.calendar,'签到积分','每日签到 +'+setGet('checkin_points',2)+' 积分',(p.points||0)+' 积分',renderCheckin);
   const rowBubbles = menuRow(ICO19.bubbles,'我的泡泡','删除不退积分', c0.my!=null ? c0.my+' 个' : '', renderMyBubbles);
-  const rowFavs = menuRow(ICO19.star,'收藏泡泡','', S.myFavorites.size+' 个', renderFavorites);
-  const rowHist = menuRow(ICO19.history,'泡泡足迹','', c0.hist!=null ? c0.hist+' 条' : '', renderFootprints);
-  const rowNoti = menuRow(ICO19.bell,'站内提醒','', c0.unread ? c0.unread+' 条未读' : '', renderNotifications);
+  const rowFavs = menuRow(ICO19.star,'收藏泡泡','我喜欢的小玩意', S.myFavorites.size+' 个', renderFavorites);
+  const rowHist = menuRow(ICO19.history,'泡泡足迹','我踩踩踩', c0.hist!=null ? c0.hist+' 条' : '', renderFootprints);
+  const rowNoti = menuRow(ICO19.bell,'站内提醒','主人，你有消息', c0.unread ? c0.unread+' 条未读' : '', renderNotifications);
   card.append(rowBubbles, rowFavs, rowHist, rowCheckin, rowNoti); /* fix13：用户定版顺序 */
   /* fix13：站内提醒有未读时，铃铛图标右上角挂红点（与未读计数同步） */
   const syncNotiDot = ()=>{
@@ -2948,7 +2955,7 @@ function openAccountModal(){
   const avPrev = h('span','avatar'); avPrev.style.cssText='width:52px; height:52px; font-size:20px';
   fillAvatar(avPrev, p.nickname||'用', p.avatar_url);
   const avBtn = h('button','mini-btn','更换头像'); avBtn.type='button';
-  const avFile = h('input'); avFile.type='file'; avFile.accept='image/*'; avFile.hidden=true;
+  const avFile = h('input'); avFile.type='file'; avFile.accept='image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif'; avFile.hidden=true;
   avBtn.onclick = ()=>avFile.click();
   avFile.onchange = async ()=>{
     const f = avFile.files && avFile.files[0]; if(!f) return;
@@ -3215,7 +3222,7 @@ async function renderMyBubbles(){
         tags,
         smalls: [
           [document.createTextNode(TYPE_META[b.type].name+' · '+b.cost+' 积分 · '+fmtTimeShort(b.created_at)+(hidden?' · 举报达阈值已隐藏':''))],
-          [document.createTextNode('出现 '+(b.show_count||0)+' 次 · 被查看 '+(b.view_count||0)+' 次 · 点赞 '+(b.like_count||0))]
+          [document.createTextNode('出现 '+(b.show_count||0)+' · 查看 '+(b.view_count||0)+' · 点赞 '+(b.like_count||0))]
         ],
         onOpen: ()=>openExpand(b,'list'),
         onPreview: ()=>openExpand(b,'list'),
@@ -4274,7 +4281,7 @@ async function renderAdminSettings(){
     const logoIn = tIn(s.site_logo_url,'粘贴 https:// 图片地址，或点右侧上传');
     const logoRow = h('div','fld-row');
     const upBtn = h('button','mini-btn','上传'); upBtn.type='button';
-    const logoFile = h('input'); logoFile.type='file'; logoFile.accept='image/*'; logoFile.hidden=true;
+    const logoFile = h('input'); logoFile.type='file'; logoFile.accept='image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif'; logoFile.hidden=true;
     upBtn.onclick = ()=>logoFile.click();
     logoFile.onchange = async ()=>{
       const f = logoFile.files && logoFile.files[0]; if(!f) return;
