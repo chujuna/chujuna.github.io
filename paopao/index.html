@@ -2705,7 +2705,7 @@ async function renderMine(){
   mini.appendChild(ar.firstChild);
   mini.onclick = ()=>renderAccount(); /* 本轮第 10 条（两段式）：点头像卡先进「账号信息」只读页，页上点「修改资料」才弹窗 */
   wrap.appendChild(mini);
-  if(p.is_banned){ const bn = h('div',null,'账号已被封禁：能浏览，不能发布与签到'); bn.style.cssText='color:var(--accent);font-size:13px;margin:-4px 2px 12px'; wrap.appendChild(bn); }
+  if(p.is_banned){ const bn = h('div',null,'账号已被封禁：能浏览，不能发布与签到'); bn.style.cssText='color:var(--accent);font-size:13px;margin:-4px 2px 12px;text-align:center'; wrap.appendChild(bn); }
   const c0 = CACHE.counts || {};
   const card = h('div','card menu-card');
   /* 本轮第 5 条：副标题精简——纯解释性/重复主标题的直接去掉，只留有信息量的
