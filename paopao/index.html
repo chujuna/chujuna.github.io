@@ -2695,11 +2695,11 @@ function pagerAttach(listEl, key, items, repaint){
   }
 }
 
-/* 本轮第 8 条：免邮箱注册的内部邮箱（@users.paopao.app 结尾）不对用户露出，
-   统一显示为「未绑定邮箱」；管理员后台看的是 profiles 原值，不走这个函数 */
+/* 免邮箱注册的内部邮箱（@users.paopao.app 结尾）不露出：未绑定即显示为空，
+   各处拼接时用 filter(Boolean) 去掉空段与多余的间隔点 */
 function dispEmail(email){
   const e = String(email||'');
-  return /@users\.paopao\.app$/i.test(e) ? '未绑定邮箱' : e;
+  return /@users\.paopao\.app$/i.test(e) ? '' : e;
 }
 
 /* ================= 我的 ================= */
@@ -2715,7 +2715,7 @@ async function renderMine(){
   const av = h('span','avatar'); fillAvatar(av, p.nickname||'用', p.avatar_url);
   const tx = h('span','pm-tx');
   const nameB = h('b',null,p.nickname||'用户');
-  const subS = h('small',null,dispEmail(S.user.email)+' · '+(p.role==='admin'?'管理员':'普通用户'));
+  const subS = h('small',null,[dispEmail(S.user.email), (p.role==='admin'?'管理员':'普通用户')].filter(Boolean).join(' · '));
   tx.append(nameB, subS);
   mini.append(av, tx);
   const lo = h('span','mine-logout'); lo.setAttribute('role','button'); lo.setAttribute('aria-label','退出登录');
@@ -2755,7 +2755,7 @@ async function renderMine(){
   loadProfile().then(np=>{
     if(seq!==viewSeq || !np) return;
     nameB.textContent = np.nickname||'用户';
-    subS.textContent = dispEmail(S.user.email)+' · '+(np.role==='admin'?'管理员':'普通用户');
+    subS.textContent = [dispEmail(S.user.email), (np.role==='admin'?'管理员':'普通用户')].filter(Boolean).join(' · ');
     fillAvatar(av, np.nickname||'用', np.avatar_url);
     setVal(rowCheckin, (np.points||0)+' 积分');
   });
@@ -3841,7 +3841,7 @@ function renderAdminUserDetail(u){
   const mid = h('div');
   const h3 = h('h3');
   h3.append(document.createTextNode(u.nickname||'用户'), h('span','profile-id','ID '+u.user_no));
-  mid.append(h3, h('p',null, (u.username ? u.username+' · ' : '')+(u.email||'')));
+  mid.append(h3, h('p',null, [u.username||'', dispEmail(u.email)].filter(Boolean).join(' · ')));
   const roleTag = tagEl('', u.role==='admin' ? '管理员' : '普通用户');
   roleTag.style.cssText = 'margin-left:auto; ' + (u.role==='admin' ? 'background:rgba(250,36,60,.12); color:var(--accent)' : 'background:rgba(0,113,227,.12); color:var(--blue)');
   top.append(av, mid, roleTag); card.appendChild(top);
@@ -3912,7 +3912,9 @@ function openAdminEditUser(u){
   /* 本轮第 9 条：邮箱与重置密码也归管理员可改——这两项动的是登录账号本身，
      不走 RPC，保存时调 /api/admin-user（带管理员会话 JWT）由服务端改 */
   const ef = h('div','field'); ef.appendChild(h('label',null,'邮箱'));
-  const emailIn = h('input'); emailIn.type='text'; emailIn.setAttribute('inputmode','email'); emailIn.value=u.email||''; emailIn.placeholder='you@example.com'; ef.appendChild(emailIn);
+  const emailIn = h('input'); emailIn.type='text'; emailIn.setAttribute('inputmode','email');
+  const mailInternal = /@users\.paopao\.app$/i.test(u.email||'');
+  emailIn.value = mailInternal ? '' : (u.email||''); emailIn.placeholder = mailInternal ? '未绑定邮箱，可填写真实邮箱' : 'you@example.com'; ef.appendChild(emailIn);
   card.appendChild(ef);
   const pf = h('div','field'); pf.appendChild(h('label',null,'重置密码'));
   const pwIn = h('input'); pwIn.type='password'; pwIn.autocomplete='new-password'; pwIn.placeholder='不改请留空（至少 6 位）'; pf.appendChild(pwIn);
