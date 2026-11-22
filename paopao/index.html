@@ -478,6 +478,7 @@ html.booting .wrap, html.booting .topbar, html.booting .capsule, html.booting .s
 .points-card .big{font-size:46px; font-weight:800; letter-spacing:-.02em; line-height:1.1; margin-bottom:14px}
 .points-card .lbl{color:var(--ink2); font-size:13px; margin-bottom:14px}
 .checkin-note{font-size:12px; color:var(--ink3); margin-top:10px}
+.checkin-note.is-banned{font-weight:700; text-align:center}
 .sec-title{font-size:19px; font-weight:800; margin:26px 2px 12px; display:flex; justify-content:space-between; align-items:baseline}
 .sec-title small{font-size:12px; color:var(--ink3); font-weight:500}
 .log-list,.my-list{background:var(--card); border-radius:var(--r-lg); box-shadow:var(--shadow); border:1px solid var(--line2); overflow:hidden}
@@ -3150,7 +3151,9 @@ async function renderCheckin(){
     toast('签到成功 +'+setGet('checkin_points',2)); renderCheckin();
   };
   card.appendChild(btn);
-  const noteEl = h('div','checkin-note', banned() ? '账号已被封禁，不能签到' : '每天可签 1 次（规则由管理员设置）');
+  const noteEl = h('div','checkin-note');
+  const paintNote = ()=>{ const b = banned(); noteEl.textContent = b ? '账号已被封禁：能浏览，不能发布与签到' : '每天可签 1 次（规则由管理员设置）'; noteEl.classList.toggle('is-banned', b); };
+  paintNote();
   card.appendChild(noteEl);
   panel.appendChild(card);
   panel.appendChild(secTitle('积分明细','每一分都有记录'));
@@ -3172,7 +3175,7 @@ async function renderCheckin(){
   if(CACHE.pointsLog) paintLogs(CACHE.pointsLog); else list.appendChild(pageLoadingEl());
   loadProfile().then(np=>{ if(seq!==viewSeq || !np) return; big.textContent = String(np.points||0);
     /* 档案刷新后按最新封禁状态重绘（进页面后才被封禁/解封也能立刻反映，不再靠旧状态判断） */
-    noteEl.textContent = banned() ? '账号已被封禁，不能签到' : '每天可签 1 次（规则由管理员设置）';
+    paintNote();
     paintBtn(!!CACHE.checkinSigned); });
   const today = shanghaiToday();
   const [doneRes, logsRes] = await Promise.all([
