@@ -89,6 +89,9 @@ svg{display:block}
 .btn-primary{background:var(--ink); color:var(--bg)}
 @media (prefers-color-scheme: dark){ .btn-primary{background:#F5F5F7; color:#000} }
 .btn-blue{background:var(--blue); color:#fff}
+/* 签到按钮禁用态（今日已签到 / 账号被封禁）：灰底灰字、不可点击 */
+.checkin-btn:disabled{background:#E4E4E7; color:#8E8E93; transform:none; cursor:not-allowed}
+@media (prefers-color-scheme: dark){ .checkin-btn:disabled{background:#2C2C2E; color:#636366} }
 .btn-ghost{background:var(--card); border:1px solid var(--line); color:var(--ink)}
 .btn-danger{background:var(--accent); color:#fff}
 .btn[disabled]{opacity:.45; pointer-events:none}
@@ -3136,9 +3139,9 @@ async function renderCheckin(){
     btn.textContent = signed ? '今日已签到，明日再来' : '每日签到 +'+setGet('checkin_points',2)+' 积分';
     btn.disabled = signed || banned();
   };
-  const btn = h('button','btn btn-blue','每日签到 +'+setGet('checkin_points',2)+' 积分');
+  const btn = h('button','btn btn-blue checkin-btn','每日签到 +'+setGet('checkin_points',2)+' 积分');
   btn.style.cssText='min-width:190px; min-height:48px; font-size:15px';
-  if(CACHE.checkinSigned!=null) paintBtn(CACHE.checkinSigned);
+  paintBtn(!!CACHE.checkinSigned);
   btn.onclick = async ()=>{
     btn.disabled = true;
     const { error } = await sb.rpc('daily_checkin');
