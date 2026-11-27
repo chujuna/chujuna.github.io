@@ -63,12 +63,14 @@ const API = 'https://musicapi-692.pages.dev/api';
 const qs = new URLSearchParams(location.search);
 const act = qs.get('act') || '';
 const qPlat = qs.get('plat') || '', qKind = qs.get('kind') || 'chart', qId = (qs.get('id') || '').replace(/\D/g, '');
-const isApiCall = act === 'index' || act === 'list' || act === 'meta' || (qPlat && qId);
+const qRawId = qs.get('id') || qs.get('mid') || '';
+const isApiCall = act === 'index' || act === 'list' || act === 'meta' || act === 'lrc' || (qPlat && qId);
 
 async function runApiCall() {
   document.title = 'JSON';
   let path;
   if (act === 'index' || (!act && !qPlat)) path = '/index';
+  else if (act === 'lrc') path = `/lrc?plat=${qPlat}&id=${encodeURIComponent(qRawId)}`;
   else if (act === 'meta') path = `/meta?plat=${qPlat}&id=${qId}`;
   else path = `/list?plat=${qPlat}&kind=${qKind}&id=${qId}`;
   try {
@@ -116,6 +118,10 @@ if (isApiCall) { runApiCall(); }
     网易歌单：<a href="?plat=wy&kind=playlist&id=17980906438" target="_blank">?plat=wy&amp;kind=playlist&amp;id=17980906438</a></p>
     <h3>3）只取歌单信息（名称 / 封面 / 总数，不含歌曲）</h3>
     <p><a href="?act=meta&plat=qq&id=2206788506" target="_blank">?act=meta&amp;plat=qq&amp;id=2206788506</a></p>
+    <h3>4）歌词（LRC，带时间轴）</h3>
+    <p>网易用歌曲 ID：<a href="?act=lrc&plat=wy&id=1973665667" target="_blank">?act=lrc&amp;plat=wy&amp;id=1973665667</a><br>
+    QQ 用歌曲 mid：<a href="?act=lrc&plat=qq&id=002KlKqj04GcXj" target="_blank">?act=lrc&amp;plat=qq&amp;id=002KlKqj04GcXj</a><br>
+    返回 <code>lrc</code> 原文歌词；网易有翻译时另有 <code>tlyric</code> 翻译歌词、逐字歌词在 <code>klyric</code>。纯音乐或未收录的歌返回 code=0「没有歌词」。</p>
     <h3>返回字段</h3>
     <p>每首歌含：<code>id</code> 歌曲 ID（QQ 另有 <code>mid</code>）、<code>name</code> 歌名、<code>artist</code> 歌手、<code>album</code> 专辑、<code>duration</code> 时长（秒）、<code>cover</code> 单曲封面。歌单含 <code>name</code>、<code>cover</code> 封面、<code>count</code> 总数、<code>creator</code> 创建者。</p>
     <pre>{
